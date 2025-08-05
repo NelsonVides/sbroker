@@ -634,8 +634,7 @@ init_it(Starter, Parent, Name, Mod, Args, Opts) ->
             Reason = {bad_return_value, Other},
             init_stop(Starter, Name, Reason)
     catch
-        Class:Reason ->
-            Stack = erlang:get_stacktrace(),
+        Class:Reason:Stack ->
             Reason2 = sbroker_handlers:exit_reason({Class, Reason, Stack}),
             init_stop(Starter, Name, Reason2)
     end.
@@ -862,8 +861,8 @@ update_meter(
         Other ->
             valve_return(Other, open, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            valve_exception(Class, Reason, open, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            valve_exception(Class, Reason, Stack, open, Time, Q, V, Config)
     end;
 update_meter(
     Now,
@@ -894,8 +893,8 @@ update_meter(
         Other ->
             queue_return(Other, closed, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            queue_exception(Class, Reason, closed, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            queue_exception(Class, Reason, Stack, closed, Time, Q, V, Config)
     end.
 
 update_meter(
@@ -987,8 +986,8 @@ open(
         Other ->
             valve_return(Other, open, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            valve_exception(Class, Reason, open, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            valve_exception(Class, Reason, Stack, open, Time, Q, V, Config)
     end;
 open(
     {continue, From, Ref},
@@ -1011,8 +1010,8 @@ open(
         Other ->
             valve_return(Other, open, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            valve_exception(Class, Reason, open, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            valve_exception(Class, Reason, Stack, open, Time, Q, V, Config)
     end;
 open({cancel, From, _}, Time, Q, V, _, Config) ->
     cancelled(From, false),
@@ -1041,8 +1040,8 @@ closed(
         Other ->
             queue_return(Other, closed, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            queue_exception(Class, Reason, closed, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            queue_exception(Class, Reason, Stack, closed, Time, Q, V, Config)
     end;
 closed(
     {nb_ask, Ask, _},
@@ -1078,8 +1077,8 @@ closed(
         Other ->
             valve_return(Other, closed, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            valve_exception(Class, Reason, closed, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            valve_exception(Class, Reason, Stack, closed, Time, Q, V, Config)
     end;
 closed(
     {cancel, From, Tag},
@@ -1096,8 +1095,8 @@ closed(
         Other ->
             queue_return(Other, closed, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            queue_exception(Class, Reason, closed, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            queue_exception(Class, Reason, Stack, closed, Time, Q, V, Config)
     end;
 closed(Msg, Time, Q, V, Next, Config) ->
     common(Msg, closed, Time, Q, V, Next, Config).
@@ -1118,8 +1117,8 @@ common(
         Other ->
             valve_return(Other, State, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            valve_exception(Class, Reason, State, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            valve_exception(Class, Reason, Stack, State, Time, Q, V, Config)
     end;
 common(
     {done, From, Ref},
@@ -1140,8 +1139,8 @@ common(
         Other ->
             valve_return(Other, State, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            valve_exception(Class, Reason, State, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            valve_exception(Class, Reason, Stack, State, Time, Q, V, Config)
     end;
 common({'$mark', Mark}, State, #time{now = Now} = Time, Q, V, Next, Config) ->
     receive
@@ -1180,8 +1179,8 @@ common(
             gen:reply(From, Len),
             timeout(State, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            queue_exception(Class, Reason, State, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            queue_exception(Class, Reason, Stack, State, Time, Q, V, Config)
     end;
 common(
     {size, From, _},
@@ -1197,8 +1196,8 @@ common(
             gen:reply(From, Size),
             timeout(State, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            queue_exception(Class, Reason, State, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            queue_exception(Class, Reason, Stack, State, Time, Q, V, Config)
     end;
 common(
     {_, From, get_modules},
@@ -1335,8 +1334,8 @@ config_change(#config{mod = Mod, args = Args}) ->
         Other ->
             {error, {bad_return_value, Other}}
     catch
-        Class:Reason ->
-            {error, {Class, Reason, erlang:get_stacktrace()}}
+        Class:Reason:Stack ->
+            {error, {Class, Reason, Stack}}
     end.
 
 config_meters(QMod, QArgs, VMod, VArgs, MeterArgs) ->
@@ -1418,8 +1417,8 @@ opening_out(
         Other ->
             queue_return(Other, open, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            queue_exception(Class, Reason, open, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            queue_exception(Class, Reason, Stack, open, Time, Q, V, Config)
     end.
 
 opening_ask(
@@ -1444,8 +1443,8 @@ opening_ask(
         Other ->
             valve_return(Other, open, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            valve_exception(Class, Reason, open, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            valve_exception(Class, Reason, Stack, open, Time, Q, V, Config)
     end.
 
 info_queue(
@@ -1462,8 +1461,8 @@ info_queue(
         Other ->
             queue_return(Other, State, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            queue_exception(Class, Reason, State, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            queue_exception(Class, Reason, Stack, State, Time, Q, V, Config)
     end.
 
 info_valve(
@@ -1482,8 +1481,8 @@ info_valve(
         Other ->
             valve_return(Other, State, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            valve_exception(Class, Reason, State, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            valve_exception(Class, Reason, Stack, State, Time, Q, V, Config)
     end.
 
 info_meter(_, State, NState, #time{meters = []} = Time, Q, V, Next, Config) ->
@@ -1529,8 +1528,8 @@ open_timeout(#time{send = Send} = Time, Q, V, #config{valve_mod = VMod} = Config
         Other ->
             valve_return(Other, open, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            valve_exception(Class, Reason, open, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            valve_exception(Class, Reason, Stack, open, Time, Q, V, Config)
     end.
 
 closed_timeout(
@@ -1547,8 +1546,8 @@ closed_timeout(
         Other ->
             valve_return(Other, closed, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            valve_exception(Class, Reason, closed, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            valve_exception(Class, Reason, Stack, closed, Time, Q, V, Config)
     end.
 
 valve_timeout(
@@ -1568,8 +1567,8 @@ valve_timeout(
         Other ->
             valve_return(Other, closed, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            valve_exception(Class, Reason, closed, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            valve_exception(Class, Reason, Stack, closed, Time, Q, V, Config)
     end.
 
 queue_timeout(
@@ -1585,8 +1584,8 @@ queue_timeout(
         Other ->
             queue_return(Other, closed, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            queue_exception(Class, Reason, closed, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            queue_exception(Class, Reason, Stack, closed, Time, Q, V, Config)
     end.
 
 timeout(open, open, Time, Q, V, Config) ->
@@ -1612,8 +1611,8 @@ opening_timeout(
         Other ->
             valve_return(Other, open, Time, Q, V, Config)
     catch
-        Class:Reason ->
-            valve_exception(Class, Reason, open, Time, Q, V, Config)
+        Class:Reason:Stack ->
+            valve_exception(Class, Reason, Stack, open, Time, Q, V, Config)
     end.
 
 queue_return(
@@ -1634,13 +1633,14 @@ queue_return(
 queue_exception(
     Class,
     Reason,
+    Stack,
     State,
     Time,
     Q,
     V,
     #config{queue_mod = QMod, valve_mod = VMod} = Config
 ) ->
-    Reason2 = {Class, Reason, erlang:get_stacktrace()},
+    Reason2 = {Class, Reason, Stack},
     Callbacks = [
         {sbroker_queue, QMod, Reason2, Q},
         {sregulator_valve, VMod, stop, {State, V}}
@@ -1665,13 +1665,14 @@ valve_return(
 valve_exception(
     Class,
     Reason,
+    Stack,
     State,
     Time,
     Q,
     V,
     #config{queue_mod = QMod, valve_mod = VMod} = Config
 ) ->
-    Reason2 = {Class, Reason, erlang:get_stacktrace()},
+    Reason2 = {Class, Reason, Stack},
     Callbacks = [
         {sbroker_queue, QMod, stop, Q},
         {sregulator_valve, VMod, Reason2, {State, V}}

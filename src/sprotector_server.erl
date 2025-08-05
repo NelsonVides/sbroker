@@ -227,7 +227,7 @@ max_int(Int) ->
 
 drop_int(1.0) ->
     ?MAX_DROP;
-drop_int(0.0) ->
+drop_int(+0.0) ->
     0;
 drop_int(Drop) ->
     % Drop could < 0.0 or > 1.0.

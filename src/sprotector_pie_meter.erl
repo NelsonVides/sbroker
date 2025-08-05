@@ -284,7 +284,7 @@ decay(Drop, _, _) ->
 drop_control(
     Sojourn,
     #pie{
-        drop = 0.0,
+        drop = +0.0,
         last = Last,
         target = Target,
         interval = Interval,
