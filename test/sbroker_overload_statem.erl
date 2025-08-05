@@ -35,21 +35,37 @@ module() ->
     sbroker_overload_meter.
 
 args() ->
-    ?LET({Target, Interval, Alarm},
-         {choose(0, 3), choose(1, 5), desc()},
-         #{target   => Target,
-           interval => Interval,
-           alarm    => Alarm}).
+    ?LET(
+        {Target, Interval, Alarm},
+        {choose(0, 3), choose(1, 5), desc()},
+        #{
+            target => Target,
+            interval => Interval,
+            alarm => Alarm
+        }
+    ).
 
 desc() ->
     oneof([a, b, c]).
 
 init(Time, #{target := Target, interval := Interval, alarm := Alarm}) ->
-    State = #state{target=erlang:convert_time_unit(Target, milli_seconds,
-                                                   native),
-                   interval=erlang:convert_time_unit(Interval, milli_seconds,
-                                                     native), alarm=Alarm,
-                   status=fast, time=Time, queue=fast, interval_time=0},
+    State = #state{
+        target = erlang:convert_time_unit(
+            Target,
+            milli_seconds,
+            native
+        ),
+        interval = erlang:convert_time_unit(
+            Interval,
+            milli_seconds,
+            native
+        ),
+        alarm = Alarm,
+        status = fast,
+        time = Time,
+        queue = fast,
+        interval_time = 0
+    },
     {State, timeout(State, Time)}.
 
 update_next(State, Time, MsgQLen, QueueDelay, _, _) ->
@@ -60,49 +76,74 @@ update_post(State, Time, MsgQLen, QueueDelay, _, _) ->
     NState = next(queue(MsgQLen, QueueDelay, State), State, Time),
     {alarm_post(NState), timeout(NState, Time)}.
 
-change(#state{alarm=Alarm, interval_time=IntervalTime, time=PrevTime} = State,
-       Time, #{target := Target, interval := Interval, alarm := Alarm}) ->
+change(
+    #state{alarm = Alarm, interval_time = IntervalTime, time = PrevTime} = State,
+    Time,
+    #{target := Target, interval := Interval, alarm := Alarm}
+) ->
     NIntervalTime = IntervalTime - PrevTime + Time,
-    NState = State#state{target=erlang:convert_time_unit(Target, milli_seconds,
-                                                         native),
-                         interval=erlang:convert_time_unit(Interval,
-                                                           milli_seconds,
-                                                           native), time=Time,
-                         interval_time=NIntervalTime},
+    NState = State#state{
+        target = erlang:convert_time_unit(
+            Target,
+            milli_seconds,
+            native
+        ),
+        interval = erlang:convert_time_unit(
+            Interval,
+            milli_seconds,
+            native
+        ),
+        time = Time,
+        interval_time = NIntervalTime
+    },
     {NState, timeout(NState, Time)};
 change(_, Time, Args) ->
     init(Time, Args).
 
-timeout(#state{status=Status, queue=Status}, _) ->
+timeout(#state{status = Status, queue = Status}, _) ->
     infinity;
-timeout(#state{time=PrevTime, interval_time=IntervalTime,
-               interval=Interval}, Time) ->
-    NIntervalTime = IntervalTime-PrevTime+Time,
+timeout(
+    #state{
+        time = PrevTime,
+        interval_time = IntervalTime,
+        interval = Interval
+    },
+    Time
+) ->
+    NIntervalTime = IntervalTime - PrevTime + Time,
     Time + max(0, Interval - NIntervalTime).
 
 %% Internal
 
-queue(_, QueueDelay, #state{target=Target}) when QueueDelay < Target ->
+queue(_, QueueDelay, #state{target = Target}) when QueueDelay < Target ->
     fast;
-queue(0, 0, #state{target=0}) ->
+queue(0, 0, #state{target = 0}) ->
     fast;
 queue(_, _, _) ->
     slow.
 
-next(Status, #state{status=Status, queue=Status} = State, Time) ->
-    State#state{time=Time};
-next(NStatus, #state{queue=NStatus, interval=Interval, time=PrevTime,
-                     interval_time=IntervalTime} = State, Time) ->
-    case IntervalTime-PrevTime+Time of
+next(Status, #state{status = Status, queue = Status} = State, Time) ->
+    State#state{time = Time};
+next(
+    NStatus,
+    #state{
+        queue = NStatus,
+        interval = Interval,
+        time = PrevTime,
+        interval_time = IntervalTime
+    } = State,
+    Time
+) ->
+    case IntervalTime - PrevTime + Time of
         NIntervalTime when NIntervalTime >= Interval ->
-            State#state{status=NStatus, interval_time=0, time=Time};
+            State#state{status = NStatus, interval_time = 0, time = Time};
         NIntervalTime ->
-            State#state{interval_time=NIntervalTime, time=Time}
+            State#state{interval_time = NIntervalTime, time = Time}
     end;
 next(NStatus, #state{} = State, Time) ->
-    State#state{queue=NStatus, interval_time=0, time=Time}.
+    State#state{queue = NStatus, interval_time = 0, time = Time}.
 
-alarm_post(#state{status=fast, alarm=Alarm}) ->
+alarm_post(#state{status = fast, alarm = Alarm}) ->
     case sbroker_test_handler:get_alarms() of
         [] ->
             true;
@@ -110,7 +151,7 @@ alarm_post(#state{status=fast, alarm=Alarm}) ->
             ct:pal("Alarm set"),
             false
     end;
-alarm_post(#state{status=slow, alarm=Alarm}) ->
+alarm_post(#state{status = slow, alarm = Alarm}) ->
     case sbroker_test_handler:get_alarms() of
         [] ->
             ct:pal("Alarm clear"),

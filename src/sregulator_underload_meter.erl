@@ -57,114 +57,149 @@
 %% types
 
 -type spec() ::
-    #{alarm    => Alarm :: any(),
-      target   => Target :: integer(),
-      interval => Interval :: pos_integer()}.
+    #{
+        alarm => Alarm :: any(),
+        target => Target :: integer(),
+        interval => Interval :: pos_integer()
+    }.
 
--record(state, {target :: integer(),
-                interval :: pos_integer(),
-                alarm_id :: any(),
-                status = clear :: clear | set,
-                toggle_next = infinity :: integer() | infinity}).
+-record(state, {
+    target :: integer(),
+    interval :: pos_integer(),
+    alarm_id :: any(),
+    status = clear :: clear | set,
+    toggle_next = infinity :: integer() | infinity
+}).
 
 %% @private
 -spec init(Time, Spec) -> {State, infinity} when
-      Time :: integer(),
-      Spec :: spec(),
-      State :: #state{}.
+    Time :: integer(),
+    Spec :: spec(),
+    State :: #state{}.
 init(_, Spec) ->
     AlarmId = sbroker_util:alarm(underload, Spec),
     Target = sbroker_util:relative_target(Spec),
     Interval = sbroker_util:interval(Spec),
     alarm_handler:clear_alarm(AlarmId),
-    {#state{target=Target, interval=Interval, alarm_id=AlarmId}, infinity}.
+    {#state{target = Target, interval = Interval, alarm_id = AlarmId}, infinity}.
 
 %% @private
 -spec handle_update(QueueDelay, ProcessDelay, RelativeTime, Time, State) ->
-    {NState, Next} when
-      QueueDelay :: non_neg_integer(),
-      ProcessDelay :: non_neg_integer(),
-      RelativeTime :: integer(),
-      Time :: integer(),
-      State :: #state{},
-      NState :: #state{},
-      Next :: integer() | infinity.
-handle_update(_, _, RelativeTime, Time,
-              #state{status=clear, target=Target, interval=Interval,
-                     alarm_id=AlarmId, toggle_next=ToggleNext} = State) ->
+    {NState, Next}
+when
+    QueueDelay :: non_neg_integer(),
+    ProcessDelay :: non_neg_integer(),
+    RelativeTime :: integer(),
+    Time :: integer(),
+    State :: #state{},
+    NState :: #state{},
+    Next :: integer() | infinity.
+handle_update(
+    _,
+    _,
+    RelativeTime,
+    Time,
+    #state{
+        status = clear,
+        target = Target,
+        interval = Interval,
+        alarm_id = AlarmId,
+        toggle_next = ToggleNext
+    } = State
+) ->
     if
         -RelativeTime < Target andalso ToggleNext == infinity ->
             {State, ToggleNext};
         -RelativeTime < Target ->
-            {State#state{toggle_next=infinity}, infinity};
+            {State#state{toggle_next = infinity}, infinity};
         ToggleNext =:= infinity ->
             NToggleNext = Time + Interval,
-            {State#state{toggle_next=NToggleNext}, NToggleNext};
+            {State#state{toggle_next = NToggleNext}, NToggleNext};
         ToggleNext > Time ->
             {State, ToggleNext};
         true ->
             alarm_handler:set_alarm({AlarmId, {valve_slow, self()}}),
-            {State#state{status=set, toggle_next=infinity}, infinity}
+            {State#state{status = set, toggle_next = infinity}, infinity}
     end;
-handle_update(_, _, RelativeTime, Time,
-              #state{status=set, target=Target, interval=Interval,
-                     alarm_id=AlarmId, toggle_next=ToggleNext} = State) ->
+handle_update(
+    _,
+    _,
+    RelativeTime,
+    Time,
+    #state{
+        status = set,
+        target = Target,
+        interval = Interval,
+        alarm_id = AlarmId,
+        toggle_next = ToggleNext
+    } = State
+) ->
     if
         -RelativeTime < Target andalso ToggleNext == infinity ->
             NToggleNext = Time + Interval,
-            {State#state{toggle_next=NToggleNext}, NToggleNext};
+            {State#state{toggle_next = NToggleNext}, NToggleNext};
         -RelativeTime < Target andalso ToggleNext > Time ->
             {State, ToggleNext};
         -RelativeTime < Target ->
             alarm_handler:clear_alarm(AlarmId),
-            {State#state{status=clear, toggle_next=infinity}, infinity};
+            {State#state{status = clear, toggle_next = infinity}, infinity};
         ToggleNext =:= infinity ->
             {State, infinity};
         true ->
-            {State#state{toggle_next=infinity}, infinity}
+            {State#state{toggle_next = infinity}, infinity}
     end.
 
 %% @private
 -spec handle_info(Msg, Time, State) -> {State, Next} when
-      Msg :: any(),
-      Time :: integer(),
-      State :: #state{},
-      Next :: integer() | infinity.
-handle_info(_, Time, #state{toggle_next=ToggleNext} = State) ->
+    Msg :: any(),
+    Time :: integer(),
+    State :: #state{},
+    Next :: integer() | infinity.
+handle_info(_, Time, #state{toggle_next = ToggleNext} = State) ->
     {State, max(Time, ToggleNext)}.
 
 %% @private
 -spec code_change(OldVsn, Time, State, Extra) -> {NState, Next} when
-      OldVsn :: any(),
-      Time :: integer(),
-      State :: #state{},
-      Extra :: any(),
-      NState :: #state{},
-      Next :: integer() | infinity.
-code_change(_, Time, #state{toggle_next=ToggleNext} = State, _) ->
+    OldVsn :: any(),
+    Time :: integer(),
+    State :: #state{},
+    Extra :: any(),
+    NState :: #state{},
+    Next :: integer() | infinity.
+code_change(_, Time, #state{toggle_next = ToggleNext} = State, _) ->
     {State, max(Time, ToggleNext)}.
 
 %% @private
 -spec config_change(Spec, Time, State) -> {NState, Next} when
-      Spec :: spec(),
-      Time :: integer(),
-      State :: #state{},
-      NState :: #state{},
-      Next :: integer() | infinity.
-config_change(Spec, Time,
-              #state{alarm_id=AlarmId, interval=Interval, status=Status,
-                     toggle_next=ToggleNext} = State) ->
+    Spec :: spec(),
+    Time :: integer(),
+    State :: #state{},
+    NState :: #state{},
+    Next :: integer() | infinity.
+config_change(
+    Spec,
+    Time,
+    #state{
+        alarm_id = AlarmId,
+        interval = Interval,
+        status = Status,
+        toggle_next = ToggleNext
+    } = State
+) ->
     case sbroker_util:alarm(underload, Spec) of
         AlarmId when ToggleNext == infinity ->
             NTarget = sbroker_util:relative_target(Spec),
             NInterval = sbroker_util:interval(Spec),
-            {State#state{target=NTarget, interval=NInterval}, infinity};
+            {State#state{target = NTarget, interval = NInterval}, infinity};
         AlarmId when is_integer(ToggleNext) ->
             NTarget = sbroker_util:relative_target(Spec),
             NInterval = sbroker_util:interval(Spec),
-            NToggleNext = ToggleNext+NInterval-Interval,
-            NState = State#state{target=NTarget, interval=NInterval,
-                                 toggle_next=NToggleNext},
+            NToggleNext = ToggleNext + NInterval - Interval,
+            NState = State#state{
+                target = NTarget,
+                interval = NInterval,
+                toggle_next = NToggleNext
+            },
             {NState, max(Time, NToggleNext)};
         _ when Status == set ->
             alarm_handler:clear_alarm(AlarmId),
@@ -175,9 +210,9 @@ config_change(Spec, Time,
 
 %% @private
 -spec terminate(Reason, State) -> ok when
-      Reason :: any(),
-      State :: #state{}.
-terminate(_, #state{status=set, alarm_id=AlarmId}) ->
+    Reason :: any(),
+    State :: #state{}.
+terminate(_, #state{status = set, alarm_id = AlarmId}) ->
     alarm_handler:clear_alarm(AlarmId);
 terminate(_, _) ->
     ok.

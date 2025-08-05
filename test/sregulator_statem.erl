@@ -46,10 +46,24 @@
 -export([change_code/3]).
 -export([get_modules/2]).
 
--record(state, {sregulator, queue=[], queue_mod, queue_out, queue_drops,
-                queue_state=[], valve=[], valve_mod, valve_opens,
-                valve_state=[], valve_status, meter_mod, cancels=[], done=[],
-                sys=running, change}).
+-record(state, {
+    sregulator,
+    queue = [],
+    queue_mod,
+    queue_out,
+    queue_drops,
+    queue_state = [],
+    valve = [],
+    valve_mod,
+    valve_opens,
+    valve_state = [],
+    valve_status,
+    meter_mod,
+    cancels = [],
+    done = [],
+    sys = running,
+    change
+}).
 
 -define(TIMEOUT, 5000).
 
@@ -66,53 +80,58 @@ check(CounterExample, Opts) ->
     proper:check(prop_sregulator(), CounterExample, Opts).
 
 prop_sregulator() ->
-    ?FORALL(Cmds, commands(?MODULE),
-            ?TRAPEXIT(begin
-                          {History, State, Result} = run_commands(?MODULE, Cmds),
-                          cleanup(State),
-                          ?WHENFAIL(begin
-                                        io:format("History~n~p", [History]),
-                                        io:format("State~n~p", [State]),
-                                        io:format("Result~n~p", [Result])
-                                    end,
-                                    aggregate(command_names(Cmds), Result =:= ok))
-                      end)).
-
+    ?FORALL(
+        Cmds,
+        commands(?MODULE),
+        ?TRAPEXIT(begin
+            {History, State, Result} = run_commands(?MODULE, Cmds),
+            cleanup(State),
+            ?WHENFAIL(
+                begin
+                    io:format("History~n~p", [History]),
+                    io:format("State~n~p", [State]),
+                    io:format("Result~n~p", [Result])
+                end,
+                aggregate(command_names(Cmds), Result =:= ok)
+            )
+        end)
+    ).
 
 initial_state() ->
     #state{}.
 
-command(#state{sregulator=undefined} = State) ->
+command(#state{sregulator = undefined} = State) ->
     {call, ?MODULE, start_link, start_link_args(State)};
-command(#state{sys=running} = State) ->
-    frequency([{10, {call, sregulator, update, update_args(State)}},
-               {10, {call, ?MODULE, spawn_client,
-                     spawn_client_args(State)}},
-               {4, {call, ?MODULE, continue, continue_args(State)}},
-               {3, {call, ?MODULE, done, done_args(State)}},
-               {3, {call, sregulator, timeout, timeout_args(State)}},
-               {3, {call, ?MODULE, cancel, cancel_args(State)}},
-               {2, {call, sregulator, len, len_args(State)}},
-               {2, {call, sregulator, size, size_args(State)}},
-               {2, {call, ?MODULE, change_config,
-                    change_config_args(State)}},
-               {2, {call, ?MODULE, shutdown_client,
-                    shutdown_client_args(State)}},
-               {1, {call, sys, get_status, get_status_args(State)}},
-               {1, {call, sys, get_state, get_state_args(State)}},
-               {1, {call, ?MODULE, replace_state, replace_state_args(State)}},
-               {1, {call, sys, suspend, suspend_args(State)}},
-               {1, {call, ?MODULE, get_modules, get_modules_args(State)}}]);
-command(#state{sys=suspended} = State) ->
-    frequency([{5, {call, sys, resume, resume_args(State)}},
-               {2, {call, ?MODULE, change_code, change_code_args(State)}},
-               {1, {call, sys, get_status, get_status_args(State)}},
-               {1, {call, sys, get_state, get_state_args(State)}},
-               {1, {call, ?MODULE, replace_state, replace_state_args(State)}}]).
+command(#state{sys = running} = State) ->
+    frequency([
+        {10, {call, sregulator, update, update_args(State)}},
+        {10, {call, ?MODULE, spawn_client, spawn_client_args(State)}},
+        {4, {call, ?MODULE, continue, continue_args(State)}},
+        {3, {call, ?MODULE, done, done_args(State)}},
+        {3, {call, sregulator, timeout, timeout_args(State)}},
+        {3, {call, ?MODULE, cancel, cancel_args(State)}},
+        {2, {call, sregulator, len, len_args(State)}},
+        {2, {call, sregulator, size, size_args(State)}},
+        {2, {call, ?MODULE, change_config, change_config_args(State)}},
+        {2, {call, ?MODULE, shutdown_client, shutdown_client_args(State)}},
+        {1, {call, sys, get_status, get_status_args(State)}},
+        {1, {call, sys, get_state, get_state_args(State)}},
+        {1, {call, ?MODULE, replace_state, replace_state_args(State)}},
+        {1, {call, sys, suspend, suspend_args(State)}},
+        {1, {call, ?MODULE, get_modules, get_modules_args(State)}}
+    ]);
+command(#state{sys = suspended} = State) ->
+    frequency([
+        {5, {call, sys, resume, resume_args(State)}},
+        {2, {call, ?MODULE, change_code, change_code_args(State)}},
+        {1, {call, sys, get_status, get_status_args(State)}},
+        {1, {call, sys, get_state, get_state_args(State)}},
+        {1, {call, ?MODULE, replace_state, replace_state_args(State)}}
+    ]).
 
 precondition(State, {call, _, start_link, Args}) ->
     start_link_pre(State, Args);
-precondition(#state{sregulator=undefined}, _) ->
+precondition(#state{sregulator = undefined}, _) ->
     false;
 precondition(State, {call, _, suspend, Args}) ->
     suspend_pre(State, Args);
@@ -120,7 +139,7 @@ precondition(State, {call, _, change_code, Args}) ->
     change_code_pre(State, Args);
 precondition(State, {call, _, resume, Args}) ->
     resume_pre(State, Args);
-precondition(#state{sys=suspended}, _) ->
+precondition(#state{sys = suspended}, _) ->
     false;
 precondition(_State, _Call) ->
     true.
@@ -175,7 +194,7 @@ postcondition(State, {call, _, continue, Args}, Result) ->
 postcondition(State, {call, _, done, Args}, Result) ->
     done_post(State, Args, Result);
 postcondition(State, {call, _, timeout, Args}, Result) ->
-   timeout_post(State, Args, Result);
+    timeout_post(State, Args, Result);
 postcondition(State, {call, _, cancel, Args}, Result) ->
     cancel_post(State, Args, Result);
 postcondition(State, {call, _, len, Args}, Result) ->
@@ -203,9 +222,9 @@ postcondition(State, {call, _, resume, Args}, Result) ->
 postcondition(_State, _Call, _Result) ->
     true.
 
-cleanup(#state{sregulator=undefined}) ->
+cleanup(#state{sregulator = undefined}) ->
     application:unset_env(sbroker, ?MODULE);
-cleanup(#state{sregulator=Regulator}) ->
+cleanup(#state{sregulator = Regulator}) ->
     application:unset_env(sbroker, ?MODULE),
     sys:terminate(Regulator, normal).
 
@@ -213,25 +232,35 @@ start_link_args(_) ->
     [init()].
 
 init() ->
-    frequency([{30, {ok, {queue_spec(), valve_spec(), [meter_spec()]}}},
-               {1, ignore},
-               {1, bad}]).
+    frequency([
+        {30, {ok, {queue_spec(), valve_spec(), [meter_spec()]}}},
+        {1, ignore},
+        {1, bad}
+    ]).
 
 queue_spec() ->
-    {oneof([sbroker_statem_queue, sbroker_statem2_queue]),
-     {oneof([out, out_r]),
-      ?SUCHTHAT(Drops, resize(4, list(oneof([0, choose(1, 2)]))),
-                Drops =/= [])}}.
+    {oneof([sbroker_statem_queue, sbroker_statem2_queue]), {
+        oneof([out, out_r]),
+        ?SUCHTHAT(
+            Drops,
+            resize(4, list(oneof([0, choose(1, 2)]))),
+            Drops =/= []
+        )
+    }}.
 
 valve_spec() ->
-    {oneof([sregulator_statem_valve, sregulator_statem2_valve]),
-     ?SUCHTHAT(Opens, resize(4, list(oneof([open, closed]))), Opens =/= [])}.
+    {
+        oneof([sregulator_statem_valve, sregulator_statem2_valve]),
+        ?SUCHTHAT(Opens, resize(4, list(oneof([open, closed]))), Opens =/= [])
+    }.
 
 meter_spec() ->
-    oneof([{sbroker_overload_meter, #{}},
-           {sregulator_underload_meter, #{}},
-           {sbetter_statem_meter, {self, #{update => 1000}}},
-           {sregulator_update_meter, [{undefined, ask, #{update => 1000}}]}]).
+    oneof([
+        {sbroker_overload_meter, #{}},
+        {sregulator_underload_meter, #{}},
+        {sbetter_statem_meter, {self, #{update => 1000}}},
+        {sregulator_update_meter, [{undefined, ask, #{update => 1000}}]}
+    ]).
 
 start_link(Init) ->
     application:set_env(sbroker, ?MODULE, update_spec(Init)),
@@ -242,9 +271,8 @@ start_link(Init) ->
                 {'EXIT', _, Reason} ->
                     process_flag(trap_exit, Trap),
                     Error
-            after
-                100 ->
-                    exit({timeout, Error})
+            after 100 ->
+                exit({timeout, Error})
             end;
         Other ->
             process_flag(trap_exit, Trap),
@@ -260,18 +288,27 @@ init([]) ->
     {ok, Result} = application:get_env(sbroker, ?MODULE),
     Result.
 
-start_link_pre(#state{sregulator=Regulator}, _) ->
+start_link_pre(#state{sregulator = Regulator}, _) ->
     Regulator =:= undefined.
 
-start_link_next(State, Value,
-                [{ok, {{QMod, {QOut, QDrops}},
-                       {VMod, [Open | VState] = VOpens},
-                       [{MeterMod, _}]}}]) ->
+start_link_next(
+    State,
+    Value,
+    [{ok, {{QMod, {QOut, QDrops}}, {VMod, [Open | VState] = VOpens}, [{MeterMod, _}]}}]
+) ->
     Regulator = {call, erlang, element, [2, Value]},
-    State#state{sregulator=Regulator, queue_mod=QMod, queue_out=QOut,
-                queue_drops=QDrops, queue_state=QDrops, valve_mod=VMod,
-                valve_opens=VOpens, valve_state=VState, valve_status=Open,
-                meter_mod=MeterMod};
+    State#state{
+        sregulator = Regulator,
+        queue_mod = QMod,
+        queue_out = QOut,
+        queue_drops = QDrops,
+        queue_state = QDrops,
+        valve_mod = VMod,
+        valve_opens = VOpens,
+        valve_state = VState,
+        valve_status = Open,
+        meter_mod = MeterMod
+    };
 start_link_next(State, _, [ignore]) ->
     State;
 start_link_next(State, _, [bad]) ->
@@ -286,7 +323,7 @@ start_link_post(_, [bad], {error, {bad_return_value, bad}}) ->
 start_link_post(_, _, _) ->
     false.
 
-update_args(#state{sregulator=Regulator}) ->
+update_args(#state{sregulator = Regulator}) ->
     [Regulator, choose(-10, 10), ?TIMEOUT].
 
 update_next(State, _, _) ->
@@ -295,32 +332,46 @@ update_next(State, _, _) ->
 update_post(State, _, _) ->
     valve_post(State, fun queue_post/1).
 
-spawn_client_args(#state{sregulator=Regulator}) ->
+spawn_client_args(#state{sregulator = Regulator}) ->
     [Regulator, oneof([async_ask, nb_ask, dynamic_ask])].
 
 spawn_client(Broker, Fun) ->
     {ok, Pid, MRef} = proc_lib:start(?MODULE, client_init, [Broker, Fun]),
     {Pid, MRef}.
 
-spawn_client_next(#state{valve_status=open, queue=[], valve=V} = State, Client,
-             [_, _]) ->
-    valve_next(State#state{valve=V++[Client]});
-spawn_client_next(#state{valve_status=closed} = State, _, [_, nb_ask]) ->
+spawn_client_next(
+    #state{valve_status = open, queue = [], valve = V} = State,
+    Client,
+    [_, _]
+) ->
+    valve_next(State#state{valve = V ++ [Client]});
+spawn_client_next(#state{valve_status = closed} = State, _, [_, nb_ask]) ->
     valve_next(State, fun queue_next/1);
-spawn_client_next(#state{valve_status=closed, queue=Q} = State, Client,
-                  [_, AskFun])
-  when AskFun == async_ask; AskFun == dynamic_ask ->
-    queue_next(State#state{queue=Q++[Client]}, fun valve_next/1).
+spawn_client_next(
+    #state{valve_status = closed, queue = Q} = State,
+    Client,
+    [_, AskFun]
+) when
+    AskFun == async_ask; AskFun == dynamic_ask
+->
+    queue_next(State#state{queue = Q ++ [Client]}, fun valve_next/1).
 
-spawn_client_post(#state{valve_status=open, queue=[], valve=V} = State,
-                  [_, _], Client) ->
-    go_post(Client) andalso valve_post(State#state{valve=V++[Client]});
-spawn_client_post(#state{valve_status=closed} = State, [_, nb_ask], _) ->
+spawn_client_post(
+    #state{valve_status = open, queue = [], valve = V} = State,
+    [_, _],
+    Client
+) ->
+    go_post(Client) andalso valve_post(State#state{valve = V ++ [Client]});
+spawn_client_post(#state{valve_status = closed} = State, [_, nb_ask], _) ->
     valve_post(State, fun queue_post/1);
-spawn_client_post(#state{valve_status=closed, queue=Q} = State, [_, AskFun],
-                  Client)
-  when AskFun == async_ask; AskFun == dynamic_ask ->
-    queue_post(State#state{queue=Q++[Client]}, fun valve_post/1).
+spawn_client_post(
+    #state{valve_status = closed, queue = Q} = State,
+    [_, AskFun],
+    Client
+) when
+    AskFun == async_ask; AskFun == dynamic_ask
+->
+    queue_post(State#state{queue = Q ++ [Client]}, fun valve_post/1).
 
 continue(Regulator, undefined) ->
     Result = sregulator:continue(Regulator, make_ref()),
@@ -328,64 +379,100 @@ continue(Regulator, undefined) ->
 continue(_, Client) ->
     client_call(Client, continue).
 
-continue_args(#state{sregulator=Regulator, queue=Q, valve=V, done=Done,
-                     cancels=Cancels}) ->
+continue_args(#state{
+    sregulator = Regulator,
+    queue = Q,
+    valve = V,
+    done = Done,
+    cancels = Cancels
+}) ->
     case Q ++ V ++ Done ++ Cancels of
         [] ->
             [Regulator, undefined];
         Clients ->
-            [Regulator, frequency([{9, elements(Clients)},
-                                   {1, undefined}])]
+            [
+                Regulator,
+                frequency([
+                    {9, elements(Clients)},
+                    {1, undefined}
+                ])
+            ]
     end.
 
-continue_next(#state{valve_state=[], valve_opens=VState} = State, Value,
-              Args) ->
-    continue_next(State#state{valve_state=VState}, Value, Args);
-continue_next(#state{valve_state=[open | VState], valve=V} = State, _,
-              [_, Client]) ->
+continue_next(
+    #state{valve_state = [], valve_opens = VState} = State,
+    Value,
+    Args
+) ->
+    continue_next(State#state{valve_state = VState}, Value, Args);
+continue_next(
+    #state{valve_state = [open | VState], valve = V} = State,
+    _,
+    [_, Client]
+) ->
     case lists:member(Client, V) of
         true ->
-            valve_next(State#state{valve_status=open, valve_state=VState},
-                       fun queue_next/1);
+            valve_next(
+                State#state{valve_status = open, valve_state = VState},
+                fun queue_next/1
+            );
         false ->
             valve_next(State, fun queue_next/1)
     end;
-continue_next(#state{valve_state=[closed | VState], valve=V} = State, _,
-              [_, Client]) ->
+continue_next(
+    #state{valve_state = [closed | VState], valve = V} = State,
+    _,
+    [_, Client]
+) ->
     case lists:member(Client, V) of
         true ->
-            NState = State#state{valve_status=closed, valve_state=VState,
-                                 valve=V--[Client]},
+            NState = State#state{
+                valve_status = closed,
+                valve_state = VState,
+                valve = V -- [Client]
+            },
             valve_next(NState, fun queue_next/1);
         false ->
             valve_next(State, fun queue_next/1)
     end.
 
-continue_post(#state{valve_state=[], valve_opens=VState} = State, Args,
-              Result) ->
-    continue_post(State#state{valve_state=VState}, Args, Result);
-continue_post(#state{valve_state=[open | VState], valve=V} = State, [_, Client],
-              Result) ->
+continue_post(
+    #state{valve_state = [], valve_opens = VState} = State,
+    Args,
+    Result
+) ->
+    continue_post(State#state{valve_state = VState}, Args, Result);
+continue_post(
+    #state{valve_state = [open | VState], valve = V} = State,
+    [_, Client],
+    Result
+) ->
     case lists:member(Client, V) of
         true ->
-            NState = State#state{valve_status=open, valve_state=VState},
+            NState = State#state{valve_status = open, valve_state = VState},
             call_post(Client, go, Result) andalso
-            valve_post(NState, fun queue_post/1);
+                valve_post(NState, fun queue_post/1);
         false ->
             call_post(Client, not_found, Result) andalso
-            valve_post(State, fun queue_post/1)
+                valve_post(State, fun queue_post/1)
     end;
-continue_post(#state{valve_state=[closed | VState], valve=V} = State,
-              [_, Client], Result) ->
+continue_post(
+    #state{valve_state = [closed | VState], valve = V} = State,
+    [_, Client],
+    Result
+) ->
     case lists:member(Client, V) of
         true ->
-            NState = State#state{valve_status=closed, valve_state=VState,
-                                 valve=V--[Client]},
+            NState = State#state{
+                valve_status = closed,
+                valve_state = VState,
+                valve = V -- [Client]
+            },
             call_post(Client, stop, Result) andalso
-            valve_post(NState, fun queue_post/1);
+                valve_post(NState, fun queue_post/1);
         false ->
             call_post(Client, not_found, Result) andalso
-            valve_post(State, fun queue_post/1)
+                valve_post(State, fun queue_post/1)
     end.
 
 done(Regulator, undefined) ->
@@ -397,12 +484,12 @@ done(_, Client) ->
 done_args(State) ->
     continue_args(State).
 
-done_next(#state{valve=V} = State, _, [_, Client]) ->
-    NState = State#state{valve=V--[Client]},
+done_next(#state{valve = V} = State, _, [_, Client]) ->
+    NState = State#state{valve = V -- [Client]},
     valve_next(NState, fun queue_next/1).
 
-done_post(#state{valve=V} = State, [_, Client], Result) ->
-    NState = State#state{valve=V--[Client]},
+done_post(#state{valve = V} = State, [_, Client], Result) ->
+    NState = State#state{valve = V -- [Client]},
     Post = valve_post(NState, fun queue_post/1),
     case lists:member(Client, V) of
         true ->
@@ -411,7 +498,7 @@ done_post(#state{valve=V} = State, [_, Client], Result) ->
             Post andalso call_post(Client, not_found, Result)
     end.
 
-timeout_args(#state{sregulator=Regulator}) ->
+timeout_args(#state{sregulator = Regulator}) ->
     [Regulator].
 
 timeout_next(State, _, _) ->
@@ -428,37 +515,41 @@ cancel(Regulator, undefined) ->
 cancel(_, Client) ->
     client_call(Client, cancel).
 
-cancel_next(#state{queue=Q, cancels=Cancels} =State, _, [_, Client]) ->
+cancel_next(#state{queue = Q, cancels = Cancels} = State, _, [_, Client]) ->
     case lists:member(Client, Q) of
         true ->
-            queue_next(State#state{queue=Q--[Client],
-                                   cancels=Cancels++[Client]},
-                       fun valve_next/1);
+            queue_next(
+                State#state{
+                    queue = Q -- [Client],
+                    cancels = Cancels ++ [Client]
+                },
+                fun valve_next/1
+            );
         false ->
-            queue_next(State,fun valve_next/1)
+            queue_next(State, fun valve_next/1)
     end.
 
-cancel_post(#state{queue=Q} = State, [_, Client], Result) ->
+cancel_post(#state{queue = Q} = State, [_, Client], Result) ->
     case lists:member(Client, Q) of
         true when Result =:= 1 ->
-            queue_post(State#state{queue=Q--[Client]}, fun valve_post/1);
+            queue_post(State#state{queue = Q -- [Client]}, fun valve_post/1);
         true ->
             ct:pal("Cancel: ~p", [Result]),
             false;
         false when Result =:= false ->
-            queue_post(State#state{queue=Q--[Client]}, fun valve_post/1);
+            queue_post(State#state{queue = Q -- [Client]}, fun valve_post/1);
         false ->
             ct:pal("Cancel: ~p", [Result]),
             false
     end.
 
-len_args(#state{sregulator=Regulator}) ->
+len_args(#state{sregulator = Regulator}) ->
     [Regulator, ?TIMEOUT].
 
 len_next(State, _, _) ->
     valve_next(State, fun queue_next/1).
 
-len_post(#state{queue=Q} = State, _, Len) ->
+len_post(#state{queue = Q} = State, _, Len) ->
     length(Q) =:= Len andalso valve_post(State, fun queue_post/1).
 
 size_args(State) ->
@@ -467,10 +558,10 @@ size_args(State) ->
 size_next(State, _, _) ->
     valve_next(State, fun queue_next/1).
 
-size_post(#state{valve=V} = State, _, Size) ->
+size_post(#state{valve = V} = State, _, Size) ->
     length(V) =:= Size andalso valve_post(State, fun queue_post/1).
 
-change_config_args(#state{sregulator=Regulator}) ->
+change_config_args(#state{sregulator = Regulator}) ->
     [Regulator, init()].
 
 change_config(Regulator, Init) ->
@@ -482,18 +573,21 @@ change_config_next(State, _, [_, ignore]) ->
 change_config_next(State, _, [_, bad]) ->
     valve_next(State, fun queue_next/1);
 change_config_next(State, _, [_, {ok, {QSpec, VSpec, [{MeterMod, _}]}}]) ->
-    NState = queue_change_next(QSpec, State#state{meter_mod=MeterMod}),
+    NState = queue_change_next(QSpec, State#state{meter_mod = MeterMod}),
     valve_change_next(VSpec, NState).
 
 change_config_post(State, [_, ignore], ok) ->
     valve_post(State, fun queue_post/1);
 change_config_post(State, [_, bad], {error, {bad_return_value, bad}}) ->
     valve_post(State, fun queue_post/1);
-change_config_post(State,
-                   [_, {ok, {QSpec, VSpec, [{MeterMod, _}]}}], ok) ->
-    NState = State#state{meter_mod=MeterMod},
+change_config_post(
+    State,
+    [_, {ok, {QSpec, VSpec, [{MeterMod, _}]}}],
+    ok
+) ->
+    NState = State#state{meter_mod = MeterMod},
     queue_change_post(QSpec, NState) andalso
-    valve_change_post(VSpec, queue_change_next(QSpec, NState));
+        valve_change_post(VSpec, queue_change_next(QSpec, NState));
 change_config_post(_, _, _) ->
     false.
 
@@ -513,38 +607,51 @@ shutdown_client(_, Client) ->
             ok;
         {'DOWN', MRef, _, _, Reason} ->
             exit(Reason)
-    after
-        100 ->
-            exit(timeout)
+    after 100 ->
+        exit(timeout)
     end.
 
 shutdown_client_next(State, _, [_, undefined]) ->
     queue_next(State, fun valve_next/1);
-shutdown_client_next(#state{queue=Q, valve=V, cancels=Cancels,
-                            done=Done} = State, _, [_, Client]) ->
+shutdown_client_next(
+    #state{
+        queue = Q,
+        valve = V,
+        cancels = Cancels,
+        done = Done
+    } = State,
+    _,
+    [_, Client]
+) ->
     case lists:member(Client, Q) orelse lists:member(Client, V) of
         true ->
-            queue_next(State#state{queue=Q--[Client]},
-                       fun(#state{valve=NV, done=NDone} = NState) ->
-                               NState2 = NState#state{valve=NV--[Client],
-                                                      done=NDone--[Client]},
-                               valve_next(NState2)
-                       end);
+            queue_next(
+                State#state{queue = Q -- [Client]},
+                fun(#state{valve = NV, done = NDone} = NState) ->
+                    NState2 = NState#state{
+                        valve = NV -- [Client],
+                        done = NDone -- [Client]
+                    },
+                    valve_next(NState2)
+                end
+            );
         false ->
-            State#state{cancels=Cancels--[Client], done=Done--[Client]}
+            State#state{cancels = Cancels -- [Client], done = Done -- [Client]}
     end.
 
 shutdown_client_post(State, [_, undefined], _) ->
     queue_post(State, fun valve_post/1);
-shutdown_client_post(#state{queue=Q, valve=V} = State, [_, Client], _) ->
+shutdown_client_post(#state{queue = Q, valve = V} = State, [_, Client], _) ->
     case lists:member(Client, Q) orelse lists:member(Client, V) of
         true ->
-            {Drops, NState} = queue_aqm(State#state{queue=Q--[Client]}),
-            #state{valve=NV, cancels=Cancels, done=Done} = NState,
-            NState2 = NState#state{valve=NV--[Client],
-                                   cancels=Cancels--[Client],
-                                   done=Done--[Client]},
-            drops_post(Drops--[Client]) andalso valve_post(NState2);
+            {Drops, NState} = queue_aqm(State#state{queue = Q -- [Client]}),
+            #state{valve = NV, cancels = Cancels, done = Done} = NState,
+            NState2 = NState#state{
+                valve = NV -- [Client],
+                cancels = Cancels -- [Client],
+                done = Done -- [Client]
+            },
+            drops_post(Drops -- [Client]) andalso valve_post(NState2);
         false ->
             true
     end.
@@ -555,12 +662,14 @@ get_status_args(State) ->
 get_status_next(State, _, _) ->
     sys_next(State).
 
-get_status_post(#state{sregulator=Regulator, sys=Sys} = State, _,
-                {status, Pid, {module, Mod},
-                 [_, SysState, Parent, _, Status]}) ->
+get_status_post(
+    #state{sregulator = Regulator, sys = Sys} = State,
+    _,
+    {status, Pid, {module, Mod}, [_, SysState, Parent, _, Status]}
+) ->
     Pid =:= Regulator andalso Mod =:= sregulator andalso
-    SysState =:= Sys andalso Parent =:= self() andalso
-    status_post(State, Status) andalso sys_post(State);
+        SysState =:= Sys andalso Parent =:= self() andalso
+        status_post(State, Status) andalso sys_post(State);
 get_status_post(_, _, Result) ->
     ct:pal("Full status: ~p", [Result]),
     false.
@@ -589,16 +698,16 @@ replace_state_post(State, _, Result) ->
 suspend_args(State) ->
     sys_args(State).
 
-suspend_pre(#state{sys=SysState}, _) ->
+suspend_pre(#state{sys = SysState}, _) ->
     SysState =:= running.
 
 suspend_next(State, _, _) ->
-    State#state{sys=suspended}.
+    State#state{sys = suspended}.
 
 suspend_post(_, _, _) ->
     true.
 
-get_modules_args(#state{sregulator=Regulator}) ->
+get_modules_args(#state{sregulator = Regulator}) ->
     [Regulator, ?TIMEOUT].
 
 get_modules(Regulator, Timeout) ->
@@ -608,8 +717,15 @@ get_modules(Regulator, Timeout) ->
 get_modules_next(State, _, _) ->
     valve_next(State, fun queue_next/1).
 
-get_modules_post(#state{queue_mod=QMod, valve_mod=VMod,
-                        meter_mod=MeterMod} = State, _, Result) ->
+get_modules_post(
+    #state{
+        queue_mod = QMod,
+        valve_mod = VMod,
+        meter_mod = MeterMod
+    } = State,
+    _,
+    Result
+) ->
     case lists:usort([?MODULE, QMod, VMod, MeterMod]) of
         Result ->
             valve_post(State, fun queue_post/1);
@@ -618,15 +734,17 @@ get_modules_post(#state{queue_mod=QMod, valve_mod=VMod,
             false
     end.
 
-change_code_args(#state{sregulator=Regulator}) ->
-    Mod = oneof([{?MODULE, init()},
-                 sbroker_statem_queue,
-                 sbroker_statem2_queue,
-                 sregulator_statem_valve,
-                 sregulator_statem2_valve,
-                 sbroker_overload_meter,
-                 sregulator_underload_meter,
-                 sregulator_update_meter]),
+change_code_args(#state{sregulator = Regulator}) ->
+    Mod = oneof([
+        {?MODULE, init()},
+        sbroker_statem_queue,
+        sbroker_statem2_queue,
+        sregulator_statem_valve,
+        sregulator_statem2_valve,
+        sbroker_overload_meter,
+        sregulator_underload_meter,
+        sregulator_update_meter
+    ]),
     [Regulator, Mod, ?TIMEOUT].
 
 change_code(Regulator, {?MODULE, Init}, Timeout) ->
@@ -635,24 +753,29 @@ change_code(Regulator, {?MODULE, Init}, Timeout) ->
 change_code(Regulator, Mod, Timeout) ->
     sys:change_code(Regulator, Mod, undefined, undefined, Timeout).
 
-change_code_pre(#state{sys=SysState}, _) ->
+change_code_pre(#state{sys = SysState}, _) ->
     SysState =:= suspended.
 
 change_code_next(State, _, [_, {?MODULE, {ok, _} = Init}, _]) ->
-    State#state{change=Init};
+    State#state{change = Init};
 change_code_next(State, _, [_, {?MODULE, _}, _]) ->
     State;
 change_code_next(State, _, [_, Mod, _]) ->
     change_code_queue(Mod, change_code_valve(Mod, State)).
 
-change_code_queue(Mod, #state{queue_mod=Mod, queue_drops=QDrops} = State) ->
-    State#state{queue_state=QDrops};
+change_code_queue(Mod, #state{queue_mod = Mod, queue_drops = QDrops} = State) ->
+    State#state{queue_state = QDrops};
 change_code_queue(_, State) ->
     State.
 
-change_code_valve(Mod, #state{valve_mod=Mod,
-                              valve_opens=[Status | VOpens]} = State) ->
-    State#state{valve_status=Status, valve_state=VOpens};
+change_code_valve(
+    Mod,
+    #state{
+        valve_mod = Mod,
+        valve_opens = [Status | VOpens]
+    } = State
+) ->
+    State#state{valve_status = Status, valve_state = VOpens};
 change_code_valve(_, State) ->
     State.
 
@@ -660,8 +783,11 @@ change_code_post(_, [_, {?MODULE, {ok, _}}, _], ok) ->
     true;
 change_code_post(_, [_, {?MODULE, ignore}, _], ok) ->
     true;
-change_code_post(_, [_, {?MODULE, bad}, _],
-                 {error, {bad_return_value, bad}}) ->
+change_code_post(
+    _,
+    [_, {?MODULE, bad}, _],
+    {error, {bad_return_value, bad}}
+) ->
     true;
 change_code_post(_, [_, Mod, _], ok) when is_atom(Mod) ->
     true;
@@ -671,22 +797,28 @@ change_code_post(_, _, _) ->
 resume_args(State) ->
     sys_args(State).
 
-resume_pre(#state{sys=SysState}, _) ->
+resume_pre(#state{sys = SysState}, _) ->
     SysState =:= suspended.
 
-resume_next(#state{change={ok, {QSpec, VSpec, [{MeterMod, _}]}}} = State, _,
-            _) ->
-    NState = State#state{sys=running, change=undefined, meter_mod=MeterMod},
+resume_next(
+    #state{change = {ok, {QSpec, VSpec, [{MeterMod, _}]}}} = State,
+    _,
+    _
+) ->
+    NState = State#state{sys = running, change = undefined, meter_mod = MeterMod},
     NState2 = queue_change_next(QSpec, NState),
     valve_change_next(VSpec, NState2);
 resume_next(State, _, _) ->
-    valve_next(State#state{sys=running}, fun queue_next/1).
+    valve_next(State#state{sys = running}, fun queue_next/1).
 
-resume_post(#state{change={ok, {QSpec, VSpec, [{MeterMod, _}]}}} = State, _,
-            _) ->
-    NState = State#state{sys=running, change=undefined, meter_mod=MeterMod},
+resume_post(
+    #state{change = {ok, {QSpec, VSpec, [{MeterMod, _}]}}} = State,
+    _,
+    _
+) ->
+    NState = State#state{sys = running, change = undefined, meter_mod = MeterMod},
     queue_change_post(QSpec, NState) andalso
-    valve_change_post(VSpec, queue_change_next(QSpec, NState));
+        valve_change_post(VSpec, queue_change_next(QSpec, NState));
 resume_post(State, _, _) ->
     valve_post(State, fun queue_post/1).
 
@@ -695,48 +827,62 @@ resume_post(State, _, _) ->
 valve_next(State) ->
     valve_next(State, fun(NState) -> NState end).
 
-valve_next(#state{valve_state=[], valve_opens=[_|_] = VState} = State, Close) ->
-    valve_next(State#state{valve_state=VState}, Close);
-valve_next(#state{valve_state=[open | VState]} = State, _) ->
-    NState = State#state{valve_status=open, valve_state=VState},
-    queue_next(NState,
-               fun(#state{queue=[], queue_drops=QDrops} = NState2) ->
-                       NState2#state{queue_state=QDrops};
-                  (#state{queue_out=out, queue=Q, valve=V} = NState2) ->
-                       NState3 = NState2#state{queue=tl(Q),
-                                               valve=V++[hd(Q)]},
-                       valve_next(NState3);
-                  (#state{queue_out=out_r, queue=Q, valve=V} = NState2) ->
-                       NState3 = NState2#state{queue=lists:droplast(Q),
-                                               valve=V++[lists:last(Q)]},
-                       valve_next(NState3)
-               end);
-valve_next(#state{valve_state=[closed | VState]} = State, Close) ->
-    Close(State#state{valve_status=closed, valve_state=VState}).
+valve_next(#state{valve_state = [], valve_opens = [_ | _] = VState} = State, Close) ->
+    valve_next(State#state{valve_state = VState}, Close);
+valve_next(#state{valve_state = [open | VState]} = State, _) ->
+    NState = State#state{valve_status = open, valve_state = VState},
+    queue_next(
+        NState,
+        fun
+            (#state{queue = [], queue_drops = QDrops} = NState2) ->
+                NState2#state{queue_state = QDrops};
+            (#state{queue_out = out, queue = Q, valve = V} = NState2) ->
+                NState3 = NState2#state{
+                    queue = tl(Q),
+                    valve = V ++ [hd(Q)]
+                },
+                valve_next(NState3);
+            (#state{queue_out = out_r, queue = Q, valve = V} = NState2) ->
+                NState3 = NState2#state{
+                    queue = lists:droplast(Q),
+                    valve = V ++ [lists:last(Q)]
+                },
+                valve_next(NState3)
+        end
+    );
+valve_next(#state{valve_state = [closed | VState]} = State, Close) ->
+    Close(State#state{valve_status = closed, valve_state = VState}).
 
 valve_post(State) ->
     valve_post(State, fun meter_post/1).
 
-valve_post(#state{valve_state=[], valve_opens=VState} = State, Close) ->
-    valve_post(State#state{valve_state=VState}, Close);
-valve_post(#state{valve_state=[open | VState]} = State, _) ->
-    NState = State#state{valve_status=open, valve_state=VState},
-    queue_post(NState,
-               fun(#state{queue=[]} = NState2) ->
-                       meter_post(NState2);
-                  (#state{queue_out=out, queue=Q, valve=V} = NState2) ->
-                       Client = hd(Q),
-                       NState3 = NState2#state{queue=tl(Q),
-                                               valve=V++[Client]},
-                       go_post(Client) andalso valve_post(NState3);
-                  (#state{queue_out=out_r, queue=Q, valve=V} = NState2) ->
-                       Client = lists:last(Q),
-                       NState3 = NState2#state{queue=lists:droplast(Q),
-                                               valve=V++[Client]},
-                       go_post(Client) andalso valve_post(NState3)
-               end);
-valve_post(#state{valve_state=[closed | VState]} = State, Close) ->
-    Close(State#state{valve_status=closed, valve_state=VState}).
+valve_post(#state{valve_state = [], valve_opens = VState} = State, Close) ->
+    valve_post(State#state{valve_state = VState}, Close);
+valve_post(#state{valve_state = [open | VState]} = State, _) ->
+    NState = State#state{valve_status = open, valve_state = VState},
+    queue_post(
+        NState,
+        fun
+            (#state{queue = []} = NState2) ->
+                meter_post(NState2);
+            (#state{queue_out = out, queue = Q, valve = V} = NState2) ->
+                Client = hd(Q),
+                NState3 = NState2#state{
+                    queue = tl(Q),
+                    valve = V ++ [Client]
+                },
+                go_post(Client) andalso valve_post(NState3);
+            (#state{queue_out = out_r, queue = Q, valve = V} = NState2) ->
+                Client = lists:last(Q),
+                NState3 = NState2#state{
+                    queue = lists:droplast(Q),
+                    valve = V ++ [Client]
+                },
+                go_post(Client) andalso valve_post(NState3)
+        end
+    );
+valve_post(#state{valve_state = [closed | VState]} = State, Close) ->
+    Close(State#state{valve_status = closed, valve_state = VState}).
 
 queue_next(State) ->
     queue_next(State, fun(NState) -> NState end).
@@ -752,24 +898,24 @@ queue_post(State, Fun) ->
     {Drops, NState} = queue_aqm(State),
     drops_post(Drops) andalso Fun(NState).
 
-queue_aqm(#state{queue_state=[], queue_drops=QDrops} = State) ->
-    queue_aqm(State#state{queue_state=QDrops});
-queue_aqm(#state{queue=[]} = State) ->
+queue_aqm(#state{queue_state = [], queue_drops = QDrops} = State) ->
+    queue_aqm(State#state{queue_state = QDrops});
+queue_aqm(#state{queue = []} = State) ->
     {[], State};
-queue_aqm(#state{queue=Q, queue_state=[Drop | QState], done=Done} = State) ->
+queue_aqm(#state{queue = Q, queue_state = [Drop | QState], done = Done} = State) ->
     Drop2 = min(length(Q), Drop),
     {Drops, NQ} = lists:split(Drop2, Q),
-    {Drops, State#state{queue=NQ, queue_state=QState, done=Done++Drops}}.
+    {Drops, State#state{queue = NQ, queue_state = QState, done = Done ++ Drops}}.
 
-meter_post(#state{meter_mod=sbetter_statem_meter, valve_status=VStatus}) ->
+meter_post(#state{meter_mod = sbetter_statem_meter, valve_status = VStatus}) ->
     receive
-        {meter, QueueDelay, ProcessDelay, RelativeTime, _}
-          when QueueDelay >= 0, ProcessDelay >= 0 ->
+        {meter, QueueDelay, ProcessDelay, RelativeTime, _} when
+            QueueDelay >= 0, ProcessDelay >= 0
+        ->
             no_more_meter() andalso relative_post(RelativeTime, VStatus)
-    after
-        100 ->
-            ct:pal("Did not receive sbetter_statem_meter message"),
-            false
+    after 100 ->
+        ct:pal("Did not receive sbetter_statem_meter message"),
+        false
     end;
 meter_post(_) ->
     true.
@@ -779,9 +925,8 @@ no_more_meter() ->
         {meter, _, _, _, _} ->
             ct:pal("missed meter message(s)"),
             false
-    after
-        0 ->
-            true
+    after 0 ->
+        true
     end.
 
 relative_post(RelativeTime, closed) when RelativeTime < 0 ->
@@ -816,63 +961,96 @@ drops_post([]) ->
 call_post(_, Expected, Observed) when Expected == Observed ->
     true;
 call_post(Client, Expected, Observed) ->
-    ct:pal("Call for ~p~nExpected: ~p~nObserved: ~p",
-           [Client, Expected, Observed]),
+    ct:pal(
+        "Call for ~p~nExpected: ~p~nObserved: ~p",
+        [Client, Expected, Observed]
+    ),
     false.
 
-queue_change_next({QMod, {QOut, QDrops}},
-           #state{queue_mod=QMod, queue_drops=QDrops} = State) ->
-    queue_next(State#state{queue_out=QOut});
+queue_change_next(
+    {QMod, {QOut, QDrops}},
+    #state{queue_mod = QMod, queue_drops = QDrops} = State
+) ->
+    queue_next(State#state{queue_out = QOut});
 %% If module and/or args different reset the backend state.
 queue_change_next({QMod, {QOut, QDrops}}, State) ->
-    queue_next(State#state{queue_mod=QMod, queue_out=QOut, queue_drops=QDrops,
-                           queue_state=QDrops}).
+    queue_next(State#state{
+        queue_mod = QMod,
+        queue_out = QOut,
+        queue_drops = QDrops,
+        queue_state = QDrops
+    }).
 
-queue_change_post({QMod, {QOut, QDrops}},
-           #state{queue_mod=QMod, queue_drops=QDrops} = State) ->
-    queue_post(State#state{queue_out=QOut}, fun(_) -> true end);
+queue_change_post(
+    {QMod, {QOut, QDrops}},
+    #state{queue_mod = QMod, queue_drops = QDrops} = State
+) ->
+    queue_post(State#state{queue_out = QOut}, fun(_) -> true end);
 %% If module and/or args different reset the backend state.
 queue_change_post({QMod, {QOut, QDrops}}, State) ->
-    queue_post(State#state{queue_mod=QMod, queue_out=QOut, queue_drops=QDrops,
-                           queue_state=QDrops}, fun(_) -> true end).
+    queue_post(
+        State#state{
+            queue_mod = QMod,
+            queue_out = QOut,
+            queue_drops = QDrops,
+            queue_state = QDrops
+        },
+        fun(_) -> true end
+    ).
 
-valve_change_next({VMod, VOpens},
-           #state{valve_mod=VMod, valve_opens=VOpens} = State) ->
+valve_change_next(
+    {VMod, VOpens},
+    #state{valve_mod = VMod, valve_opens = VOpens} = State
+) ->
     valve_next(State);
 %% If module and/or args different reset the backend state.
 valve_change_next({VMod, VOpens}, State) ->
-    valve_next(State#state{valve_mod=VMod, valve_opens=VOpens,
-                           valve_state=VOpens}).
+    valve_next(State#state{
+        valve_mod = VMod,
+        valve_opens = VOpens,
+        valve_state = VOpens
+    }).
 
-valve_change_post({VMod, VOpens},
-           #state{valve_mod=VMod, valve_opens=VOpens} = State) ->
+valve_change_post(
+    {VMod, VOpens},
+    #state{valve_mod = VMod, valve_opens = VOpens} = State
+) ->
     valve_post(State);
 %% If module and/or args different reset the backend state.
 valve_change_post({VMod, VOpens}, State) ->
-    valve_post(State#state{valve_mod=VMod, valve_opens=VOpens,
-                           valve_state=VOpens}).
+    valve_post(State#state{
+        valve_mod = VMod,
+        valve_opens = VOpens,
+        valve_state = VOpens
+    }).
 
-sys_args(#state{sregulator=Regulator}) ->
+sys_args(#state{sregulator = Regulator}) ->
     [Regulator, ?TIMEOUT].
 
-sys_next(#state{sys=running} = State) ->
+sys_next(#state{sys = running} = State) ->
     valve_next(State, fun queue_next/1);
-sys_next(#state{sys=suspended} = State) ->
+sys_next(#state{sys = suspended} = State) ->
     State.
 
-sys_post(#state{sys=running} = State) ->
+sys_post(#state{sys = running} = State) ->
     valve_post(State, fun queue_post/1);
-sys_post(#state{sys=suspended}) ->
+sys_post(#state{sys = suspended}) ->
     true.
 
-status_post(#state{sys=Sys} = State,
-            [{header, "Status for sregulator <" ++_ },
-             {data, [{"Status", SysState},
-                     {"Parent", Self},
-                     {"Time", Time}]},
-             {items, {"Installed handlers", Handlers}}]) ->
+status_post(
+    #state{sys = Sys} = State,
+    [
+        {header, "Status for sregulator <" ++ _},
+        {data, [
+            {"Status", SysState},
+            {"Parent", Self},
+            {"Time", Time}
+        ]},
+        {items, {"Installed handlers", Handlers}}
+    ]
+) ->
     SysState =:= Sys andalso Self =:= self() andalso is_integer(Time) andalso
-    get_state_post(State, Handlers);
+        get_state_post(State, Handlers);
 status_post(_, Status) ->
     ct:pal("Status: ~p", [Status]),
     false.
@@ -880,7 +1058,7 @@ status_post(_, Status) ->
 get_state_post(State, Handlers) ->
     get_queue_post(State, Handlers) andalso get_valve_post(State, Handlers).
 
-get_queue_post(#state{queue_mod=QMod, queue=Q}, Handlers) ->
+get_queue_post(#state{queue_mod = QMod, queue = Q}, Handlers) ->
     case lists:keyfind(queue, 2, Handlers) of
         {QMod, queue, QState} ->
             QMod:len(QState) == length(Q);
@@ -889,8 +1067,10 @@ get_queue_post(#state{queue_mod=QMod, queue=Q}, Handlers) ->
             false
     end.
 
-get_valve_post(#state{valve_mod=VMod, valve_status=VStatus, valve=V},
-               Handlers) ->
+get_valve_post(
+    #state{valve_mod = VMod, valve_status = VStatus, valve = V},
+    Handlers
+) ->
     case lists:keyfind(valve, 2, Handlers) of
         {VMod, valve, {VStatus, VState}} ->
             VMod:size(VState) == length(V);

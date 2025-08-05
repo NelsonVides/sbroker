@@ -77,10 +77,11 @@
 %% for the queue (or possibly using the current scheduler id). If no process is
 %% associated with the chosen process returns `undefined'.
 -spec whereis_name({Processes, Method}) ->
-    Process | undefined when
-      Processes :: tuple(),
-      Method :: method(),
-      Process :: pid().
+    Process | undefined
+when
+    Processes :: tuple(),
+    Method :: method(),
+    Process :: pid().
 whereis_name({{}, _}) ->
     undefined;
 whereis_name({{Name}, _}) ->
@@ -142,10 +143,11 @@ whereis_name({Processes, Key}) when is_tuple(Processes) ->
 %% two random choices for the queue (or possibly using the current scheduler
 %% id). Returns `ok' if a process could be chosen otherwise exits.
 -spec send({Processes, Method}, Msg) ->
-    ok when
-      Processes :: tuple(),
-      Method :: method(),
-      Msg :: any().
+    ok
+when
+    Processes :: tuple(),
+    Method :: method(),
+    Msg :: any().
 send(Name, Msg) ->
     case whereis_name(Name) of
         Pid when is_pid(Pid) ->
@@ -196,7 +198,7 @@ better_whereis(Processes, Key) ->
     compare(info(ProcA, Key), info(ProcB, Key)).
 
 scheduler_pick(Size) ->
-    Pairs = Size * (Size-1),
+    Pairs = Size * (Size - 1),
     case erlang:phash2({self(), make_ref()}, 5 * Pairs) of
         Hash when Hash < Pairs ->
             pick(Hash, Size);
@@ -205,7 +207,7 @@ scheduler_pick(Size) ->
     end.
 
 rand_pick(Size) ->
-    Pairs = Size * (Size-1),
+    Pairs = Size * (Size - 1),
     case erlang:phash2({self(), make_ref()}, 5 * Pairs) of
         Hash when Hash < Pairs ->
             pick(Hash, Size);
@@ -214,17 +216,17 @@ rand_pick(Size) ->
     end.
 
 pick(Hash, Size) ->
-    case {(Hash div Size) + 1, (Hash div (Size-1)) + 1} of
+    case {(Hash div Size) + 1, (Hash div (Size - 1)) + 1} of
         {Same, Same} ->
             % Same must be less than Size for a match, and first element is
             % 1..Size-1 so adding 1 to creates even distribution.
-            {Same+1, Same};
+            {Same + 1, Same};
         Other ->
             Other
     end.
 
 pick(Size) ->
-    Pairs = Size * (Size-1),
+    Pairs = Size * (Size - 1),
     Hash = erlang:phash2({self(), make_ref()}, Pairs),
     pick(Hash, Size).
 
@@ -249,8 +251,9 @@ lookup(Pid, Key) ->
             nobetter
     end.
 
-compare({ValueA, Pid}, {ValueOrError, _})
-  when is_integer(ValueA), ValueA < ValueOrError ->
+compare({ValueA, Pid}, {ValueOrError, _}) when
+    is_integer(ValueA), ValueA < ValueOrError
+->
     Pid;
 compare(_, {ValueB, Pid}) when is_integer(ValueB) ->
     Pid;

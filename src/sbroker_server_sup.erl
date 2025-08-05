@@ -33,15 +33,19 @@
 %% public API
 
 -spec start_link() -> {ok, Pid} when
-      Pid :: pid().
+    Pid :: pid().
 start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 %% supervisor API
 
 init([]) ->
-    BetterServer = {sbetter_server, {sbetter_server, start_link, []},
-                    permanent, 5000, worker, [sbetter_server]},
-    ProtectorServer = {sprotector_server, {sprotector_server, start_link, []},
-                     permanent, 5000, worker, [sprotector_server]},
+    BetterServer =
+        {sbetter_server, {sbetter_server, start_link, []}, permanent, 5000, worker, [
+            sbetter_server
+        ]},
+    ProtectorServer =
+        {sprotector_server, {sprotector_server, start_link, []}, permanent, 5000, worker, [
+            sprotector_server
+        ]},
     {ok, {{one_for_one, 3, 30}, [BetterServer, ProtectorServer]}}.

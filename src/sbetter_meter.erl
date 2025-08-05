@@ -62,84 +62,95 @@
 %% types
 
 -type spec() ::
-    #{ask    => #{upper => AskUpper :: non_neg_integer()},
-      ask_r  => #{upper => AskRUpper :: non_neg_integer()},
-      update => Update :: pos_integer()}.
+    #{
+        ask => #{upper => AskUpper :: non_neg_integer()},
+        ask_r => #{upper => AskRUpper :: non_neg_integer()},
+        update => Update :: pos_integer()
+    }.
 
 -export_type([spec/0]).
 
--record(state, {ask :: non_neg_integer(),
-                bid :: non_neg_integer(),
-                update :: pos_integer(),
-                update_next :: integer()}).
+-record(state, {
+    ask :: non_neg_integer(),
+    bid :: non_neg_integer(),
+    update :: pos_integer(),
+    update_next :: integer()
+}).
 
 %% @private
 -spec init(Time, Spec) -> {State, Time} when
-      Time :: integer(),
-      Spec :: spec(),
-      State :: #state{}.
+    Time :: integer(),
+    Spec :: spec(),
+    State :: #state{}.
 init(Time, Spec) ->
     Ask = sbroker_util:upper(ask, Spec),
     Bid = sbroker_util:upper(ask_r, Spec),
     Update = sbroker_util:update(Spec),
     true = sbetter_server:register(self(), Ask, Bid),
-    {#state{ask=Ask, bid=Bid, update=Update, update_next=Time}, Time}.
+    {#state{ask = Ask, bid = Bid, update = Update, update_next = Time}, Time}.
 
 %% @private
 -spec handle_update(QueueDelay, ProcessDelay, RelativeTime, Time, State) ->
-    {NState, UpdateNext} when
-      QueueDelay :: non_neg_integer(),
-      ProcessDelay :: non_neg_integer(),
-      RelativeTime :: integer(),
-      Time :: integer(),
-      State :: #state{},
-      NState :: #state{},
-      UpdateNext :: integer().
-handle_update(QueueDelay, ProcessDelay, RelativeTime, Time,
-              #state{ask=Ask, bid=Bid, update=Update} = State) ->
+    {NState, UpdateNext}
+when
+    QueueDelay :: non_neg_integer(),
+    ProcessDelay :: non_neg_integer(),
+    RelativeTime :: integer(),
+    Time :: integer(),
+    State :: #state{},
+    NState :: #state{},
+    UpdateNext :: integer().
+handle_update(
+    QueueDelay,
+    ProcessDelay,
+    RelativeTime,
+    Time,
+    #state{ask = Ask, bid = Bid, update = Update} = State
+) ->
     AskSojourn = sojourn(QueueDelay + ProcessDelay, RelativeTime, Ask),
     BidSojourn = sojourn(QueueDelay + ProcessDelay, -RelativeTime, Bid),
     true = sbetter_server:update(self(), AskSojourn, BidSojourn),
     Next = Time + Update,
-    {State#state{update_next=Next}, Next}.
+    {State#state{update_next = Next}, Next}.
 
 %% @private
 -spec handle_info(Msg, Time, State) -> {State, UpdateNext} when
-      Msg :: any(),
-      Time :: integer(),
-      State :: #state{},
-      UpdateNext :: integer().
+    Msg :: any(),
+    Time :: integer(),
+    State :: #state{},
+    UpdateNext :: integer().
 handle_info(_, Time, State) ->
     handle(Time, State).
 
 %% @private
 -spec code_change(OldVsn, Time, State, Extra) -> {State, UpdateNext} when
-      OldVsn :: any(),
-      Time :: integer(),
-      State :: #state{},
-      Extra :: any(),
-      UpdateNext :: integer().
+    OldVsn :: any(),
+    Time :: integer(),
+    State :: #state{},
+    Extra :: any(),
+    UpdateNext :: integer().
 code_change(_, Time, State, _) ->
     handle(Time, State).
 
 %% @private
 -spec config_change(Spec, Time, State) ->
-    {NState, UpdateNext} when
-      Spec :: spec(),
-      Time :: integer(),
-      State :: #state{},
-      NState :: #state{},
-      UpdateNext :: integer().
+    {NState, UpdateNext}
+when
+    Spec :: spec(),
+    Time :: integer(),
+    State :: #state{},
+    NState :: #state{},
+    UpdateNext :: integer().
 config_change(Spec, Time, _) ->
     Ask = sbroker_util:upper(ask, Spec),
     Bid = sbroker_util:upper(ask_r, Spec),
     Update = sbroker_util:update(Spec),
-    {#state{ask=Ask, bid=Bid, update=Update, update_next=Time}, Time}.
+    {#state{ask = Ask, bid = Bid, update = Update, update_next = Time}, Time}.
 
 %% @private
 -spec terminate(Reason, State) -> true when
-      Reason :: any(),
-      State :: #state{}.
+    Reason :: any(),
+    State :: #state{}.
 terminate(_, _) ->
     sbetter_server:unregister(self()).
 
@@ -148,5 +159,5 @@ terminate(_, _) ->
 sojourn(QueueDelay, RelativeTime, Upper) ->
     min(Upper, QueueDelay + max(RelativeTime, 0)).
 
-handle(Time, #state{update_next=Next} = State) ->
+handle(Time, #state{update_next = Next} = State) ->
     {State, max(Next, Time)}.

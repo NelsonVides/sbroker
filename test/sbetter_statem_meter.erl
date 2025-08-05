@@ -33,8 +33,13 @@ init(Time, {Pid, Arg}) ->
     {{Pid, State}, Next}.
 
 handle_update(QueueDelay, ProcessDelay, RelativeTime, Time, {Pid, State}) ->
-    {NState, Next} = sbetter_meter:handle_update(QueueDelay, ProcessDelay,
-                                                 RelativeTime, Time, State),
+    {NState, Next} = sbetter_meter:handle_update(
+        QueueDelay,
+        ProcessDelay,
+        RelativeTime,
+        Time,
+        State
+    ),
     Pid ! {meter, QueueDelay, ProcessDelay, RelativeTime, Time},
     {{Pid, NState}, Next}.
 

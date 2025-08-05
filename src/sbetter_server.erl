@@ -56,20 +56,23 @@
 %% Returns `true' if the process is successfully registered, or `false' if
 %% already registered.
 -spec register(Pid, AskValue, AskRValue) -> Result when
-      Pid :: pid(),
-      AskValue :: integer(),
-      AskRValue :: integer(),
-      Result :: boolean().
-register(Pid, AskValue, BidValue)
-  when is_pid(Pid), node(Pid) == node(),
-       is_integer(AskValue), is_integer(BidValue) ->
+    Pid :: pid(),
+    AskValue :: integer(),
+    AskRValue :: integer(),
+    Result :: boolean().
+register(Pid, AskValue, BidValue) when
+    is_pid(Pid),
+    node(Pid) == node(),
+    is_integer(AskValue),
+    is_integer(BidValue)
+->
     gen_server:call(?MODULE, {register, Pid, AskValue, BidValue}, ?TIMEOUT).
 
 %% @doc Unregister the process `Pid' with the server.
 %%
 %% The server will synchronously unlink from `Pid'.
 -spec unregister(Pid) -> true when
-      Pid :: pid().
+    Pid :: pid().
 unregister(Pid) when is_pid(Pid), node(Pid) == node() ->
     gen_server:call(?MODULE, {unregister, Pid}, ?TIMEOUT).
 
@@ -79,28 +82,29 @@ unregister(Pid) when is_pid(Pid), node(Pid) == node() ->
 %% Returns `true' if the values were updated, or `false' if `Pid' is not
 %% registered with the server.
 -spec update(Pid, AskValue, AskRValue) -> Result when
-      Pid :: pid(),
-      AskValue :: integer(),
-      AskRValue :: integer(),
-      Result :: boolean().
-update(Pid, AskValue, BidValue)
-  when is_integer(AskValue), is_integer(BidValue) ->
+    Pid :: pid(),
+    AskValue :: integer(),
+    AskRValue :: integer(),
+    Result :: boolean().
+update(Pid, AskValue, BidValue) when
+    is_integer(AskValue), is_integer(BidValue)
+->
     ets:update_element(?MODULE, {Pid, ask}, {2, AskValue}) andalso
-    ets:update_element(?MODULE, {Pid, bid}, {2, BidValue}).
+        ets:update_element(?MODULE, {Pid, bid}, {2, BidValue}).
 
 %% private API
 
 %% @private
 -spec start_link() -> {ok, Pid} when
-      Pid :: pid().
+    Pid :: pid().
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, ?MODULE, []).
 
 %% @private
 -spec lookup(Pid, Key) -> SojournTime when
-      Pid :: pid(),
-      Key :: ask | ask_r,
-      SojournTime :: non_neg_integer().
+    Pid :: pid(),
+    Key :: ask | ask_r,
+    SojournTime :: non_neg_integer().
 lookup(Pid, ask) ->
     ets:update_counter(?MODULE, {Pid, ask}, {2, 0});
 lookup(Pid, ask_r) ->
@@ -111,8 +115,10 @@ lookup(Pid, ask_r) ->
 %% @private
 init(Table) ->
     _ = process_flag(trap_exit, true),
-    Table = ets:new(Table,
-                    [named_table, set, public, {write_concurrency, true}]),
+    Table = ets:new(
+        Table,
+        [named_table, set, public, {write_concurrency, true}]
+    ),
     {ok, Table}.
 
 %% @private
@@ -135,8 +141,10 @@ handle_info({'EXIT', Pid, _}, Table) ->
     delete(Table, Pid),
     {noreply, Table};
 handle_info(Msg, Table) ->
-    error_logger:error_msg("sbetter_server received unexpected message: ~p~n",
-                           [Msg]),
+    error_logger:error_msg(
+        "sbetter_server received unexpected message: ~p~n",
+        [Msg]
+    ),
     {noreply, Table}.
 
 %% @private
@@ -151,7 +159,7 @@ terminate(_, _) ->
 
 insert_new(Table, Pid, AskValue, BidValue) ->
     ets:insert_new(Table, {{Pid, ask}, AskValue}) andalso
-    ets:insert_new(Table, {{Pid, bid}, BidValue}).
+        ets:insert_new(Table, {{Pid, bid}, BidValue}).
 
 delete(Table, Pid) ->
     ets:delete(Table, {Pid, ask}),

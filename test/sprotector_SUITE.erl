@@ -49,16 +49,24 @@
 %% common_test api
 
 all() ->
-    [{group, whereis},
-     {group, send}].
+    [
+        {group, whereis},
+        {group, send}
+    ].
 
 suite() ->
     [{timetrap, {seconds, 120}}].
 
 groups() ->
-    [{whereis, [parallel], [whereis_pid, whereis_local, whereis_global,
-                            whereis_via]},
-     {send, [parallel], [send_pid, send_local, send_global, send_via]}].
+    [
+        {whereis, [parallel], [
+            whereis_pid,
+            whereis_local,
+            whereis_global,
+            whereis_via
+        ]},
+        {send, [parallel], [send_pid, send_local, send_global, send_via]}
+    ].
 
 init_per_suite(Config) ->
     {ok, Started} = application:ensure_all_started(sbroker),
@@ -111,11 +119,9 @@ whereis_local(_) ->
     Self = sprotector:whereis_name({?MODULE, ask_r}),
     {'EXIT', drop} = (catch sprotector:whereis_name({?MODULE, ask})),
 
-    {'EXIT', drop} = (catch sprotector:whereis_name({{?MODULE, node()},
-                                                     ask_r})),
+    {'EXIT', drop} = (catch sprotector:whereis_name({{?MODULE, node()}, ask_r})),
 
-    {'EXIT', {badnode, node}} = (catch sprotector:whereis_name({{?MODULE, node},
-                                                              ask})),
+    {'EXIT', {badnode, node}} = (catch sprotector:whereis_name({{?MODULE, node}, ask})),
 
     erlang:unregister(?MODULE),
 
@@ -164,7 +170,10 @@ send_pid(_) ->
     Ref = make_ref(),
 
     sprotector:send({Self, ask}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     try sprotector:send({Self, ask_r}, Ref) of
         _ ->
@@ -184,9 +193,12 @@ send_local(_) ->
     erlang:register(?MODULE, Self),
 
     sprotector:send({?MODULE, ask}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
-     try sprotector:send({?MODULE, ask_r}, Ref) of
+    try sprotector:send({?MODULE, ask_r}, Ref) of
         _ ->
             exit(no_exit)
     catch
@@ -198,8 +210,7 @@ send_local(_) ->
         _ ->
             exit(no_exit)
     catch
-        exit:{{badnode, node},
-              {sprotector, send, [{{?MODULE, node}, ask_r}, Ref]}} ->
+        exit:{{badnode, node}, {sprotector, send, [{{?MODULE, node}, ask_r}, Ref]}} ->
             ok
     end,
 
@@ -217,8 +228,9 @@ send_local(_) ->
         _ ->
             exit(no_exit)
     catch
-        exit:{noproc, {sprotector, send, [{{?MODULE, Node}, ask_r}, Ref]}}
-          when Node =:= node() ->
+        exit:{noproc, {sprotector, send, [{{?MODULE, Node}, ask_r}, Ref]}} when
+            Node =:= node()
+        ->
             ok
     end,
 
@@ -232,7 +244,10 @@ send_global(_) ->
     Ref = make_ref(),
 
     sprotector:send({Name, ask_r}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     try sprotector:send({Name, ask}, Ref) of
         _ ->
@@ -262,7 +277,10 @@ send_via(_) ->
     Ref = make_ref(),
 
     sprotector:send({Name, ask_r}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     try sprotector:send({Name, ask}, Ref) of
         _ ->

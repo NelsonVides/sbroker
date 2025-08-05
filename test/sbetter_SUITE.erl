@@ -51,17 +51,31 @@
 %% common_test api
 
 all() ->
-    [{group, whereis},
-     {group, send}].
+    [
+        {group, whereis},
+        {group, send}
+    ].
 
 suite() ->
     [{timetrap, {seconds, 120}}].
 
 groups() ->
-    [{whereis, [parallel], [whereis_pid, whereis_local, whereis_global,
-                            whereis_via, whereis_empty]},
-     {send, [parallel], [send_pid, send_local, send_global, send_via,
-                         send_empty]}].
+    [
+        {whereis, [parallel], [
+            whereis_pid,
+            whereis_local,
+            whereis_global,
+            whereis_via,
+            whereis_empty
+        ]},
+        {send, [parallel], [
+            send_pid,
+            send_local,
+            send_global,
+            send_via,
+            send_empty
+        ]}
+    ].
 
 init_per_suite(Config) ->
     {ok, Started} = application:ensure_all_started(sbroker),
@@ -121,8 +135,7 @@ whereis_local(_) ->
     A = sbetter:whereis_name({{{?MODULE, node()}}, ask_r}),
     B = sbetter:whereis_name({{{?MODULE, node()}, B}, ask_r}),
     B = sbetter:whereis_name({{{?MODULE, node()}, B, B}, ask_r}),
-    {'EXIT', {badnode, node}} = (catch sbetter:whereis_name({{{?MODULE,
-                                                               node}}, ask})),
+    {'EXIT', {badnode, node}} = (catch sbetter:whereis_name({{{?MODULE, node}}, ask})),
 
     erlang:unregister(?MODULE),
 
@@ -131,11 +144,10 @@ whereis_local(_) ->
     undefined = sbetter:whereis_name({{?MODULE, ?MODULE, ?MODULE}, ask}),
 
     undefined = sbetter:whereis_name({{?MODULE, node()}, ask}),
-    undefined = sbetter:whereis_name({{{?MODULE, node()},
-                                       {?MODULE, node()}}, scheduler_ask_r}),
-    undefined = sbetter:whereis_name({{{?MODULE, node()},
-                                       {?MODULE, node()},
-                                       {?MODULE, node()}}, ask}),
+    undefined = sbetter:whereis_name({{{?MODULE, node()}, {?MODULE, node()}}, scheduler_ask_r}),
+    undefined = sbetter:whereis_name({
+        {{?MODULE, node()}, {?MODULE, node()}, {?MODULE, node()}}, ask
+    }),
 
     ok.
 
@@ -194,10 +206,16 @@ send_pid(_) ->
     Ref = make_ref(),
 
     sbetter:send({{Self}, ask}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     sbetter:send({{Self, Self}, ask_r}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     ok.
 
@@ -208,16 +226,28 @@ send_local(_) ->
     Ref = make_ref(),
 
     sbetter:send({{?MODULE}, ask}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     sbetter:send({{?MODULE, ?MODULE}, scheduler_ask_r}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     sbetter:send({{{?MODULE, node()}}, scheduler_ask}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     sbetter:send({{{?MODULE, node()}, {?MODULE, node()}}, ask_r}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     erlang:unregister(?MODULE),
 
@@ -233,8 +263,11 @@ send_local(_) ->
         _ ->
             exit(no_exit)
     catch
-        exit:{noproc, {sbetter, send, [{{?MODULE, ?MODULE}, scheduler_ask},
-                                       Ref]}} ->
+        exit:{noproc,
+            {sbetter, send, [
+                {{?MODULE, ?MODULE}, scheduler_ask},
+                Ref
+            ]}} ->
             ok
     end,
 
@@ -242,9 +275,13 @@ send_local(_) ->
         _ ->
             exit(no_exit)
     catch
-        exit:{noproc, {sbetter, send, [{{{?MODULE, Node}}, scheduler_ask_r},
-                                       Ref]}}
-          when Node =:= node() ->
+        exit:{noproc,
+            {sbetter, send, [
+                {{{?MODULE, Node}}, scheduler_ask_r},
+                Ref
+            ]}} when
+            Node =:= node()
+        ->
             ok
     end,
 
@@ -252,13 +289,11 @@ send_local(_) ->
         _ ->
             exit(no_exit)
     catch
-        exit:{noproc,
-              {sbetter, send,
-               [{{{?MODULE, Node2}, {?MODULE, Node2}}, ask_r}, Ref]}}
-          when Node2 =:= node() ->
+        exit:{noproc, {sbetter, send, [{{{?MODULE, Node2}, {?MODULE, Node2}}, ask_r}, Ref]}} when
+            Node2 =:= node()
+        ->
             ok
     end,
-
 
     ok.
 
@@ -270,10 +305,16 @@ send_global(_) ->
     Ref = make_ref(),
 
     sbetter:send({{Name}, scheduler_ask}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     sbetter:send({{Name, Name}, ask_r}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     global:unregister_name({?MODULE, global}),
 
@@ -289,8 +330,11 @@ send_global(_) ->
         _ ->
             exit(no_exit)
     catch
-        exit:{noproc, {sbetter, send, [{{Name, Name}, scheduler_ask_r},
-                                       Ref]}} ->
+        exit:{noproc,
+            {sbetter, send, [
+                {{Name, Name}, scheduler_ask_r},
+                Ref
+            ]}} ->
             ok
     end,
 
@@ -298,8 +342,11 @@ send_global(_) ->
         _ ->
             exit(no_exit)
     catch
-        exit:{noproc, {sbetter, send, [{{Name, Name, Name}, ask_r},
-                                       Ref]}} ->
+        exit:{noproc,
+            {sbetter, send, [
+                {{Name, Name, Name}, ask_r},
+                Ref
+            ]}} ->
             ok
     end,
 
@@ -313,10 +360,16 @@ send_via(_) ->
     Ref = make_ref(),
 
     sbetter:send({{Name}, scheduler_ask}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     sbetter:send({{Name, Name}, ask_r}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     global:unregister_name({?MODULE, via}),
 
@@ -340,8 +393,11 @@ send_via(_) ->
         _ ->
             exit(no_exit)
     catch
-        exit:{noproc, {sbetter, send, [{{Name, Name, Name}, scheduler_ask},
-                                       Ref]}} ->
+        exit:{noproc,
+            {sbetter, send, [
+                {{Name, Name, Name}, scheduler_ask},
+                Ref
+            ]}} ->
             ok
     end,
 

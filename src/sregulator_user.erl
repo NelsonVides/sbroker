@@ -71,11 +71,11 @@
 %% in `regulators' or `{error, Reason}' if the regulator fails to start with
 %% reason `Reason'.
 -spec start(Name) -> {ok, Pid} | {error, Reason} when
-      Name :: sregulator:name(),
-      Pid :: pid() | undefined,
-      Reason :: term().
+    Name :: sregulator:name(),
+    Pid :: pid() | undefined,
+    Reason :: term().
 start(Name) ->
-      sbroker_user_sup:start(?MODULE, Name).
+    sbroker_user_sup:start(?MODULE, Name).
 
 %% @doc Restart a regulator with name, `Name'.
 %%
@@ -89,11 +89,11 @@ start(Name) ->
 %% in `regulators' or `{error, Reason}' if the regulator fails to start with
 %% reason `Reason'.
 -spec restart(Name) -> {ok, Pid} | {error, Reason} when
-      Name :: sregulator:name(),
-      Pid :: pid() | undefined,
-      Reason :: term().
+    Name :: sregulator:name(),
+    Pid :: pid() | undefined,
+    Reason :: term().
 restart(Name) ->
-      sbroker_user_sup:restart(?MODULE, Name).
+    sbroker_user_sup:restart(?MODULE, Name).
 
 %% @doc Terminate a regulator with name, `Name'.
 %%
@@ -106,9 +106,9 @@ restart(Name) ->
 %% Returns `ok' once the regulator is terminated, otherwise
 %% `{error, not_found}'.
 -spec terminate(Name) -> ok | {error, not_found} when
-      Name :: sregulator:name().
+    Name :: sregulator:name().
 terminate(Name) ->
-      sbroker_user_sup:terminate(?MODULE, Name).
+    sbroker_user_sup:terminate(?MODULE, Name).
 
 %% @doc Delete a regulator with name, `Name'.
 %%
@@ -121,10 +121,10 @@ terminate(Name) ->
 %% Returns `ok' on successfully deleting the regulator, otherwise
 %% `{error, Reason}' where `Reason' is reason for the error.
 -spec delete(Name) -> ok | {error, Reason} when
-      Name :: sregulator:name(),
-      Reason :: running | restarting | not_found.
+    Name :: sregulator:name(),
+    Reason :: running | restarting | not_found.
 delete(Name) ->
-      sbroker_user_sup:delete(?MODULE, Name).
+    sbroker_user_sup:delete(?MODULE, Name).
 
 %% @doc List user regulators started in the `sbroker' application.
 %%
@@ -132,10 +132,10 @@ delete(Name) ->
 %% regulator, `Pid' is the `pid()' or `undefined', `Type' is `worker' and
 %% `Modules' is `dynamic'.
 -spec which_regulators() -> [{Name, Pid, Type, Modules}] when
-      Name :: sregulator:name(),
-      Pid :: undefined | pid(),
-      Type :: worker,
-      Modules :: dynamic.
+    Name :: sregulator:name(),
+    Pid :: undefined | pid(),
+    Type :: worker,
+    Modules :: dynamic.
 which_regulators() ->
     sbroker_user_sup:which_children(?MODULE).
 
@@ -148,18 +148,21 @@ which_regulators() ->
 %% Returns a list of failed changes, where `Name' is the `sregulator:name()' of
 %% the regulator and `Reason' is the reason.
 -spec change_config() -> [{Name, Reason}] when
-      Name :: sregulator:name(),
-      Reason :: term().
+    Name :: sregulator:name(),
+    Reason :: term().
 change_config() ->
-    [{Name, Reason} ||
-     {Name, Pid, _, _} <- which_regulators(), is_pid(Pid),
-     {error, Reason} <- [change_config(Pid)]].
+    [
+        {Name, Reason}
+     || {Name, Pid, _, _} <- which_regulators(),
+        is_pid(Pid),
+        {error, Reason} <- [change_config(Pid)]
+    ].
 
 %% @private
 -spec start_link(Name) -> {ok, Pid} | {error, Reason} when
-      Name :: sregulator:name(),
-      Pid :: pid(),
-      Reason :: term().
+    Name :: sregulator:name(),
+    Pid :: pid(),
+    Reason :: term().
 start_link(Name) ->
     sregulator:start_link(Name, ?MODULE, Name, []).
 
@@ -170,7 +173,7 @@ init(Name) ->
     Regulators = application:get_env(sbroker, regulators, []),
     case lists:keyfind(Name, 1, Regulators) of
         {_, Config} -> {ok, Config};
-        false       -> ignore
+        false -> ignore
     end.
 
 %% internal

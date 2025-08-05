@@ -34,10 +34,12 @@
 -export([send_time/1]).
 -export([terminate/2]).
 
--record(state, {config :: [non_neg_integer()],
-                out :: out | out_r,
-                drops :: [non_neg_integer()],
-                queue :: sbroker_queue:internal_queue()}).
+-record(state, {
+    config :: [non_neg_integer()],
+    out :: out | out_r,
+    drops :: [non_neg_integer()],
+    queue :: sbroker_queue:internal_queue()
+}).
 
 %% This sbroker_queue module takes a list of non_neg_integer() and drops the
 %% integer at head of the list (or the whole queue if the queue length is
@@ -49,21 +51,21 @@
 %% Timing is tested for separately using `sbroker_queue_statem`.
 
 init(Q, Time, {Out, Drops}) ->
-    handle_timeout(Time, #state{config=Drops, out=Out, drops=Drops, queue=Q}).
+    handle_timeout(Time, #state{config = Drops, out = Out, drops = Drops, queue = Q}).
 
-handle_in(SendTime, {Pid, _} = From, Value, Time, #state{queue=Q} = State) ->
+handle_in(SendTime, {Pid, _} = From, Value, Time, #state{queue = Q} = State) ->
     Ref = monitor(process, Pid),
-    NState = State#state{queue=queue:in({SendTime, From, Value, Ref}, Q)},
+    NState = State#state{queue = queue:in({SendTime, From, Value, Ref}, Q)},
     handle_timeout(Time, NState).
 
-handle_out(Time, #state{out=Out} = State) ->
-    {#state{queue=Q} = NState, TimeoutNext} = handle_timeout(Time, State),
+handle_out(Time, #state{out = Out} = State) ->
+    {#state{queue = Q} = NState, TimeoutNext} = handle_timeout(Time, State),
     case queue:Out(Q) of
         {empty, _} ->
-            #state{config=Drops} = NState,
-            {empty, NState#state{drops=Drops}};
+            #state{config = Drops} = NState,
+            {empty, NState#state{drops = Drops}};
         {{value, {SendTime, From, Value, Ref}}, NQ} ->
-            {SendTime, From, Value, Ref, NState#state{queue=NQ}, TimeoutNext}
+            {SendTime, From, Value, Ref, NState#state{queue = NQ}, TimeoutNext}
     end.
 
 handle_fq_out(Time, State) ->
@@ -75,7 +77,7 @@ handle_fq_out(Time, State) ->
     end.
 
 %% If queue is empty don't change state.
-handle_timeout(Time, #state{queue=Q} = State) ->
+handle_timeout(Time, #state{queue = Q} = State) ->
     case queue:is_empty(Q) of
         true ->
             {State, infinity};
@@ -83,16 +85,17 @@ handle_timeout(Time, #state{queue=Q} = State) ->
             {timeout(Time, State), infinity}
     end.
 
-handle_cancel(Tag, Time, #state{queue=Q} = State) ->
+handle_cancel(Tag, Time, #state{queue = Q} = State) ->
     Len = queue:len(Q),
-    Cancel = fun({_, {_, Tag2}, _, Ref}) when Tag2 =:= Tag ->
-                     demonitor(Ref, [flush]),
-                     false;
-                (_) ->
-                     true
-             end,
+    Cancel = fun
+        ({_, {_, Tag2}, _, Ref}) when Tag2 =:= Tag ->
+            demonitor(Ref, [flush]),
+            false;
+        (_) ->
+            true
+    end,
     NQ = queue:filter(Cancel, Q),
-    {NState, TimeoutNext} = handle_timeout(Time, State#state{queue=NQ}),
+    {NState, TimeoutNext} = handle_timeout(Time, State#state{queue = NQ}),
     case queue:len(NQ) of
         Len ->
             {false, NState, TimeoutNext};
@@ -100,24 +103,24 @@ handle_cancel(Tag, Time, #state{queue=Q} = State) ->
             {Len - NLen, NState, TimeoutNext}
     end.
 
-handle_info({'DOWN', Ref, _, _, _}, Time, #state{queue=Q} = State) ->
+handle_info({'DOWN', Ref, _, _, _}, Time, #state{queue = Q} = State) ->
     NQ = queue:filter(fun({_, _, _, Ref2}) -> Ref2 =/= Ref end, Q),
-    handle_timeout(Time, State#state{queue=NQ});
+    handle_timeout(Time, State#state{queue = NQ});
 handle_info(_, Time, State) ->
     handle_timeout(Time, State).
 
-code_change(_, _, #state{config=Config} = State, _) ->
-    {State#state{drops=Config}, infinity}.
+code_change(_, _, #state{config = Config} = State, _) ->
+    {State#state{drops = Config}, infinity}.
 
-config_change({Out, Config}, Time, #state{config=Config} = State) ->
-    handle_timeout(Time, State#state{out=Out});
+config_change({Out, Config}, Time, #state{config = Config} = State) ->
+    handle_timeout(Time, State#state{out = Out});
 config_change({Out, Config}, Time, State) ->
-    handle_timeout(Time, State#state{config=Config, out=Out, drops=Config}).
+    handle_timeout(Time, State#state{config = Config, out = Out, drops = Config}).
 
-len(#state{queue=Q}) ->
+len(#state{queue = Q}) ->
     queue:len(Q).
 
-send_time(#state{queue=Q}) ->
+send_time(#state{queue = Q}) ->
     case queue:peek(Q) of
         {value, {SendTime, _, _, _}} ->
             SendTime;
@@ -125,20 +128,20 @@ send_time(#state{queue=Q}) ->
             empty
     end.
 
-terminate(_, #state{queue=Q}) ->
+terminate(_, #state{queue = Q}) ->
     Q.
 
 %% Internal
 
-timeout(_, #state{config=[], drops=[]} = State) ->
+timeout(_, #state{config = [], drops = []} = State) ->
     State;
-timeout(Time, #state{config=Config, drops=[]} = State) ->
-    timeout(Time, State#state{drops=Config});
-timeout(Time, #state{drops=[Drop | Drops], queue=Q} = State) ->
+timeout(Time, #state{config = Config, drops = []} = State) ->
+    timeout(Time, State#state{drops = Config});
+timeout(Time, #state{drops = [Drop | Drops], queue = Q} = State) ->
     Drop2 = min(Drop, queue:len(Q)),
     {DropQ, NQ} = queue:split(Drop2, Q),
     drop_queue(Time, DropQ),
-    State#state{drops=Drops, queue=NQ}.
+    State#state{drops = Drops, queue = NQ}.
 
 drop_queue(Time, Q) ->
     _ = [drop_item(Time, Item) || Item <- queue:to_list(Q)],

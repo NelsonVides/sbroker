@@ -189,46 +189,72 @@
 -export_type([internal_map/0]).
 
 -callback init(Map :: internal_map(), Time :: integer(), Args :: any()) ->
-    {Status :: open | closed, State :: any(),
-     TimeoutTime :: integer() | infinity}.
+    {Status :: open | closed, State :: any(), TimeoutTime :: integer() | infinity}.
 
--callback handle_ask(Pid :: pid(), Ref :: reference(), Time :: integer(),
-                     State :: any()) ->
-    {Result :: go, Open :: integer(), Status :: open | closed, NState :: any(),
-     TimeoutTime :: integer() | infinity}.
+-callback handle_ask(
+    Pid :: pid(),
+    Ref :: reference(),
+    Time :: integer(),
+    State :: any()
+) ->
+    {
+        Result :: go,
+        Open :: integer(),
+        Status :: open | closed,
+        NState :: any(),
+        TimeoutTime :: integer() | infinity
+    }.
 
 -callback handle_done(Ref :: reference(), Time :: integer(), State :: any()) ->
-    {Result :: done | error, Status :: open | closed, NState :: any(),
-     TimeoutTime :: integer() | infinity}.
+    {
+        Result :: done | error,
+        Status :: open | closed,
+        NState :: any(),
+        TimeoutTime :: integer() | infinity
+    }.
 
--callback handle_continue(Ref :: reference(), Time :: integer(),
-                          State :: any()) ->
-    {Result :: go, Open :: integer(), Status :: open | closed, NState :: any(),
-     TimeoutTime :: integer() | infinity} |
-    {Result :: done | error, Status :: open | closed, NState :: any(),
-     TimeoutTime :: integer() | infinity}.
+-callback handle_continue(
+    Ref :: reference(),
+    Time :: integer(),
+    State :: any()
+) ->
+    {
+        Result :: go,
+        Open :: integer(),
+        Status :: open | closed,
+        NState :: any(),
+        TimeoutTime :: integer() | infinity
+    }
+    | {
+        Result :: done | error,
+        Status :: open | closed,
+        NState :: any(),
+        TimeoutTime :: integer() | infinity
+    }.
 
--callback handle_update(RelativeTime :: integer(), Time :: integer(),
-                        State :: any()) ->
-    {Status :: open | closed, NState :: any(),
-     TimeoutTime :: integer() | infinity}.
+-callback handle_update(
+    RelativeTime :: integer(),
+    Time :: integer(),
+    State :: any()
+) ->
+    {Status :: open | closed, NState :: any(), TimeoutTime :: integer() | infinity}.
 
 -callback handle_info(Msg :: any(), Time :: integer(), State :: any()) ->
-    {Status :: open | closed, NState :: any(),
-     TimeoutTime :: integer() | infinity}.
+    {Status :: open | closed, NState :: any(), TimeoutTime :: integer() | infinity}.
 
 -callback handle_timeout(Time :: integer(), State :: any()) ->
-    {Status :: open | closed, NState :: any(),
-     TimeoutTime :: integer() | infinity}.
+    {Status :: open | closed, NState :: any(), TimeoutTime :: integer() | infinity}.
 
--callback code_change(OldVsn :: any(), Time :: integer(), State :: any(),
-                      Extra :: any()) ->
-    {Status :: open | closed, NState :: any(),
-     TimeoutTime :: integer() | infinity}.
+-callback code_change(
+    OldVsn :: any(),
+    Time :: integer(),
+    State :: any(),
+    Extra :: any()
+) ->
+    {Status :: open | closed, NState :: any(), TimeoutTime :: integer() | infinity}.
 
 -callback config_change(Args :: any(), Time :: integer(), State :: any()) ->
-    {Status :: open | closed, NState :: any(),
-     TimeoutTime :: integer() | infinity}.
+    {Status :: open | closed, NState :: any(), TimeoutTime :: integer() | infinity}.
 
 -callback size(State :: any()) -> Size :: non_neg_integer().
 
@@ -241,7 +267,7 @@
 
 %% @private
 -spec initial_state() -> Map when
-      Map :: internal_map().
+    Map :: internal_map().
 initial_state() ->
     #{}.
 
@@ -261,24 +287,26 @@ init(Mod, Map, Send, _, Args) ->
 
 %% @private
 -spec code_change(Module, OldVsn, Send, Time, {Status, State}, Extra) ->
-    {{NStatus, NState}, TimeoutTime} when
-      Module :: module(),
-      OldVsn :: any(),
-      Send :: integer(),
-      Time :: integer(),
-      Status :: open | closed,
-      State :: any(),
-      Extra :: any(),
-      NStatus :: open | closed,
-      NState :: any(),
-      TimeoutTime :: integer() | infinity.
+    {{NStatus, NState}, TimeoutTime}
+when
+    Module :: module(),
+    OldVsn :: any(),
+    Send :: integer(),
+    Time :: integer(),
+    Status :: open | closed,
+    State :: any(),
+    Extra :: any(),
+    NStatus :: open | closed,
+    NState :: any(),
+    TimeoutTime :: integer() | infinity.
 code_change(Mod, OldVsn, Send, _, {_, State}, Extra) ->
     {Status, NState, TimeoutTime} = Mod:code_change(OldVsn, Send, State, Extra),
     {{Status, NState}, TimeoutTime}.
 
 %% @private
 -spec config_change(Module, Args, Send, Time, {Status, State}) ->
-    {{NStatus, NState}, TimeoutTime} when
+    {{NStatus, NState}, TimeoutTime}
+when
     Module :: module(),
     Args :: any(),
     Send :: integer(),
@@ -294,11 +322,11 @@ config_change(Mod, Args, Send, _, {_, State}) ->
 
 %% @private
 -spec terminate(Module, Reason, {Status, State}) -> Map when
-      Module :: module(),
-      Reason :: sbroker_handlers:reason(),
-      Status :: open | closed,
-      State :: any(),
-      Map :: internal_map().
+    Module :: module(),
+    Reason :: sbroker_handlers:reason(),
+    Status :: open | closed,
+    State :: any(),
+    Map :: internal_map().
 terminate(Mod, Reason, {_, State}) ->
     case Mod:terminate(Reason, State) of
         Map when is_map(Map) ->

@@ -57,7 +57,7 @@ handle_info(Msg, Time, State) ->
     sregulator_statem_valve:handle_info(Msg, Time, State).
 
 handle_timeout(Time, State) ->
-     sregulator_statem_valve:handle_timeout(Time, State).
+    sregulator_statem_valve:handle_timeout(Time, State).
 
 code_change(OldVsn, Time, State, Extra) ->
     sregulator_statem_valve:code_change(OldVsn, Time, State, Extra).

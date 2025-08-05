@@ -52,37 +52,66 @@
 -export([handle_out_r/3]).
 -export([config_change/3]).
 
--record(state, {target, interval, max_packet, count=0, drop_next=undefined,
-                first_above_time=undefined, dropping=false, now=undefined}).
+-record(state, {
+    target,
+    interval,
+    max_packet,
+    count = 0,
+    drop_next = undefined,
+    first_above_time = undefined,
+    dropping = false,
+    now = undefined
+}).
 
 module() ->
     sbroker_codel_queue.
 
 args() ->
-    ?LET({Out, Target, Interval, Drop, Min, Max},
-         gen_args(),
-         #{out => Out, target => Target, interval => Interval, drop => Drop,
-           min => Min, max => Max}).
+    ?LET(
+        {Out, Target, Interval, Drop, Min, Max},
+        gen_args(),
+        #{
+            out => Out,
+            target => Target,
+            interval => Interval,
+            drop => Drop,
+            min => Min,
+            max => Max
+        }
+    ).
 
 gen_args() ->
-    ?SUCHTHAT({_, _, _, _, Min, Max},
-              {oneof([out, out_r]),
-               choose(0, 3),
-               choose(1, 3),
-               oneof([drop, drop_r]),
-               choose(0, 3),
-               oneof([choose(0, 5), infinity])},
-              Min =< Max).
+    ?SUCHTHAT(
+        {_, _, _, _, Min, Max},
+        {
+            oneof([out, out_r]),
+            choose(0, 3),
+            choose(1, 3),
+            oneof([drop, drop_r]),
+            choose(0, 3),
+            oneof([choose(0, 5), infinity])
+        },
+        Min =< Max
+    ).
 
 time_dependence(#state{}) ->
     dependent.
 
-init(#{out := Out, target := Target, interval := Interval, drop := Drop,
-       min := Min, max := Max}) ->
+init(#{
+    out := Out,
+    target := Target,
+    interval := Interval,
+    drop := Drop,
+    min := Min,
+    max := Max
+}) ->
     NTarget = erlang:convert_time_unit(Target, milli_seconds, native),
     NInterval = erlang:convert_time_unit(Interval, milli_seconds, native),
-    {Out, Drop, Min, Max, #state{target=NTarget, interval=NInterval,
-                                 max_packet=Min}}.
+    {Out, Drop, Min, Max, #state{
+        target = NTarget,
+        interval = NInterval,
+        max_packet = Min
+    }}.
 
 %% To ensure following the reference codel implementationas closely as possible
 %% use the full dequeue approach and "undo" the following:
@@ -90,18 +119,26 @@ init(#{out := Out, target := Target, interval := Interval, drop := Drop,
 %% * Changing from dropping true to false
 %% This means that a slow queue is detected and items can be dropped but a
 %% real dequeue is required to stop the first (or consecutive) slow intervals.
-handle_timeout(Time, L, #state{first_above_time=undefined} = State) ->
+handle_timeout(Time, L, #state{first_above_time = undefined} = State) ->
     handle_out(Time, L, State);
-handle_timeout(Time, L, #state{dropping=true, target=Target,
-                               max_packet=MaxPacket,
-                               first_above_time=FirstAbove} = State) ->
+handle_timeout(
+    Time,
+    L,
+    #state{
+        dropping = true,
+        target = Target,
+        max_packet = MaxPacket,
+        first_above_time = FirstAbove
+    } = State
+) ->
     {N, NState} = handle_out(Time, L, State),
     case lists:split(N, L) of
         {[], _} ->
             %% No items dropped so state does not change.
             {0, State};
-        {_, [Sojourn | _] = NL}
-          when Sojourn >= Target, length(NL) > MaxPacket ->
+        {_, [Sojourn | _] = NL} when
+            Sojourn >= Target, length(NL) > MaxPacket
+        ->
             %% Next item is slow, queue size is greater than max packet and item
             %% was not dropped so still dropping.
             {N, NState};
@@ -113,30 +150,38 @@ handle_timeout(Time, L, #state{dropping=true, target=Target,
             case handle_out(Time, Dropped ++ Pad, State) of
                 {N, NState2} ->
                     {N, NState2};
-                {M, _} when M == N+1 ->
-                    NState2 = NState#state{count=NState#state.count+1,
-                                           dropping=true,
-                                           first_above_time=FirstAbove},
+                {M, _} when M == N + 1 ->
+                    NState2 = NState#state{
+                        count = NState#state.count + 1,
+                        dropping = true,
+                        first_above_time = FirstAbove
+                    },
                     {N, control_law(NState#state.drop_next, NState2)}
             end
     end;
-handle_timeout(Time, L, #state{dropping=false,
-                               first_above_time=FirstAbove} = State) ->
+handle_timeout(
+    Time,
+    L,
+    #state{
+        dropping = false,
+        first_above_time = FirstAbove
+    } = State
+) ->
     case handle_out(Time, L, State) of
         {0, NState} ->
             %% Head might be below target, queue size below max packet or empty
             %% queue, maintain previous first_above_time.
-            {0, NState#state{first_above_time=FirstAbove}};
+            {0, NState#state{first_above_time = FirstAbove}};
         {1, NState} ->
             %% End of first interval resulted in drop. If new head is below
             %% target, queue size is less than or equal to max packet
             %% first_above_time is reset, maintain previous. Dropping is always
             %% true after first drop.
-            {1, NState#state{first_above_time=FirstAbove}}
+            {1, NState#state{first_above_time = FirstAbove}}
     end.
 
 handle_out(Time, L, State) ->
-    {Item, NL, NState} = do_dequeue(L, State#state{now=Time}),
+    {Item, NL, NState} = do_dequeue(L, State#state{now = Time}),
     case NState#state.dropping of
         true ->
             dequeue_dropping(Item, NL, NState);
@@ -144,25 +189,40 @@ handle_out(Time, L, State) ->
             dequeue_not_dropping(Item, NL, NState)
     end.
 
-handle_out_r(Time, L, #state{max_packet=MaxPacket} = State) ->
+handle_out_r(Time, L, #state{max_packet = MaxPacket} = State) ->
     case handle_timeout(Time, L, State) of
         {Drops, NState} when (length(L) - Drops) =< MaxPacket ->
-            {Drops, NState#state{first_above_time=undefined}};
+            {Drops, NState#state{first_above_time = undefined}};
         {Drops, NState} ->
             {Drops, NState}
     end.
 
-config_change(Time,
-              #{out := Out, target := Target, interval := Interval,
-                drop := Drop, min := Min, max := Max},
-              #state{first_above_time=FirstAbove,
-                     drop_next=DropNext} = State) ->
+config_change(
+    Time,
+    #{
+        out := Out,
+        target := Target,
+        interval := Interval,
+        drop := Drop,
+        min := Min,
+        max := Max
+    },
+    #state{
+        first_above_time = FirstAbove,
+        drop_next = DropNext
+    } = State
+) ->
     NTarget = erlang:convert_time_unit(Target, milli_seconds, native),
     NInterval = erlang:convert_time_unit(Interval, milli_seconds, native),
-    NFirstAbove = reduce(FirstAbove, Time+NInterval),
-    NDropNext = reduce(DropNext, Time+NInterval),
-    NState = State#state{target=NTarget, interval=NInterval, max_packet=Min,
-                         first_above_time=NFirstAbove, drop_next=NDropNext},
+    NFirstAbove = reduce(FirstAbove, Time + NInterval),
+    NDropNext = reduce(DropNext, Time + NInterval),
+    NState = State#state{
+        target = NTarget,
+        interval = NInterval,
+        max_packet = Min,
+        first_above_time = NFirstAbove,
+        drop_next = NDropNext
+    },
     {Out, Drop, Min, Max, NState}.
 
 reduce(undefined, _) ->
@@ -171,59 +231,90 @@ reduce(Next, Min) ->
     min(Next, Min).
 
 dequeue_dropping({nodrop, _} = Item, L, State) ->
-    dequeue_dropping(Item, L, State#state{dropping=false}, 0);
+    dequeue_dropping(Item, L, State#state{dropping = false}, 0);
 dequeue_dropping(Item, L, State) ->
     dequeue_dropping(Item, L, State, 0).
 
-dequeue_dropping(_Item, L, #state{dropping=Dropping, drop_next=DropNext,
-                                    now=Now} = State, Drops)
-  when Now >= DropNext andalso Dropping =:= true ->
+dequeue_dropping(
+    _Item,
+    L,
+    #state{
+        dropping = Dropping,
+        drop_next = DropNext,
+        now = Now
+    } = State,
+    Drops
+) when
+    Now >= DropNext andalso Dropping =:= true
+->
     NDrops = Drops + 1,
     case do_dequeue(L, State) of
         {{nodrop, _} = NItem, NL, NState} ->
-            dequeue_dropping(NItem, NL, NState#state{dropping=false}, NDrops);
-        {{drop, _} = NItem, NL, #state{count=Count} = NState} ->
-            NState2 = control_law(DropNext, NState#state{count=Count+1}),
+            dequeue_dropping(NItem, NL, NState#state{dropping = false}, NDrops);
+        {{drop, _} = NItem, NL, #state{count = Count} = NState} ->
+            NState2 = control_law(DropNext, NState#state{count = Count + 1}),
             dequeue_dropping(NItem, NL, NState2, NDrops)
     end;
 dequeue_dropping(_Item, _L, State, Drops) ->
     {Drops, State}.
 
-dequeue_not_dropping({drop, _Item}, L,
-                     #state{interval=Interval, drop_next=DropNext,
-                            count=Count, now=Now} = State) ->
+dequeue_not_dropping(
+    {drop, _Item},
+    L,
+    #state{
+        interval = Interval,
+        drop_next = DropNext,
+        count = Count,
+        now = Now
+    } = State
+) ->
     Drops = 1,
     {_, _, NState} = do_dequeue(L, State),
-    NState2 = NState#state{dropping=true},
-    NCount = if
-                 Count > 2 andalso Now - DropNext < 8 * Interval ->
-                     Count - 2;
-                 true ->
-                     1
-             end,
-    {Drops, control_law(Now, NState2#state{count=NCount})};
+    NState2 = NState#state{dropping = true},
+    NCount =
+        if
+            Count > 2 andalso Now - DropNext < 8 * Interval ->
+                Count - 2;
+            true ->
+                1
+        end,
+    {Drops, control_law(Now, NState2#state{count = NCount})};
 dequeue_not_dropping({nodrop, _}, _L, State) ->
     {0, State}.
 
-control_law(Start, #state{interval=Interval, count=Count} = State) ->
+control_law(Start, #state{interval = Interval, count = Count} = State) ->
     DropNext = Start + erlang:trunc(Interval / math:sqrt(Count)),
-    State#state{drop_next=DropNext}.
+    State#state{drop_next = DropNext}.
 
 do_dequeue([], State) ->
-    {{nodrop, empty}, [], State#state{first_above_time=undefined}};
-do_dequeue([SojournTime | L], #state{target=Target} = State)
-  when SojournTime < Target ->
-    {{nodrop, SojournTime}, L, State#state{first_above_time=undefined}};
-do_dequeue([SojournTime | NL] = L, #state{max_packet=MaxPacket} = State)
-  when length(L) =< MaxPacket ->
-    {{nodrop, SojournTime}, NL, State#state{first_above_time=undefined}};
-do_dequeue([SojournTime | L], #state{interval=Interval, now=Now,
-                                     first_above_time=undefined} = State) ->
+    {{nodrop, empty}, [], State#state{first_above_time = undefined}};
+do_dequeue([SojournTime | L], #state{target = Target} = State) when
+    SojournTime < Target
+->
+    {{nodrop, SojournTime}, L, State#state{first_above_time = undefined}};
+do_dequeue([SojournTime | NL] = L, #state{max_packet = MaxPacket} = State) when
+    length(L) =< MaxPacket
+->
+    {{nodrop, SojournTime}, NL, State#state{first_above_time = undefined}};
+do_dequeue(
+    [SojournTime | L],
+    #state{
+        interval = Interval,
+        now = Now,
+        first_above_time = undefined
+    } = State
+) ->
     FirstAbove = Now + Interval,
-    {{nodrop, SojournTime}, L, State#state{first_above_time=FirstAbove}};
-do_dequeue([SojournTime | L], #state{first_above_time=FirstAbove,
-                                     now=Now} = State)
-  when Now >= FirstAbove ->
+    {{nodrop, SojournTime}, L, State#state{first_above_time = FirstAbove}};
+do_dequeue(
+    [SojournTime | L],
+    #state{
+        first_above_time = FirstAbove,
+        now = Now
+    } = State
+) when
+    Now >= FirstAbove
+->
     {{drop, SojournTime}, L, State};
 do_dequeue([SojournTime | L], State) ->
     {{nodrop, SojournTime}, L, State}.

@@ -38,8 +38,8 @@
 %% tuple of process names. If no process is associated with the name returns
 %% `undefined'.
 -spec whereis_name(Processes) -> Process | undefined when
-      Processes :: tuple(),
-      Process :: pid().
+    Processes :: tuple(),
+    Process :: pid().
 whereis_name({}) ->
     undefined;
 whereis_name({Name}) ->
@@ -69,8 +69,8 @@ whereis_name(Processes) when is_tuple(Processes) ->
 %% name on another node, or a process is associated with the name. Otherwise
 %% exits.
 -spec send(Processes, Msg) -> ok when
-      Processes :: tuple(),
-      Msg :: any().
+    Processes :: tuple(),
+    Msg :: any().
 send(Processes, Msg) ->
     case whereis_name(Processes) of
         Pid when is_pid(Pid) ->

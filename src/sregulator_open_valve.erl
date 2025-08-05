@@ -53,35 +53,39 @@
 
 -export_type([spec/0]).
 
--record(state, {max :: non_neg_integer() | infinity,
-                small_time :: integer(),
-                map :: sregulator_valve:internal_map()}).
+-record(state, {
+    max :: non_neg_integer() | infinity,
+    small_time :: integer(),
+    map :: sregulator_valve:internal_map()
+}).
 
 %% sregulator_valve api
 
 %% @private
 -spec init(Map, Time, Spec) -> {open | closed, State, infinity} when
-      Map :: sregulator_valve:internal_map(),
-      Time :: integer(),
-      Spec :: spec(),
-      State :: #state{}.
+    Map :: sregulator_valve:internal_map(),
+    Time :: integer(),
+    Spec :: spec(),
+    State :: #state{}.
 init(Map, Time, Spec) ->
     Max = sbroker_util:max(Spec),
-    handle(#state{max=Max, small_time=Time, map=Map}).
+    handle(#state{max = Max, small_time = Time, map = Map}).
 
 %% @private
 -spec handle_ask(Pid, Ref, Time, State) ->
-    {go, Open, open | closed, NState, infinity} when
-      Pid :: pid(),
-      Ref :: reference(),
-      Time :: integer(),
-      State :: #state{},
-      Open :: integer(),
-      NState :: #state{}.
-handle_ask(Pid, Ref, _, #state{max=Max, small_time=Small, map=Map} = State)
-  when map_size(Map) < Max ->
+    {go, Open, open | closed, NState, infinity}
+when
+    Pid :: pid(),
+    Ref :: reference(),
+    Time :: integer(),
+    State :: #state{},
+    Open :: integer(),
+    NState :: #state{}.
+handle_ask(Pid, Ref, _, #state{max = Max, small_time = Small, map = Map} = State) when
+    map_size(Map) < Max
+->
     NMap = maps:put(Ref, Pid, Map),
-    NState = State#state{map=NMap},
+    NState = State#state{map = NMap},
     case map_size(NMap) of
         Max ->
             {go, Small, closed, NState, infinity};
@@ -91,20 +95,21 @@ handle_ask(Pid, Ref, _, #state{max=Max, small_time=Small, map=Map} = State)
 
 %% @private
 -spec handle_done(Ref, Time, State) ->
-    {done | error, open | closed, NState, infinity} when
-      Ref :: reference(),
-      Time :: integer(),
-      State :: #state{},
-      NState :: #state{}.
-handle_done(Ref, Time, #state{max=Max, map=Map} = State) ->
+    {done | error, open | closed, NState, infinity}
+when
+    Ref :: reference(),
+    Time :: integer(),
+    State :: #state{},
+    NState :: #state{}.
+handle_done(Ref, Time, #state{max = Max, map = Map} = State) ->
     Before = map_size(Map),
     NMap = maps:remove(Ref, Map),
     After = map_size(NMap),
-    NState = State#state{map=NMap},
+    NState = State#state{map = NMap},
     if
         After < Before, Before =:= Max ->
             demonitor(Ref, [flush]),
-            {done, open, NState#state{small_time=Time}, infinity};
+            {done, open, NState#state{small_time = Time}, infinity};
         After < Before, After < Max ->
             demonitor(Ref, [flush]),
             {done, open, NState, infinity};
@@ -119,33 +124,36 @@ handle_done(Ref, Time, #state{max=Max, map=Map} = State) ->
 
 %% @private
 -spec handle_continue(Ref, Time, State) ->
-    {go, Open, open | closed, NState, infinity} |
-    {done | error, open | closed, NState, infinity} when
-      Ref :: reference(),
-      Time :: integer(),
-      State :: #state{},
-      Open :: integer(),
-      NState :: #state{}.
-handle_continue(Ref, _, #state{max=Max, small_time=Small, map=Map} = State)
-  when map_size(Map) < Max ->
+    {go, Open, open | closed, NState, infinity}
+    | {done | error, open | closed, NState, infinity}
+when
+    Ref :: reference(),
+    Time :: integer(),
+    State :: #state{},
+    Open :: integer(),
+    NState :: #state{}.
+handle_continue(Ref, _, #state{max = Max, small_time = Small, map = Map} = State) when
+    map_size(Map) < Max
+->
     case maps:find(Ref, Map) of
         {ok, _} ->
             {go, Small, open, State, infinity};
         error ->
             {error, open, State, infinity}
     end;
-handle_continue(Ref, Time, #state{max=Max, map=Map} = State)
-  when map_size(Map) =:= Max ->
+handle_continue(Ref, Time, #state{max = Max, map = Map} = State) when
+    map_size(Map) =:= Max
+->
     case maps:find(Ref, Map) of
         {ok, _} ->
             {go, Time, closed, State, infinity};
         error ->
             {error, closed, State, infinity}
     end;
-handle_continue(Ref, _, #state{map=Map} = State) ->
+handle_continue(Ref, _, #state{map = Map} = State) ->
     Before = map_size(Map),
     NMap = maps:remove(Ref, Map),
-    NState = State#state{map=NMap},
+    NState = State#state{map = NMap},
     case map_size(NMap) of
         Before ->
             {error, closed, NState, infinity};
@@ -155,89 +163,91 @@ handle_continue(Ref, _, #state{map=Map} = State) ->
 
 %% @private
 -spec handle_update(Value, Time, State) ->
-    {open | closed, NState, infinity} when
-      Value :: integer(),
-      Time :: integer(),
-      State :: #state{},
-      NState :: #state{}.
+    {open | closed, NState, infinity}
+when
+    Value :: integer(),
+    Time :: integer(),
+    State :: #state{},
+    NState :: #state{}.
 handle_update(_, _, State) ->
     handle(State).
 
 %% @private
 -spec handle_info(Msg, Time, State) -> {open | closed, NState, infinity} when
-      Msg :: any(),
-      Time :: integer(),
-      State :: #state{},
-      NState :: #state{}.
-handle_info({'DOWN', Ref, _, _, _}, Time, #state{map=Map, max=Max} = State) ->
+    Msg :: any(),
+    Time :: integer(),
+    State :: #state{},
+    NState :: #state{}.
+handle_info({'DOWN', Ref, _, _, _}, Time, #state{map = Map, max = Max} = State) ->
     Before = map_size(Map),
     NMap = maps:remove(Ref, Map),
     case map_size(NMap) of
         After when Before =:= Max, After < Max ->
-            handle(State#state{map=NMap, small_time=Time});
+            handle(State#state{map = NMap, small_time = Time});
         _ ->
-            handle(State#state{map=NMap})
+            handle(State#state{map = NMap})
     end;
-handle_info(_,  _, State) ->
+handle_info(_, _, State) ->
     handle(State).
 
 %% @private
 -spec handle_timeout(Time, State) -> {open | closed, NState, infinity} when
-      Time :: integer(),
-      State :: #state{},
-      NState :: #state{}.
+    Time :: integer(),
+    State :: #state{},
+    NState :: #state{}.
 handle_timeout(_, State) ->
     handle(State).
 
 %% @private
 -spec code_change(OldVsn, Time, State, Extra) -> {Status, NState, infinity} when
-      OldVsn :: any(),
-      Time :: integer(),
-      State :: #state{},
-      Extra :: any(),
-      Status :: open | closed,
-      NState :: #state{}.
+    OldVsn :: any(),
+    Time :: integer(),
+    State :: #state{},
+    Extra :: any(),
+    Status :: open | closed,
+    NState :: #state{}.
 code_change(_, _, State, _) ->
     handle(State).
 
 %% @private
 -spec config_change(Spec, Time, State) -> {open | closed, NState, infinity} when
-      Spec :: spec(),
-      Time :: integer(),
-      State :: #state{},
-      NState :: #state{}.
+    Spec :: spec(),
+    Time :: integer(),
+    State :: #state{},
+    NState :: #state{}.
 config_change(Spec, _, State) ->
     Max = sbroker_util:max(Spec),
-    handle(State#state{max=Max}).
+    handle(State#state{max = Max}).
 
 %% @private
 -spec size(State) -> Size when
-      State :: #state{},
-      Size :: non_neg_integer().
-size(#state{map=Map}) ->
+    State :: #state{},
+    Size :: non_neg_integer().
+size(#state{map = Map}) ->
     map_size(Map).
 
 %% @private
 -spec open_time(State) -> Open | closed when
-      State :: #state{},
-      Open :: integer().
-open_time(#state{map=Map, max=Max, small_time=Small})
-  when map_size(Map) < Max ->
+    State :: #state{},
+    Open :: integer().
+open_time(#state{map = Map, max = Max, small_time = Small}) when
+    map_size(Map) < Max
+->
     Small;
 open_time(#state{}) ->
     closed.
 
 %% @private
 -spec terminate(Reason, State) -> Map when
-      Reason :: any(),
-      State :: #state{},
-      Map :: sregulator_valve:internal_map().
-terminate(_, #state{map=Map}) ->
+    Reason :: any(),
+    State :: #state{},
+    Map :: sregulator_valve:internal_map().
+terminate(_, #state{map = Map}) ->
     Map.
 
 %% Internal
 
-handle(#state{max=Max, map=Map} = State) when map_size(Map) < Max ->
+handle(#state{max = Max, map = Map} = State) when map_size(Map) < Max ->
     {open, State, infinity};
 handle(State) ->
     {closed, State, infinity}.

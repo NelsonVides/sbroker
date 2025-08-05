@@ -73,54 +73,65 @@
 %% types
 
 -type spec() ::
-    #{ask    => #{target   => AskTarget :: non_neg_integer(),
-                  interval => AskInterval :: pos_integer()},
-      ask_r  => #{target   => AskRTarget :: non_neg_integer(),
-                  interval => AskRInterval :: pos_integer()},
-      update => Update :: pos_integer(),
-      min    => Min :: non_neg_integer(),
-      max    => Max :: non_neg_integer() | infinity}.
+    #{
+        ask => #{
+            target => AskTarget :: non_neg_integer(),
+            interval => AskInterval :: pos_integer()
+        },
+        ask_r => #{
+            target => AskRTarget :: non_neg_integer(),
+            interval => AskRInterval :: pos_integer()
+        },
+        update => Update :: pos_integer(),
+        min => Min :: non_neg_integer(),
+        max => Max :: non_neg_integer() | infinity
+    }.
 
 -export_type([spec/0]).
 
--record(pie, {target :: non_neg_integer(),
-              interval :: pos_integer(),
-              alpha :: integer(),
-              beta :: integer(),
-              allowance :: non_neg_integer(),
-              drop = 0.0 :: float(),
-              last :: undefined | non_neg_integer(),
-              updated :: integer()}).
+-record(pie, {
+    target :: non_neg_integer(),
+    interval :: pos_integer(),
+    alpha :: integer(),
+    beta :: integer(),
+    allowance :: non_neg_integer(),
+    drop = 0.0 :: float(),
+    last :: undefined | non_neg_integer(),
+    updated :: integer()
+}).
 
--record(state, {update :: non_neg_integer(),
-                ask :: #pie{},
-                bid :: #pie{},
-                update_next :: integer()}).
+-record(state, {
+    update :: non_neg_integer(),
+    ask :: #pie{},
+    bid :: #pie{},
+    update_next :: integer()
+}).
 
 %% @private
 -spec init(Time, Spec) -> {State, Time} when
-      Time :: integer(),
-      Spec :: spec(),
-      State :: #state{}.
+    Time :: integer(),
+    Spec :: spec(),
+    State :: #state{}.
 init(Time, Spec) ->
     AskPie = init(Time, ask, Spec),
     BidPie = init(Time, ask_r, Spec),
     NUpdate = sbroker_util:update(Spec),
     {Min, Max} = sbroker_util:min_max(Spec),
     true = sprotector_server:register(self(), Min, Max),
-    State = #state{ask=AskPie, bid=BidPie, update=NUpdate, update_next=Time},
+    State = #state{ask = AskPie, bid = BidPie, update = NUpdate, update_next = Time},
     {State, Time}.
 
 %% @private
 -spec handle_update(QueueDelay, ProcessDelay, RelativeTime, Time, State) ->
-    {NState, Next} when
-      QueueDelay :: non_neg_integer(),
-      ProcessDelay :: non_neg_integer(),
-      RelativeTime :: integer(),
-      Time :: integer(),
-      State :: #state{},
-      NState :: #state{},
-      Next :: integer().
+    {NState, Next}
+when
+    QueueDelay :: non_neg_integer(),
+    ProcessDelay :: non_neg_integer(),
+    RelativeTime :: integer(),
+    Time :: integer(),
+    State :: #state{},
+    NState :: #state{},
+    Next :: integer().
 handle_update(QueueDelay, _, RelativeTime, Time, State) ->
     AskSojourn = sojourn(QueueDelay, RelativeTime),
     BidSojourn = sojourn(QueueDelay, -RelativeTime),
@@ -128,46 +139,53 @@ handle_update(QueueDelay, _, RelativeTime, Time, State) ->
 
 %% @private
 -spec handle_info(Msg, Time, State) -> {State, Next} when
-      Msg :: any(),
-      Time :: integer(),
-      State :: #state{},
-      Next :: integer().
+    Msg :: any(),
+    Time :: integer(),
+    State :: #state{},
+    Next :: integer().
 handle_info(_, Time, State) ->
     handle(Time, State).
 
 %% @private
 -spec code_change(OldVsn, Time, State, Extra) -> {State, Next} when
-      OldVsn :: any(),
-      Time :: integer(),
-      State :: #state{},
-      Extra :: any(),
-      Next :: integer().
+    OldVsn :: any(),
+    Time :: integer(),
+    State :: #state{},
+    Extra :: any(),
+    Next :: integer().
 code_change(_, Time, State, _) ->
     handle(Time, State).
 
 %% @private
 -spec config_change(Spec, Time, State) -> {NState, Next} when
-      Spec :: spec(),
-      Time :: integer(),
-      State :: #state{},
-      NState :: #state{},
-      Next :: integer().
-config_change(Spec, Time,
-              #state{ask=AskPie, bid=BidPie, update_next=UpdateNext}) ->
+    Spec :: spec(),
+    Time :: integer(),
+    State :: #state{},
+    NState :: #state{},
+    Next :: integer().
+config_change(
+    Spec,
+    Time,
+    #state{ask = AskPie, bid = BidPie, update_next = UpdateNext}
+) ->
     {AskDrop, NAskPie} = change(ask, Spec, AskPie),
     {BidDrop, NBidPie} = change(ask_r, Spec, BidPie),
     Update = sbroker_util:update(Spec),
     {Min, Max} = sbroker_util:min_max(Spec),
     sprotector_server:change(self(), Min, Max, queue_len(), AskDrop, BidDrop),
-    NUpdateNext = min(Time+Update, max(Time, UpdateNext)),
-    NState = #state{update=Update, ask=NAskPie, bid=NBidPie,
-                    update_next=NUpdateNext},
+    NUpdateNext = min(Time + Update, max(Time, UpdateNext)),
+    NState = #state{
+        update = Update,
+        ask = NAskPie,
+        bid = NBidPie,
+        update_next = NUpdateNext
+    },
     {NState, NUpdateNext}.
 
 %% @private
 -spec terminate(Reason, State) -> true when
-      Reason :: any(),
-      State :: #state{}.
+    Reason :: any(),
+    State :: #state{}.
 terminate(_, _) ->
     sprotector_server:unregister(self()).
 
@@ -178,37 +196,66 @@ init(Time, Queue, Spec) ->
     Beta = erlang:convert_time_unit(4, 5, native),
     Target = sbroker_util:sojourn_target(Queue, Spec),
     Interval = sbroker_util:interval(Queue, Spec),
-    #pie{target=Target, interval=Interval, alpha=Alpha, beta=Beta,
-         allowance=Interval, updated=Time}.
+    #pie{
+        target = Target,
+        interval = Interval,
+        alpha = Alpha,
+        beta = Beta,
+        allowance = Interval,
+        updated = Time
+    }.
 
 sojourn(QueueDelay, RelativeTime) ->
     QueueDelay + max(0, RelativeTime).
 
-handle_update(AskSojourn, BidSojourn, Time,
-              #state{update_next=UpdateNext, ask=AskPie, bid=BidPie} = State)
-  when UpdateNext > Time ->
+handle_update(
+    AskSojourn,
+    BidSojourn,
+    Time,
+    #state{update_next = UpdateNext, ask = AskPie, bid = BidPie} = State
+) when
+    UpdateNext > Time
+->
     {AskDrop, NAskPie} = drop_control(AskSojourn, AskPie),
     {BidDrop, NBidPie} = drop_control(BidSojourn, BidPie),
     true = sprotector_server:update(self(), queue_len(), AskDrop, BidDrop),
-    {State#state{ask=NAskPie, bid=NBidPie}, UpdateNext};
-handle_update(AskSojourn, BidSojourn, Time,
-              #state{update=Update, ask=AskPie, bid=BidPie} = State) ->
+    {State#state{ask = NAskPie, bid = NBidPie}, UpdateNext};
+handle_update(
+    AskSojourn,
+    BidSojourn,
+    Time,
+    #state{update = Update, ask = AskPie, bid = BidPie} = State
+) ->
     {AskDrop, NAskPie} = update(AskSojourn, Time, AskPie),
     {BidDrop, NBidPie} = update(BidSojourn, Time, BidPie),
     true = sprotector_server:update(self(), queue_len(), AskDrop, BidDrop),
     UpdateNext = Time + Update,
-    NState = State#state{ask=NAskPie, bid=NBidPie, update_next=UpdateNext},
+    NState = State#state{ask = NAskPie, bid = NBidPie, update_next = UpdateNext},
     {NState, UpdateNext}.
 
-update(Sojourn, Time, #pie{last=undefined} = Pie) ->
-    update(Sojourn, Time, Pie#pie{last=Sojourn, updated=Time});
-update(Sojourn, Time,
-       #pie{alpha=Alpha, beta=Beta, target=Target, last=Last, drop=Drop,
-            allowance=Allowance, updated=Updated} = Pie) ->
+update(Sojourn, Time, #pie{last = undefined} = Pie) ->
+    update(Sojourn, Time, Pie#pie{last = Sojourn, updated = Time});
+update(
+    Sojourn,
+    Time,
+    #pie{
+        alpha = Alpha,
+        beta = Beta,
+        target = Target,
+        last = Last,
+        drop = Drop,
+        allowance = Allowance,
+        updated = Updated
+    } = Pie
+) ->
     NDrop = adjust((Sojourn - Target) / Alpha + (Sojourn - Last) / Beta, Drop),
     NDrop2 = decay(NDrop, Sojourn, Last),
-    NPie = Pie#pie{last=Sojourn, updated=Time, drop=NDrop2,
-                   allowance=max(0, Allowance-(Time-Updated))},
+    NPie = Pie#pie{
+        last = Sojourn,
+        updated = Time,
+        drop = NDrop2,
+        allowance = max(0, Allowance - (Time - Updated))
+    },
     drop_control(Sojourn, NPie).
 
 adjust(Diff, Drop) ->
@@ -234,45 +281,54 @@ decay(Drop, 0, 0) ->
 decay(Drop, _, _) ->
     Drop.
 
-drop_control(Sojourn,
-          #pie{drop=0.0, last=Last, target=Target, interval=Interval,
-               allowance=Allowance} = Pie)
-  when Sojourn < Target div 2, Last < Target div 2 ->
+drop_control(
+    Sojourn,
+    #pie{
+        drop = 0.0,
+        last = Last,
+        target = Target,
+        interval = Interval,
+        allowance = Allowance
+    } = Pie
+) when
+    Sojourn < Target div 2, Last < Target div 2
+->
     case Allowance of
         Interval ->
             {0.0, Pie};
         _ ->
-            {0.0, Pie#pie{allowance=Interval}}
+            {0.0, Pie#pie{allowance = Interval}}
     end;
-drop_control(_, #pie{allowance=Allowance} = Pie) when Allowance > 0 ->
+drop_control(_, #pie{allowance = Allowance} = Pie) when Allowance > 0 ->
     {0.0, Pie};
-drop_control(_, #pie{last=Last, target=Target, drop=Drop} = Pie)
-  when Last < Target div 2, Drop < 0.2 ->
+drop_control(_, #pie{last = Last, target = Target, drop = Drop} = Pie) when
+    Last < Target div 2, Drop < 0.2
+->
     {0.0, Pie};
-drop_control(_, #pie{drop=Drop} = Pie) ->
+drop_control(_, #pie{drop = Drop} = Pie) ->
     {Drop, Pie}.
 
-change(Queue, Spec, #pie{last=undefined} = Pie) ->
+change(Queue, Spec, #pie{last = undefined} = Pie) ->
     Target = sbroker_util:sojourn_target(Queue, Spec),
     Interval = sbroker_util:interval(Queue, Spec),
-    NPie = Pie#pie{target=Target, interval=Interval, allowance=Interval},
+    NPie = Pie#pie{target = Target, interval = Interval, allowance = Interval},
     {0.0, NPie};
-change(Queue, Spec, #pie{last=Last} = Pie) ->
+change(Queue, Spec, #pie{last = Last} = Pie) ->
     Target = sbroker_util:sojourn_target(Queue, Spec),
     Interval = sbroker_util:interval(Queue, Spec),
     Allowance = change_allowance(Interval, Pie),
-    NPie = Pie#pie{target=Target, interval=Interval, allowance=Allowance},
+    NPie = Pie#pie{target = Target, interval = Interval, allowance = Allowance},
     drop_control(Last, NPie).
 
-change_allowance(_, #pie{allowance=0}) ->
+change_allowance(_, #pie{allowance = 0}) ->
     0;
-change_allowance(Interval, #pie{allowance=Allowance, interval=PrevInterval}) ->
+change_allowance(Interval, #pie{allowance = Allowance, interval = PrevInterval}) ->
     max(0, Allowance - PrevInterval + Interval).
 
 queue_len() ->
     {_, Len} = process_info(self(), message_queue_len),
     % Ignore '$mark' if present
-    max(0, Len-1).
+    max(0, Len - 1).
 
-handle(Time, #state{update_next=UpdateNext} = State) ->
+handle(Time, #state{update_next = UpdateNext} = State) ->
     {State, max(Time, UpdateNext)}.

@@ -33,16 +33,18 @@
 %% public API
 
 -spec start_link() -> {ok, Pid} when
-      Pid :: pid().
+    Pid :: pid().
 start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 %% supervisor API
 
 init([]) ->
-    ServerSup = {sbroker_server_sup, {sbroker_server_sup, start_link, []},
-                 permanent, infinity, supervisor, [sbroker_server_sup]},
-    UserSup = {sbroker_user_sup,
-               {sbroker_user_sup, start_link, []},
-               permanent, infinity, supervisor, [sbroker_user_sup]},
+    ServerSup =
+        {sbroker_server_sup, {sbroker_server_sup, start_link, []}, permanent, infinity, supervisor,
+            [sbroker_server_sup]},
+    UserSup =
+        {sbroker_user_sup, {sbroker_user_sup, start_link, []}, permanent, infinity, supervisor, [
+            sbroker_user_sup
+        ]},
     {ok, {{rest_for_one, 3, 300}, [ServerSup, UserSup]}}.

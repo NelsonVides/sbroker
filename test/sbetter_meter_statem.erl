@@ -29,36 +29,52 @@
 -export([change/3]).
 -export([timeout/2]).
 
--record(state, {ask_upper :: non_neg_integer(),
-                bid_upper :: non_neg_integer(),
-                update :: pos_integer(),
-                updated :: undefined | integer()}).
+-record(state, {
+    ask_upper :: non_neg_integer(),
+    bid_upper :: non_neg_integer(),
+    update :: pos_integer(),
+    updated :: undefined | integer()
+}).
 
 module() ->
     sbetter_meter.
 
 args() ->
-    ?LET({AskUpper, AskRUpper, Update},
-         {choose(0, 5), choose(0,5), choose(1,5)},
-         #{ask    => #{upper => AskUpper},
-           ask_r  => #{upper => AskRUpper},
-           update => Update}).
+    ?LET(
+        {AskUpper, AskRUpper, Update},
+        {choose(0, 5), choose(0, 5), choose(1, 5)},
+        #{
+            ask => #{upper => AskUpper},
+            ask_r => #{upper => AskRUpper},
+            update => Update
+        }
+    ).
 
-init(Time,
-     #{ask := #{upper := Ask}, ask_r := #{upper := Bid}, update := Update}) ->
+init(
+    Time,
+    #{ask := #{upper := Ask}, ask_r := #{upper := Bid}, update := Update}
+) ->
     NAsk = erlang:convert_time_unit(Ask, milli_seconds, native),
     NBid = erlang:convert_time_unit(Bid, milli_seconds, native),
     NUpdate = erlang:convert_time_unit(Update, milli_seconds, native),
-    {#state{ask_upper=NAsk, bid_upper=NBid, update=NUpdate}, Time}.
+    {#state{ask_upper = NAsk, bid_upper = NBid, update = NUpdate}, Time}.
 
-update_next(#state{update=NUpdate} = State, Time, _, _, _, _) ->
-    {State#state{updated=Time}, NUpdate+Time}.
+update_next(#state{update = NUpdate} = State, Time, _, _, _, _) ->
+    {State#state{updated = Time}, NUpdate + Time}.
 
-update_post(#state{ask_upper=Ask, bid_upper=Bid, update=Update}, Time,
-            _, QueueDelay, ProcessDelay, RelativeTime) ->
-    {lookup_post(QueueDelay, ProcessDelay, RelativeTime, ask, Ask) andalso
-     lookup_post(QueueDelay, ProcessDelay, -RelativeTime, ask_r, Bid),
-     Update+Time}.
+update_post(
+    #state{ask_upper = Ask, bid_upper = Bid, update = Update},
+    Time,
+    _,
+    QueueDelay,
+    ProcessDelay,
+    RelativeTime
+) ->
+    {
+        lookup_post(QueueDelay, ProcessDelay, RelativeTime, ask, Ask) andalso
+            lookup_post(QueueDelay, ProcessDelay, -RelativeTime, ask_r, Bid),
+        Update + Time
+    }.
 
 lookup_post(QueueDelay, ProcessDelay, RelativeTime, Queue, Upper) ->
     ObsValue = sbetter_server:lookup(self(), Queue),
@@ -66,15 +82,17 @@ lookup_post(QueueDelay, ProcessDelay, RelativeTime, Queue, Upper) ->
         ObsValue ->
             true;
         ExpValue ->
-            ct:pal("~p value~nExpected: ~p~nObserved: ~p",
-                   [Queue, ExpValue, ObsValue]),
+            ct:pal(
+                "~p value~nExpected: ~p~nObserved: ~p",
+                [Queue, ExpValue, ObsValue]
+            ),
             false
     end.
 
 change(_, Time, Args) ->
     init(Time, Args).
 
-timeout(#state{updated=undefined}, Time) ->
+timeout(#state{updated = undefined}, Time) ->
     Time;
-timeout(#state{update=Update, updated=Updated}, Time) ->
-    max(Time, Updated+Update).
+timeout(#state{update = Update, updated = Updated}, Time) ->
+    max(Time, Updated + Update).

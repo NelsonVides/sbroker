@@ -36,87 +36,129 @@ module() ->
     sregulator_rate_valve.
 
 args() ->
-    ?LET({Limit, Interval, Min, Max}, gen_args(),
-         #{limit => Limit, interval => Interval, min => Min, max => Max}).
+    ?LET(
+        {Limit, Interval, Min, Max},
+        gen_args(),
+        #{limit => Limit, interval => Interval, min => Min, max => Max}
+    ).
 
 gen_args() ->
-    ?LET({Min, Max},
-         ?SUCHTHAT({Min, Max}, {choose(0, 5), oneof([choose(0, 5), infinity])},
-                   Min =< Max),
-         {choose(0, 5), choose(1, 5), Min, Max}).
+    ?LET(
+        {Min, Max},
+        ?SUCHTHAT(
+            {Min, Max},
+            {choose(0, 5), oneof([choose(0, 5), infinity])},
+            Min =< Max
+        ),
+        {choose(0, 5), choose(1, 5), Min, Max}
+    ).
 
-init(#{limit := Limit, interval := Interval, min := Min, max := Max}, Size,
-     Time) ->
+init(
+    #{limit := Limit, interval := Interval, min := Min, max := Max},
+    Size,
+    Time
+) ->
     NInterval = erlang:convert_time_unit(Interval, milli_seconds, native),
     case max(0, Size - (Min + Limit)) of
         Overflow when Overflow > 0 ->
-            State = #state{interval=NInterval, intervals=[], active=Limit,
-                           overflow=Overflow},
+            State = #state{
+                interval = NInterval,
+                intervals = [],
+                active = Limit,
+                overflow = Overflow
+            },
             {Min, Max, closed, State};
         0 ->
             Active = max(0, Size - Min),
-            Intervals = lists:duplicate(Limit-Active, 0),
-            State = #state{interval=NInterval, intervals=Intervals,
-                           active=Active, overflow=0, time=Time},
+            Intervals = lists:duplicate(Limit - Active, 0),
+            State = #state{
+                interval = NInterval,
+                intervals = Intervals,
+                active = Active,
+                overflow = 0,
+                time = Time
+            },
             {Status, NState} = handle(Time, State),
             {Min, Max, Status, NState}
     end.
 
 handle_ask(Time, State) ->
     {open, NState} = handle(Time, State),
-    #state{intervals=[_|Intervals], active=Active} = NState,
-    handle(State#state{intervals=Intervals, active=Active+1}).
+    #state{intervals = [_ | Intervals], active = Active} = NState,
+    handle(State#state{intervals = Intervals, active = Active + 1}).
 
-handle_done(Time, #state{overflow=Overflow} = State) when Overflow > 0 ->
-    handle(Time, State#state{overflow=Overflow-1});
-handle_done(Time, #state{overflow=0, active=Active} = State)
-  when Active > 0 ->
-    {_, #state{intervals=Intervals} = NState} = handle(Time, State),
-    handle(NState#state{active=Active-1, intervals=Intervals++[0]}).
+handle_done(Time, #state{overflow = Overflow} = State) when Overflow > 0 ->
+    handle(Time, State#state{overflow = Overflow - 1});
+handle_done(Time, #state{overflow = 0, active = Active} = State) when
+    Active > 0
+->
+    {_, #state{intervals = Intervals} = NState} = handle(Time, State),
+    handle(NState#state{active = Active - 1, intervals = Intervals ++ [0]}).
 
-handle(Time, #state{intervals=Intervals, time=PrevTime} = State) ->
-    NIntervals = [Interval + (Time-PrevTime) || Interval <- Intervals],
-    handle(State#state{intervals=NIntervals, time=Time}).
+handle(Time, #state{intervals = Intervals, time = PrevTime} = State) ->
+    NIntervals = [Interval + (Time - PrevTime) || Interval <- Intervals],
+    handle(State#state{intervals = NIntervals, time = Time}).
 
 timeout(Time, State) ->
     {_, NState} = handle(Time, State),
     case NState of
-        #state{overflow=0, intervals=[Max | _], interval=Interval}
-          when Max < Interval ->
+        #state{overflow = 0, intervals = [Max | _], interval = Interval} when
+            Max < Interval
+        ->
             Time + (Interval - Max);
         #state{} ->
             infinity
     end.
 
-config_change(#{limit := Limit, interval := Interval, min := Min, max := Max},
-              Size, Time, State) ->
-    {_, #state{intervals=Intervals}} = handle(Time, State),
+config_change(
+    #{limit := Limit, interval := Interval, min := Min, max := Max},
+    Size,
+    Time,
+    State
+) ->
+    {_, #state{intervals = Intervals}} = handle(Time, State),
     NInterval = erlang:convert_time_unit(Interval, milli_seconds, native),
     Active = max(0, Size - Min),
     case Limit - Active of
         NegOverflow when NegOverflow < 0 ->
-            NState = #state{interval=NInterval, intervals=[],
-                            overflow=-NegOverflow, active=Limit, time=Time},
+            NState = #state{
+                interval = NInterval,
+                intervals = [],
+                overflow = -NegOverflow,
+                active = Limit,
+                time = Time
+            },
             {Min, Max, closed, NState};
         Slots when length(Intervals) >= Slots ->
             NIntervals = lists:sublist(Intervals, Slots),
-            NState = #state{interval=NInterval, intervals=NIntervals,
-                            active=Active, overflow=0, time=Time},
+            NState = #state{
+                interval = NInterval,
+                intervals = NIntervals,
+                active = Active,
+                overflow = 0,
+                time = Time
+            },
             {Status, NState2} = handle(NState),
             {Min, Max, Status, NState2};
         Slots when length(Intervals) < Slots ->
-            New = lists:duplicate(Slots-length(Intervals), 0),
+            New = lists:duplicate(Slots - length(Intervals), 0),
             NIntervals = Intervals ++ New,
-            NState = #state{interval=NInterval, intervals=NIntervals,
-                            active=Active, overflow=0, time=Time},
+            NState = #state{
+                interval = NInterval,
+                intervals = NIntervals,
+                active = Active,
+                overflow = 0,
+                time = Time
+            },
             {Status, NState2} = handle(NState),
             {Min, Max, Status, NState2}
     end.
 
 %% Internal
 
-handle(#state{overflow=0, interval=Interval, intervals=[Max|_]} = NState)
-  when Max >= Interval ->
+handle(#state{overflow = 0, interval = Interval, intervals = [Max | _]} = NState) when
+    Max >= Interval
+->
     {open, NState};
 handle(NState) ->
     {closed, NState}.

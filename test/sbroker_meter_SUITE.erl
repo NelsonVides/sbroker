@@ -53,8 +53,12 @@ init_per_suite(Config) ->
     {ok, Started} = application:ensure_all_started(sbroker),
     {alarm_handler, Alarms} = sbroker_test_handler:add_handler(),
     QcOpts = [{numtests, 1000}, long_result, {on_output, fun log/2}],
-    [{quickcheck_options, QcOpts}, {started, Started}, {alarms, Alarms} |
-     Config].
+    [
+        {quickcheck_options, QcOpts},
+        {started, Started},
+        {alarms, Alarms}
+        | Config
+    ].
 
 end_per_suite(Config) ->
     try

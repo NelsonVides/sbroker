@@ -52,85 +52,106 @@
 -export([terminate/2]).
 
 -type spec() ::
-    #{out  => Out :: out | out_r,
-      drop => Drop :: drop | drop_r,
-      max  => Max :: non_neg_integer() | infinity}.
+    #{
+        out => Out :: out | out_r,
+        drop => Drop :: drop | drop_r,
+        max => Max :: non_neg_integer() | infinity
+    }.
 
 -export_type([spec/0]).
 
--record(state, {out :: out | out_r,
-                drop :: drop | drop_r,
-                max :: non_neg_integer() | infinity,
-                len :: non_neg_integer(),
-                queue :: sbroker_queue:internal_queue()}).
+-record(state, {
+    out :: out | out_r,
+    drop :: drop | drop_r,
+    max :: non_neg_integer() | infinity,
+    len :: non_neg_integer(),
+    queue :: sbroker_queue:internal_queue()
+}).
 
 %% @private
 -spec init(Q, Time, Spec) -> {State, infinity} when
-      Q :: sbroker_queue:internal_queue(),
-      Time :: integer(),
-      Spec :: spec(),
-      State :: #state{}.
+    Q :: sbroker_queue:internal_queue(),
+    Time :: integer(),
+    Spec :: spec(),
+    State :: #state{}.
 init(Q, Time, Arg) ->
     from_queue(Q, queue:len(Q), Time, Arg).
 
 %% @private
 -spec handle_in(SendTime, From, Value, Time, State) -> {NState, infinity} when
-      SendTime :: integer(),
-      From :: {pid(), any()},
-      Value :: any(),
-      Time :: integer(),
-      State :: #state{},
-      NState :: #state{}.
-handle_in(SendTime, From, _, Time,
-          #state{max=Max, len=Max, drop=drop_r} = State) ->
+    SendTime :: integer(),
+    From :: {pid(), any()},
+    Value :: any(),
+    Time :: integer(),
+    State :: #state{},
+    NState :: #state{}.
+handle_in(
+    SendTime,
+    From,
+    _,
+    Time,
+    #state{max = Max, len = Max, drop = drop_r} = State
+) ->
     sbroker_queue:drop(From, SendTime, Time),
     {State, infinity};
-handle_in(SendTime, {Pid, _} = From, Value, Time,
-          #state{max=Max, len=Max, drop=drop, queue=Q} = State) ->
+handle_in(
+    SendTime,
+    {Pid, _} = From,
+    Value,
+    Time,
+    #state{max = Max, len = Max, drop = drop, queue = Q} = State
+) ->
     {{value, {SendTime2, From2, _, Ref2}}, NQ} = queue:out(Q),
     demonitor(Ref2, [flush]),
     sbroker_queue:drop(From2, SendTime2, Time),
     Ref = monitor(process, Pid),
     NQ2 = queue:in({SendTime, From, Value, Ref}, NQ),
-    {State#state{queue=NQ2}, infinity};
-handle_in(SendTime, {Pid, _} = From, Value, _,
-          #state{len=Len, queue=Q} = State) ->
+    {State#state{queue = NQ2}, infinity};
+handle_in(
+    SendTime,
+    {Pid, _} = From,
+    Value,
+    _,
+    #state{len = Len, queue = Q} = State
+) ->
     Ref = monitor(process, Pid),
     NQ = queue:in({SendTime, From, Value, Ref}, Q),
-    {State#state{len=Len+1, queue=NQ}, infinity}.
+    {State#state{len = Len + 1, queue = NQ}, infinity}.
 
 %% @private
 -spec handle_out(Time, State) ->
-    {SendTime, From, Value, Ref, NState, infinity} | {empty, NState} when
-      Time :: integer(),
-      State :: #state{},
-      SendTime :: integer(),
-      From :: {pid(), any()},
-      Value :: any(),
-      Ref :: reference(),
-      NState :: #state{}.
-handle_out(_Time, #state{len=0} = State) ->
+    {SendTime, From, Value, Ref, NState, infinity} | {empty, NState}
+when
+    Time :: integer(),
+    State :: #state{},
+    SendTime :: integer(),
+    From :: {pid(), any()},
+    Value :: any(),
+    Ref :: reference(),
+    NState :: #state{}.
+handle_out(_Time, #state{len = 0} = State) ->
     {empty, State};
-handle_out(_, #state{out=out, len=Len, queue=Q} = State) ->
+handle_out(_, #state{out = out, len = Len, queue = Q} = State) ->
     {{value, {SendTime, From, Value, Ref}}, NQ} = queue:out(Q),
-    {SendTime, From, Value, Ref, State#state{len=Len-1, queue=NQ}, infinity};
-handle_out(_, #state{out=out_r, len=Len, queue=Q} = State) ->
+    {SendTime, From, Value, Ref, State#state{len = Len - 1, queue = NQ}, infinity};
+handle_out(_, #state{out = out_r, len = Len, queue = Q} = State) ->
     {{value, {SendTime, From, Value, Ref}}, NQ} = queue:out_r(Q),
-    {SendTime, From, Value, Ref, State#state{len=Len-1, queue=NQ}, infinity}.
+    {SendTime, From, Value, Ref, State#state{len = Len - 1, queue = NQ}, infinity}.
 
 %% @private
 -spec handle_fq_out(Time, State) ->
-    {SendTime, From, Value, Ref, NState, NextTimeout} |
-    {empty, NState, RemoveTime} when
-      Time :: integer(),
-      State :: #state{},
-      SendTime :: integer(),
-      From :: {pid(), any()},
-      Value :: any(),
-      Ref :: reference(),
-      NState :: #state{},
-      NextTimeout :: integer() | infinity,
-      RemoveTime :: integer().
+    {SendTime, From, Value, Ref, NState, NextTimeout}
+    | {empty, NState, RemoveTime}
+when
+    Time :: integer(),
+    State :: #state{},
+    SendTime :: integer(),
+    From :: {pid(), any()},
+    Value :: any(),
+    Ref :: reference(),
+    NState :: #state{},
+    NextTimeout :: integer() | infinity,
+    RemoveTime :: integer().
 handle_fq_out(Time, State) ->
     case handle_out(Time, State) of
         {_, _, _, _, _, _} = Out ->
@@ -141,87 +162,88 @@ handle_fq_out(Time, State) ->
 
 %% @private
 -spec handle_cancel(Tag, Time, State) -> {Cancelled, NState, infinity} when
-      Tag :: any(),
-      Time :: integer(),
-      State :: #state{},
-      Cancelled :: false | pos_integer(),
-      NState :: #state{}.
-handle_cancel(Tag, _, #state{len=Len, queue=Q} = State) ->
-    Cancel = fun({_, {_, Tag2}, _, Ref}) when Tag2 =:= Tag ->
-                     demonitor(Ref, [flush]),
-                     false;
-                (_) ->
-                     true
-             end,
+    Tag :: any(),
+    Time :: integer(),
+    State :: #state{},
+    Cancelled :: false | pos_integer(),
+    NState :: #state{}.
+handle_cancel(Tag, _, #state{len = Len, queue = Q} = State) ->
+    Cancel = fun
+        ({_, {_, Tag2}, _, Ref}) when Tag2 =:= Tag ->
+            demonitor(Ref, [flush]),
+            false;
+        (_) ->
+            true
+    end,
     NQ = queue:filter(Cancel, Q),
     case queue:len(NQ) of
         Len ->
             {false, State, infinity};
         NLen ->
-            {Len - NLen, State#state{len=NLen, queue=NQ}, infinity}
+            {Len - NLen, State#state{len = NLen, queue = NQ}, infinity}
     end.
 
 %% @private
 -spec handle_timeout(Time, State) -> {State, infinity} when
-      Time :: integer(),
-      State :: #state{}.
+    Time :: integer(),
+    State :: #state{}.
 handle_timeout(_Time, State) ->
     {State, infinity}.
 
 %% @private
 -spec handle_info(Msg, Time, State) -> {NState, infinity} when
-      Msg :: any(),
-      Time :: integer(),
-      State :: #state{},
-      NState :: #state{}.
-handle_info({'DOWN', Ref, _, _, _}, _, #state{queue=Q} = State) ->
+    Msg :: any(),
+    Time :: integer(),
+    State :: #state{},
+    NState :: #state{}.
+handle_info({'DOWN', Ref, _, _, _}, _, #state{queue = Q} = State) ->
     NQ = queue:filter(fun({_, _, _, Ref2}) -> Ref2 =/= Ref end, Q),
-    {State#state{len=queue:len(NQ), queue=NQ}, infinity};
+    {State#state{len = queue:len(NQ), queue = NQ}, infinity};
 handle_info(_, _, State) ->
     {State, infinity}.
 
 %% @private
 -spec code_change(OldVsn, Time, State, Extra) -> {NState, infinity} when
-      OldVsn :: any(),
-      Time :: integer(),
-      State :: #state{},
-      Extra :: any(),
-      NState :: #state{}.
+    OldVsn :: any(),
+    Time :: integer(),
+    State :: #state{},
+    Extra :: any(),
+    NState :: #state{}.
 code_change(_, _, State, _) ->
     {State, infinity}.
 
 %% @private
 -spec config_change(Spec, Time, State) -> {NState, infinity} when
-      Spec :: spec(),
-      Time :: integer(),
-      State :: #state{},
-      NState :: #state{}.
-config_change(Spec, Time, #state{len=Len, queue=Q}) ->
+    Spec :: spec(),
+    Time :: integer(),
+    State :: #state{},
+    NState :: #state{}.
+config_change(Spec, Time, #state{len = Len, queue = Q}) ->
     from_queue(Q, Len, Time, Spec).
 
 %% @private
 -spec len(State) -> Len when
-      State :: #state{},
-      Len :: non_neg_integer().
-len(#state{len=Len}) ->
+    State :: #state{},
+    Len :: non_neg_integer().
+len(#state{len = Len}) ->
     Len.
 
 %% @private
 -spec send_time(State) -> SendTime | empty when
-      State :: #state{},
-      SendTime :: integer().
-send_time(#state{len=0}) ->
+    State :: #state{},
+    SendTime :: integer().
+send_time(#state{len = 0}) ->
     empty;
-send_time(#state{queue=Q}) ->
+send_time(#state{queue = Q}) ->
     {SendTime, _, _, _} = queue:get(Q),
     SendTime.
 
 %% @private
 -spec terminate(Reason, State) -> Q when
-      Reason :: any(),
-      State :: #state{},
-      Q :: sbroker_queue:internal_queue().
-terminate(_, #state{queue=Q}) ->
+    Reason :: any(),
+    State :: #state{},
+    Q :: sbroker_queue:internal_queue().
+terminate(_, #state{queue = Q}) ->
     Q.
 
 %% Internal
@@ -233,21 +255,21 @@ from_queue(Q, Len, Time, Spec) ->
     from_queue(Q, Len, Time, Out, Drop, Max).
 
 from_queue(Q, Len, _, Out, Drop, infinity) ->
-    {#state{out=Out, drop=Drop, max=infinity, len=Len, queue=Q}, infinity};
+    {#state{out = Out, drop = Drop, max = infinity, len = Len, queue = Q}, infinity};
 from_queue(Q, Len, Time, Out, Drop, Max) ->
     case Len - Max of
         DropCount when DropCount > 0 andalso Drop =:= drop ->
             {DropQ, NQ} = queue:split(DropCount, Q),
             drop_queue(Time, DropQ),
-            NState = #state{out=Out, drop=Drop, max=Max, len=Max, queue=NQ},
+            NState = #state{out = Out, drop = Drop, max = Max, len = Max, queue = NQ},
             {NState, infinity};
         DropCount when DropCount > 0 andalso Drop =:= drop_r ->
             {NQ, DropQ} = queue:split(Max, Q),
             drop_queue(Time, DropQ),
-            NState = #state{out=Out, drop=Drop, max=Max, len=Max, queue=NQ},
+            NState = #state{out = Out, drop = Drop, max = Max, len = Max, queue = NQ},
             {NState, infinity};
         _ ->
-            {#state{out=Out, drop=Drop, max=Max, len=Len, queue=Q}, infinity}
+            {#state{out = Out, drop = Drop, max = Max, len = Len, queue = Q}, infinity}
     end.
 
 drop_queue(Time, Q) ->

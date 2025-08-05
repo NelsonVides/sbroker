@@ -61,15 +61,19 @@
 
 %% types
 
--type process() :: pid() | atom() | {atom(), node()} | {global, term()} |
-                   {via, module(), term()}.
+-type process() ::
+    pid()
+    | atom()
+    | {atom(), node()}
+    | {global, term()}
+    | {via, module(), term()}.
 
 %% @doc Lookup a pid and possibly drop the request depending on the min, max and
 %% drop probability of the chosen queue. If no process is associated with the
 %% process returns `undefined'.
 -spec whereis_name({Process, ask | ask_r}) -> Pid | undefined when
-      Process :: process(),
-      Pid :: pid().
+    Process :: process(),
+    Pid :: pid().
 whereis_name({Process, Key}) ->
     case info(Process, Key) of
         {go, Pid} ->
@@ -86,8 +90,8 @@ whereis_name({Process, Key}) ->
 %% probability of the chosen queue. Returns `ok' if the message is sent
 %% otherwise exits.
 -spec send({Process, ask | ask_r}, Msg) -> ok when
-      Process :: process(),
-      Msg :: any().
+    Process :: process(),
+    Msg :: any().
 send(Process, Msg) ->
     try whereis_name(Process) of
         Pid when is_pid(Pid) ->

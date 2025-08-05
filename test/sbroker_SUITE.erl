@@ -49,24 +49,38 @@
 %% common_test api
 
 all() ->
-    [{group, simple},
-     {group, property}].
+    [
+        {group, simple},
+        {group, property}
+    ].
 
 suite() ->
     [{timetrap, {seconds, 120}}].
 
 groups() ->
-    [{simple,
-      [ask, ask_r, dirty_cancel, await_timeout, await_down, skip_down_match,
-       user]},
-     {property, [statem]}].
+    [
+        {simple, [
+            ask,
+            ask_r,
+            dirty_cancel,
+            await_timeout,
+            await_down,
+            skip_down_match,
+            user
+        ]},
+        {property, [statem]}
+    ].
 
 init_per_suite(Config) ->
     {ok, Started} = application:ensure_all_started(sbroker),
     {alarm_handler, Alarms} = sbroker_test_handler:add_handler(),
     QcOpts = [{numtests, 1000}, long_result, {on_output, fun log/2}],
-    [{quickcheck_options, QcOpts}, {started, Started}, {alarms, Alarms} |
-     Config].
+    [
+        {quickcheck_options, QcOpts},
+        {started, Started},
+        {alarms, Alarms}
+        | Config
+    ].
 
 end_per_suite(Config) ->
     try
@@ -165,8 +179,14 @@ dirty_cancel(_) ->
     ok = sbroker:dirty_cancel(Broker, TagB),
     0 = sbroker:len(Broker),
     0 = sbroker:len_r(Broker),
-    receive {TagA, MsgA} -> exit({no_cancel, MsgA}) after 0 -> ok end,
-    receive {TagB, MsgB} -> exit({no_cancel, MsgB}) after 0 -> ok end,
+    receive
+        {TagA, MsgA} -> exit({no_cancel, MsgA})
+    after 0 -> ok
+    end,
+    receive
+        {TagB, MsgB} -> exit({no_cancel, MsgB})
+    after 0 -> ok
+    end,
     ok.
 
 await_timeout(_) ->
@@ -174,8 +194,7 @@ await_timeout(_) ->
     Ref = make_ref(),
     Self = self(),
     {await, Ref, Broker} = sbroker:async_ask(Broker, Self, {Self, Ref}),
-    {'EXIT',
-     {timeout, {sbroker, await, [Ref, 0]}}} = (catch sbroker:await(Ref, 0)),
+    {'EXIT', {timeout, {sbroker, await, [Ref, 0]}}} = (catch sbroker:await(Ref, 0)),
     ok.
 
 await_down(_) ->
@@ -183,21 +202,20 @@ await_down(_) ->
     {ok, Broker} = sbroker_test:start_link(),
     {await, Ref, Broker} = sbroker:async_ask(Broker),
     exit(Broker, shutdown),
-    receive {'EXIT', Broker, shutdown} -> ok end,
+    receive
+        {'EXIT', Broker, shutdown} -> ok
+    end,
     _ = process_flag(trap_exit, Trap),
-    {'EXIT',
-     {shutdown,
-      {sbroker, await,
-       [Ref, ?TIMEOUT]}}} = (catch sbroker:await(Ref, ?TIMEOUT)),
+    {'EXIT', {shutdown, {sbroker, await, [Ref, ?TIMEOUT]}}} = (catch sbroker:await(Ref, ?TIMEOUT)),
     ok.
 
 skip_down_match(_) ->
     {ok, Broker} = sbroker_test:start_link(),
     ok = sys:suspend(Broker),
     {_, MRef} = spawn_monitor(fun() ->
-                          sbroker:async_ask(Broker),
-                          exit(normal)
-                  end),
+        sbroker:async_ask(Broker),
+        exit(normal)
+    end),
     receive
         {'DOWN', MRef, _, _, normal} ->
             Ref = make_ref(),
@@ -216,7 +234,6 @@ user(_) ->
     [{sbroker_timeout_queue, ask, _} | _] = sys:get_state(?MODULE),
     [{Name, Pid1, worker, dynamic}] = sbroker_user:which_brokers(),
 
-
     ok = sbroker_user:terminate(Name),
     [{Name, undefined, worker, dynamic}] = sbroker_user:which_brokers(),
 
@@ -231,7 +248,6 @@ user(_) ->
     ok = application:set_env(sbroker, brokers, [{Name, Spec1}]),
     {ok, Pid2} = sbroker_user:restart(Name),
     [{Name, Pid2, worker, dynamic}] = sbroker_user:which_brokers(),
-
 
     ok = application:set_env(sbroker, brokers, [{Name, bad}]),
     [{Name, {bad_return_value, {ok, bad}}}] = sbroker_user:change_config(),

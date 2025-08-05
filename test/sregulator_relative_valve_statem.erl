@@ -34,14 +34,22 @@ module() ->
     sregulator_relative_valve.
 
 args() ->
-    ?LET({Target, Min, Max}, gen_args(),
-         #{target => Target, min => Min, max => Max}).
+    ?LET(
+        {Target, Min, Max},
+        gen_args(),
+        #{target => Target, min => Min, max => Max}
+    ).
 
 gen_args() ->
-    ?LET({Min, Max},
-         ?SUCHTHAT({Min, Max}, {choose(0, 5), oneof([choose(0, 5), infinity])},
-                   Min =< Max),
-         {choose(-10, 10), Min, Max}).
+    ?LET(
+        {Min, Max},
+        ?SUCHTHAT(
+            {Min, Max},
+            {choose(0, 5), oneof([choose(0, 5), infinity])},
+            Min =< Max
+        ),
+        {choose(-10, 10), Min, Max}
+    ).
 
 init(#{target := Target, min := Min, max := Max}, _, _) ->
     NTarget = erlang:convert_time_unit(Target, milli_seconds, native),
@@ -61,8 +69,12 @@ handle(_, {Target, Value} = State) when Target > Value ->
 handle(_, State) ->
     {closed, State}.
 
-config_change(#{target := Target, min := Min, max := Max}, _, Time,
-              {_, Value}) ->
+config_change(
+    #{target := Target, min := Min, max := Max},
+    _,
+    Time,
+    {_, Value}
+) ->
     NTarget = erlang:convert_time_unit(Target, milli_seconds, native),
     {Status, State} = handle(Time, {NTarget, Value}),
     {Min, Max, Status, State}.

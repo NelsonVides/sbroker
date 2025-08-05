@@ -51,24 +51,39 @@
 %% common_test api
 
 all() ->
-    [{group, simple},
-     {group, property}].
+    [
+        {group, simple},
+        {group, property}
+    ].
 
 suite() ->
     [{timetrap, {seconds, 60}}].
 
 groups() ->
-    [{simple,
-      [ask, done, dirty_done, dirty_cancel, continue, await_timeout,
-       await_down, user]},
-     {property, [statem, rate_statem]}].
+    [
+        {simple, [
+            ask,
+            done,
+            dirty_done,
+            dirty_cancel,
+            continue,
+            await_timeout,
+            await_down,
+            user
+        ]},
+        {property, [statem, rate_statem]}
+    ].
 
 init_per_suite(Config) ->
     {ok, Started} = application:ensure_all_started(sbroker),
     {alarm_handler, Alarms} = sbroker_test_handler:add_handler(),
     QcOpts = [{numtests, 1000}, long_result, {on_output, fun log/2}],
-    [{quickcheck_options, QcOpts}, {started, Started}, {alarms, Alarms} |
-     Config].
+    [
+        {quickcheck_options, QcOpts},
+        {started, Started},
+        {alarms, Alarms}
+        | Config
+    ].
 
 end_per_suite(Config) ->
     try
@@ -165,8 +180,13 @@ dirty_cancel(_) ->
     {await, TagB, _} = sregulator:async_ask(Regulator),
     ok = sregulator:dirty_cancel(Regulator, TagB),
     0 = sregulator:len(Regulator, ?TIMEOUT),
-    receive {TagA, {go, _, _, _, _}} -> ok end,
-    receive {TagB, Msg} -> exit({no_cancel, Msg}) after 0 -> ok end,
+    receive
+        {TagA, {go, _, _, _, _}} -> ok
+    end,
+    receive
+        {TagB, Msg} -> exit({no_cancel, Msg})
+    after 0 -> ok
+    end,
     ok.
 
 continue(_) ->
@@ -177,7 +197,7 @@ continue(_) ->
     {go, Ref, Regulator, _, SojournTime} = sregulator:continue(Regulator, Ref),
     if
         SojournTime >= 0 -> ok;
-        true ->  exit({bad_sojourn_time, SojournTime})
+        true -> exit({bad_sojourn_time, SojournTime})
     end,
     1 = sregulator:size(Regulator, ?TIMEOUT),
     {stop, _} = sregulator:continue(Regulator, Ref),
@@ -190,9 +210,8 @@ await_timeout(_) ->
     {ok, Regulator} = sregulator_test:start_link(),
     Ref = make_ref(),
     {await, Ref, Regulator} = sregulator:async_ask(Regulator, {self(), Ref}),
-    {'EXIT',
-     {timeout, {sregulator, await, [Ref, 0]}}} =
-    (catch sregulator:await(Ref, 0)),
+    {'EXIT', {timeout, {sregulator, await, [Ref, 0]}}} =
+        (catch sregulator:await(Ref, 0)),
     ok.
 
 await_down(_) ->
@@ -200,12 +219,12 @@ await_down(_) ->
     {ok, Regulator} = sregulator_test:start_link(),
     {await, Ref, Regulator} = sregulator:async_ask(Regulator),
     exit(Regulator, shutdown),
-    receive {'EXIT', Regulator, shutdown} -> ok end,
+    receive
+        {'EXIT', Regulator, shutdown} -> ok
+    end,
     _ = process_flag(trap_exit, Trap),
-    {'EXIT',
-     {shutdown,
-      {sregulator, await,
-       [Ref, ?TIMEOUT]}}} = (catch sregulator:await(Ref, ?TIMEOUT)),
+    {'EXIT', {shutdown, {sregulator, await, [Ref, ?TIMEOUT]}}} =
+        (catch sregulator:await(Ref, ?TIMEOUT)),
     ok.
 
 user(_) ->
@@ -215,7 +234,6 @@ user(_) ->
     {ok, Pid1} = sregulator_user:start(Name),
     [{sbroker_timeout_queue, queue, _} | _] = sys:get_state(?MODULE),
     [{Name, Pid1, worker, dynamic}] = sregulator_user:which_regulators(),
-
 
     ok = sregulator_user:terminate(Name),
     [{Name, undefined, worker, dynamic}] = sregulator_user:which_regulators(),
@@ -231,7 +249,6 @@ user(_) ->
     ok = application:set_env(sbroker, regulators, [{Name, Spec1}]),
     {ok, Pid2} = sregulator_user:restart(Name),
     [{Name, Pid2, worker, dynamic}] = sregulator_user:which_regulators(),
-
 
     ok = application:set_env(sbroker, regulators, [{Name, bad}]),
     [{Name, {bad_return_value, {ok, bad}}}] = sregulator_user:change_config(),

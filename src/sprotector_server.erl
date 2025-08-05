@@ -50,7 +50,8 @@
 %% macros
 
 -define(TIMEOUT, 5000).
--define(MAX_DROP, 16#8000000). % 2^27, phash2 default range
+% 2^27, phash2 default range
+-define(MAX_DROP, 16#8000000).
 
 %% public API
 
@@ -66,22 +67,23 @@
 %% probabilites are set to `0' and `0.0'. The server will synchronously link to
 %% the `Pid'.
 -spec register(Pid, Min, Max) -> Result when
-      Pid :: pid(),
-      Min :: non_neg_integer(),
-      Max :: non_neg_integer() | infinity,
-      Result :: boolean().
-register(Pid, Min, Max)
-  when (is_pid(Pid) andalso node(Pid) == node()) andalso
-       (is_integer(Min) andalso Min >= 0) andalso
-       ((is_integer(Max) andalso Max >= 0 andalso Max >= Min)
-        orelse Max == infinity) ->
+    Pid :: pid(),
+    Min :: non_neg_integer(),
+    Max :: non_neg_integer() | infinity,
+    Result :: boolean().
+register(Pid, Min, Max) when
+    (is_pid(Pid) andalso node(Pid) == node()) andalso
+        (is_integer(Min) andalso Min >= 0) andalso
+        ((is_integer(Max) andalso Max >= 0 andalso Max >= Min) orelse
+            Max == infinity)
+->
     gen_server:call(?MODULE, {register, Pid, Min, Max}, ?TIMEOUT).
 
 %% @doc Unregister the process `Pid' with the server.
 %%
 %% The server will synchronously unlink from `Pid'.
 -spec unregister(Pid) -> true when
-      Pid :: pid().
+    Pid :: pid().
 unregister(Pid) ->
     gen_server:call(?MODULE, {unregister, Pid}, ?TIMEOUT).
 
@@ -96,13 +98,14 @@ unregister(Pid) ->
 %% Returns `true' if the values were updated, or `false' if `Pid' is not
 %% registered with the server.
 -spec update(Pid, Len, AskDrop, AskRDrop) -> Result when
-      Pid :: pid(),
-      Len :: non_neg_integer(),
-      AskDrop :: float(),
-      AskRDrop :: float(),
-      Result :: boolean().
-update(Pid, Len, AskDrop, AskRDrop)
-  when is_integer(Len), Len >= 0, is_float(AskDrop), is_float(AskRDrop) ->
+    Pid :: pid(),
+    Len :: non_neg_integer(),
+    AskDrop :: float(),
+    AskRDrop :: float(),
+    Result :: boolean().
+update(Pid, Len, AskDrop, AskRDrop) when
+    is_integer(Len), Len >= 0, is_float(AskDrop), is_float(AskRDrop)
+->
     AskInt = drop_int(AskDrop),
     AskRInt = drop_int(AskRDrop),
     ets:update_element(?MODULE, Pid, [{4, Len}, {5, AskInt}, {6, AskRInt}]).
@@ -113,20 +116,21 @@ update(Pid, Len, AskDrop, AskRDrop)
 %% This function is an atomic. Returns `true' if the values were
 %% changed/updated, or `false' if `Pid' is not registered with the server.
 -spec change(Pid, Min, Max, Len, AskDrop, AskRDrop) -> Result when
-      Pid :: pid(),
-      Min :: non_neg_integer(),
-      Max :: non_neg_integer() | infinity,
-      Len :: non_neg_integer(),
-      AskDrop :: float(),
-      AskRDrop :: float(),
-      Result :: boolean().
-change(Pid, Min, Max, Len, AskDrop, AskRDrop)
-  when (is_pid(Pid) andalso node(Pid) == node()) andalso
-       (is_integer(Min) andalso Min >= 0) andalso
-       ((is_integer(Max) andalso Max >= 0 andalso Max >= Min)
-        orelse Max == infinity) andalso
-       is_integer(Len) andalso Len >= 0 andalso
-       is_float(AskDrop) andalso is_float(AskRDrop) ->
+    Pid :: pid(),
+    Min :: non_neg_integer(),
+    Max :: non_neg_integer() | infinity,
+    Len :: non_neg_integer(),
+    AskDrop :: float(),
+    AskRDrop :: float(),
+    Result :: boolean().
+change(Pid, Min, Max, Len, AskDrop, AskRDrop) when
+    (is_pid(Pid) andalso node(Pid) == node()) andalso
+        (is_integer(Min) andalso Min >= 0) andalso
+        ((is_integer(Max) andalso Max >= 0 andalso Max >= Min) orelse
+            Max == infinity) andalso
+        is_integer(Len) andalso Len >= 0 andalso
+        is_float(AskDrop) andalso is_float(AskRDrop)
+->
     NMax = max_int(Max),
     AskInt = drop_int(AskDrop),
     AskRInt = drop_int(AskRDrop),
@@ -137,15 +141,15 @@ change(Pid, Min, Max, Len, AskDrop, AskRDrop)
 
 %% @private
 -spec start_link() -> {ok, Pid} when
-      Pid :: pid().
+    Pid :: pid().
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, ?MODULE, []).
 
 %% @private
 -spec ask(Pid, Key) -> Result when
-      Pid :: pid(),
-      Key :: ask | ask_r,
-      Result :: go | drop.
+    Pid :: pid(),
+    Key :: ask | ask_r,
+    Result :: go | drop.
 ask(Pid, ask) ->
     do_ask(Pid, [{2, 0}, {3, 0}, {4, 1}, {5, 0}]);
 ask(Pid, ask_r) ->
@@ -153,9 +157,9 @@ ask(Pid, ask_r) ->
 
 %% @private
 -spec lookup(Pid, Key) -> Drop when
-      Pid :: pid(),
-      Key :: ask | ask_r,
-      Drop :: float().
+    Pid :: pid(),
+    Key :: ask | ask_r,
+    Drop :: float().
 lookup(Pid, ask) ->
     do_lookup(Pid, 5);
 lookup(Pid, ask_r) ->
@@ -163,8 +167,8 @@ lookup(Pid, ask_r) ->
 
 %% @private
 -spec len(Pid) -> Len when
-      Pid :: pid(),
-      Len :: non_neg_integer().
+    Pid :: pid(),
+    Len :: non_neg_integer().
 len(Pid) ->
     ets:lookup_element(?MODULE, Pid, 4).
 
@@ -173,8 +177,10 @@ len(Pid) ->
 %% @private
 init(Table) ->
     _ = process_flag(trap_exit, true),
-    Table = ets:new(Table,
-                    [named_table, set, public, {write_concurrency, true}]),
+    Table = ets:new(
+        Table,
+        [named_table, set, public, {write_concurrency, true}]
+    ),
     {ok, Table}.
 
 %% @private
@@ -198,8 +204,10 @@ handle_info({'EXIT', Pid, _}, Table) ->
     ets:delete(Table, Pid),
     {noreply, Table};
 handle_info(Msg, Table) ->
-    error_logger:error_msg("sprotector_server received unexpected message: ~p~n",
-                           [Msg]),
+    error_logger:error_msg(
+        "sprotector_server received unexpected message: ~p~n",
+        [Msg]
+    ),
     {noreply, Table}.
 
 %% @private

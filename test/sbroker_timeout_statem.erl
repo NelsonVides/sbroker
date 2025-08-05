@@ -34,17 +34,30 @@ module() ->
     sbroker_timeout_queue.
 
 args() ->
-    ?LET({Out, Timeout, Drop, Min, Max}, gen_args(),
-         #{out => Out, timeout => Timeout, drop => Drop, min => Min,
-           max => Max}).
+    ?LET(
+        {Out, Timeout, Drop, Min, Max},
+        gen_args(),
+        #{
+            out => Out,
+            timeout => Timeout,
+            drop => Drop,
+            min => Min,
+            max => Max
+        }
+    ).
 
 gen_args() ->
-    ?SUCHTHAT({_, _, _, Min, Max},
-              {oneof([out, out_r]),
-               oneof([choose(0, 3), infinity]),
-               oneof([drop, drop_r]),
-               choose(0, 3),
-               oneof([choose(0, 5), infinity])}, Min =< Max).
+    ?SUCHTHAT(
+        {_, _, _, Min, Max},
+        {
+            oneof([out, out_r]),
+            oneof([choose(0, 3), infinity]),
+            oneof([drop, drop_r]),
+            choose(0, 3),
+            oneof([choose(0, 5), infinity])
+        },
+        Min =< Max
+    ).
 
 time_dependence({_, infinity}) ->
     independent;
@@ -71,4 +84,4 @@ config_change(_, Spec, _) ->
 %% Internal
 
 timeout(infinity) -> infinity;
-timeout(Timeout)  -> erlang:convert_time_unit(Timeout, milli_seconds, native).
+timeout(Timeout) -> erlang:convert_time_unit(Timeout, milli_seconds, native).

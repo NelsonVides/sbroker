@@ -36,41 +36,51 @@ module() ->
     sbroker_fair_queue.
 
 args() ->
-    oneof([{sbroker_drop_queue, sbroker_drop_statem:args(), index()},
-           {sbroker_timeout_queue, sbroker_timeout_statem:args(), index()},
-           {sbroker_codel_queue, sbroker_codel_statem:args(), index()}]).
+    oneof([
+        {sbroker_drop_queue, sbroker_drop_statem:args(), index()},
+        {sbroker_timeout_queue, sbroker_timeout_statem:args(), index()},
+        {sbroker_codel_queue, sbroker_codel_statem:args(), index()}
+    ]).
 
 index() ->
-    frequency([{5, node},
-               {1, {hash, node, choose(1, 3)}},
-               {1, {hash, oneof([application, pid, value, {element, 1}]), 1}}]).
+    frequency([
+        {5, node},
+        {1, {hash, node, choose(1, 3)}},
+        {1, {hash, oneof([application, pid, value, {element, 1}]), 1}}
+    ]).
 
-time_dependence(#state{statem=SMod, state=State}) ->
+time_dependence(#state{statem = SMod, state = State}) ->
     SMod:time_dependence(State).
 
 init({QMod, Args, Index}) ->
     SMod = queue2statem(QMod),
     {Out, Drop, Min, Max, State} = SMod:init(Args),
-    {Out, Drop, Min, Max,
-     #state{queue=QMod, statem=SMod, state=State, index=Index}}.
+    {Out, Drop, Min, Max, #state{queue = QMod, statem = SMod, state = State, index = Index}}.
 
-handle_timeout(Time, L, #state{statem=SMod, state=State} = FullState) ->
-    {Drops, NState} = SMod:handle_timeout(Time, L,  State),
-    {Drops, FullState#state{state=NState}}.
+handle_timeout(Time, L, #state{statem = SMod, state = State} = FullState) ->
+    {Drops, NState} = SMod:handle_timeout(Time, L, State),
+    {Drops, FullState#state{state = NState}}.
 
-handle_out(Time, L, #state{statem=SMod, state=State} = FullState) ->
+handle_out(Time, L, #state{statem = SMod, state = State} = FullState) ->
     {Drops, NState} = SMod:handle_out(Time, L, State),
-    {Drops, FullState#state{state=NState}}.
+    {Drops, FullState#state{state = NState}}.
 
-handle_out_r(Time, L, #state{statem=SMod, state=State} = FullState) ->
+handle_out_r(Time, L, #state{statem = SMod, state = State} = FullState) ->
     {Drops, NState} = SMod:handle_out_r(Time, L, State),
-    {Drops, FullState#state{state=NState}}.
+    {Drops, FullState#state{state = NState}}.
 
-config_change(Time, {QMod, Args, Index},
-              #state{index=Index, queue=QMod, statem=SMod,
-                     state=State} = FullState) ->
+config_change(
+    Time,
+    {QMod, Args, Index},
+    #state{
+        index = Index,
+        queue = QMod,
+        statem = SMod,
+        state = State
+    } = FullState
+) ->
     {Out, Drop, Min, Max, NState} = SMod:config_change(Time, Args, State),
-    {Out, Drop, Min, Max, FullState#state{state=NState}};
+    {Out, Drop, Min, Max, FullState#state{state = NState}};
 config_change(_, FullArgs, _) ->
     init(FullArgs).
 

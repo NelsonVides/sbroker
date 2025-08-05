@@ -35,24 +35,33 @@
 
 -define(READ_TIME_AFTER, 16).
 
--type process() :: pid() | atom() | {atom(), node()} | {global, any()} |
-    {via, module(), any()}.
+-type process() ::
+    pid()
+    | atom()
+    | {atom(), node()}
+    | {global, any()}
+    | {via, module(), any()}.
 -type name() :: {local, atom()} | {global, any()} | {via, module(), any()}.
 -type debug_option() ::
-    trace | log | {log, pos_integer()} | statistics |
-    {log_to_file, file:filename()} | {install, {fun(), any()}}.
+    trace
+    | log
+    | {log, pos_integer()}
+    | statistics
+    | {log_to_file, file:filename()}
+    | {install, {fun(), any()}}.
 -type start_option() ::
-    {debug, debug_option()} | {timeout, timeout()} |
-    {spawn_opt, [proc_lib:spawn_option()]} |
-    {read_time_after, non_neg_integer() | infinity}.
+    {debug, debug_option()}
+    | {timeout, timeout()}
+    | {spawn_opt, [proc_lib:spawn_option()]}
+    | {read_time_after, non_neg_integer() | infinity}.
 -type start_return() :: {ok, pid()} | ignore | {error, any()}.
 
 -spec call(Process, Label, Msg, Timeout) -> Reply when
-      Process :: process(),
-      Label :: atom(),
-      Msg :: any(),
-      Timeout :: timeout(),
-      Reply :: any().
+    Process :: process(),
+    Label :: atom(),
+    Msg :: any(),
+    Timeout :: timeout(),
+    Reply :: any().
 call(Process, Label, Msg, Timeout) ->
     try whereis(Process) of
         undefined ->
@@ -72,11 +81,11 @@ call(Process, Label, Msg, Timeout) ->
     end.
 
 -spec simple_call(Process, Label, Msg, Timeout) -> Reply when
-      Process :: process(),
-      Label :: atom(),
-      Msg :: any(),
-      Timeout :: timeout(),
-      Reply :: any().
+    Process :: process(),
+    Label :: atom(),
+    Msg :: any(),
+    Timeout :: timeout(),
+    Reply :: any().
 simple_call(Process, Label, Msg, Timeout) ->
     try gen:call(Process, Label, Msg, Timeout) of
         {ok, Reply} ->
@@ -88,14 +97,14 @@ simple_call(Process, Label, Msg, Timeout) ->
     end.
 
 -spec async_call(Process, Label, Msg) -> {await, Tag, NProcess} | {drop, 0} when
-      Process :: process(),
-      Label :: atom(),
-      Msg :: any(),
-      Tag :: reference(),
-      NProcess :: pid() | {atom(), node()}.
+    Process :: process(),
+    Label :: atom(),
+    Msg :: any(),
+    Tag :: reference(),
+    NProcess :: pid() | {atom(), node()}.
 async_call(Process, Label, Msg) ->
     try whereis(Process) of
-         undefined ->
+        undefined ->
             exit({noproc, {?MODULE, async_call, [Process, Label, Msg]}});
         NProcess ->
             Tag = monitor(process, NProcess),
@@ -107,17 +116,18 @@ async_call(Process, Label, Msg) ->
     end.
 
 -spec async_call(Process, Label, Msg, To) ->
-    {await, Tag, NProcess} | {drop, 0} when
-      Process :: process(),
-      Label :: atom(),
-      Msg :: any(),
-      To :: {Pid, Tag},
-      Pid :: pid(),
-      Tag :: reference(),
-      NProcess :: pid() | {atom(), node()}.
+    {await, Tag, NProcess} | {drop, 0}
+when
+    Process :: process(),
+    Label :: atom(),
+    Msg :: any(),
+    To :: {Pid, Tag},
+    Pid :: pid(),
+    Tag :: reference(),
+    NProcess :: pid() | {atom(), node()}.
 async_call(Process, Label, Msg, {Pid, Tag} = To) when is_pid(Pid) ->
     try whereis(Process) of
-         undefined ->
+        undefined ->
             exit({noproc, {?MODULE, async_call, [Process, Label, Msg, Tag]}});
         NProcess ->
             _ = NProcess ! {Label, To, Msg},
@@ -128,16 +138,15 @@ async_call(Process, Label, Msg, {Pid, Tag} = To) when is_pid(Pid) ->
     end.
 
 -spec dynamic_call(Process, Label, Msg, Timeout) -> Reply when
-      Process :: process(),
-      Label :: atom(),
-      Msg :: any(),
-      Timeout :: timeout(),
-      Reply :: any().
+    Process :: process(),
+    Label :: atom(),
+    Msg :: any(),
+    Timeout :: timeout(),
+    Reply :: any().
 dynamic_call(Process, Label, Msg, Timeout) ->
     try whereis(Process) of
         undefined ->
-            exit({noproc,
-                  {?MODULE, dynamic_call, [Process, Label, Msg, Timeout]}});
+            exit({noproc, {?MODULE, dynamic_call, [Process, Label, Msg, Timeout]}});
         NProcess ->
             Tag = monitor(process, NProcess),
             _ = erlang:send(NProcess, {Label, {self(), Tag}, Msg}, [noconnect]),
@@ -150,11 +159,10 @@ dynamic_call(Process, Label, Msg, Timeout) ->
                 {'DOWN', Tag, _, _, Reason} ->
                     Args = [Process, Label, Msg, Timeout],
                     exit({Reason, {?MODULE, dynamic_call, Args}})
-            after
-                Timeout ->
-                    demonitor(Tag, [flush]),
-                    Args = [Process, Label, Msg, Timeout],
-                    exit({timeout, {?MODULE, dynamic_call, Args}})
+            after Timeout ->
+                demonitor(Tag, [flush]),
+                Args = [Process, Label, Msg, Timeout],
+                exit({timeout, {?MODULE, dynamic_call, Args}})
             end
     catch
         exit:drop ->
@@ -162,8 +170,8 @@ dynamic_call(Process, Label, Msg, Timeout) ->
     end.
 
 -spec send(Process, Msg) -> ok when
-      Process :: process(),
-      Msg :: any().
+    Process :: process(),
+    Msg :: any().
 send(Process, Msg) ->
     try whereis(Process) of
         undefined ->
@@ -177,10 +185,10 @@ send(Process, Msg) ->
     end.
 
 -spec whereis(Process) -> Pid | {Name, Node} | undefined when
-      Process :: process(),
-      Pid :: pid(),
-      Name :: atom(),
-      Node :: node().
+    Process :: process(),
+    Pid :: pid(),
+    Name :: atom(),
+    Node :: node().
 whereis(Pid) when is_pid(Pid) ->
     Pid;
 whereis(Name) when is_atom(Name) ->
@@ -195,20 +203,20 @@ whereis({via, Mod, Name}) ->
     Mod:whereis_name(Name).
 
 -spec start_link(Behaviour, Mod, Args, Opts) -> start_return() when
-      Behaviour :: module(),
-      Mod :: module(),
-      Args :: any(),
-      Opts :: [start_option()].
+    Behaviour :: module(),
+    Mod :: module(),
+    Args :: any(),
+    Opts :: [start_option()].
 start_link(Behaviour, Mod, Args, Opts) ->
     {TimeOpts, GenOpts} = partition_options(Opts),
     gen:start(?MODULE, link, Behaviour, {Mod, Args, TimeOpts}, GenOpts).
 
 -spec start_link(Name, Behaviour, Mod, Args, Opts) -> start_return() when
-      Name :: name(),
-      Behaviour :: module(),
-      Mod :: module(),
-      Args :: any(),
-      Opts :: [start_option()].
+    Name :: name(),
+    Behaviour :: module(),
+    Mod :: module(),
+    Args :: any(),
+    Opts :: [start_option()].
 start_link(Name, Behaviour, Mod, Args, Opts) ->
     {TimeOpts, GenOpts} = partition_options(Opts),
     gen:start(?MODULE, link, Name, Behaviour, {Mod, Args, TimeOpts}, GenOpts).
@@ -216,8 +224,8 @@ start_link(Name, Behaviour, Mod, Args, Opts) ->
 %% gen api
 
 init_it(Starter, Parent, Name, Behaviour, {Mod, Args, TimeOpts}, GenOpts) ->
-     _ = put('$initial_call', {Mod, init, 1}),
-     Behaviour:init_it(Starter, Parent, Name, Mod, Args, TimeOpts ++ GenOpts).
+    _ = put('$initial_call', {Mod, init, 1}),
+    Behaviour:init_it(Starter, Parent, Name, Mod, Args, TimeOpts ++ GenOpts).
 
 %% Internal
 

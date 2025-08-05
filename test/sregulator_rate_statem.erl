@@ -44,8 +44,18 @@
 -export([cancel/1]).
 -export([down/1]).
 
--record(state, {regulator, target, limit, interval, min, max, queue, clients=[],
-                sleep=false, start}).
+-record(state, {
+    regulator,
+    target,
+    limit,
+    interval,
+    min,
+    max,
+    queue,
+    clients = [],
+    sleep = false,
+    start
+}).
 
 quickcheck() ->
     quickcheck([]).
@@ -60,35 +70,41 @@ check(CounterExample, Opts) ->
     proper:check(prop_sregulator_rate(), CounterExample, Opts).
 
 prop_sregulator_rate() ->
-    ?FORALL(Cmds, commands(?MODULE),
-            ?TRAPEXIT(begin
-                          {History, State, Result} = run_commands(?MODULE, Cmds),
-                          cleanup(State),
-                          ?WHENFAIL(begin
-                                        io:format("History~n~p", [History]),
-                                        io:format("State~n~p", [State]),
-                                        io:format("Result~n~p", [Result])
-                                    end,
-                                    aggregate(command_names(Cmds), Result =:= ok))
-                      end)).
-
+    ?FORALL(
+        Cmds,
+        commands(?MODULE),
+        ?TRAPEXIT(begin
+            {History, State, Result} = run_commands(?MODULE, Cmds),
+            cleanup(State),
+            ?WHENFAIL(
+                begin
+                    io:format("History~n~p", [History]),
+                    io:format("State~n~p", [State]),
+                    io:format("Result~n~p", [Result])
+                end,
+                aggregate(command_names(Cmds), Result =:= ok)
+            )
+        end)
+    ).
 
 initial_state() ->
     #state{}.
 
-command(#state{regulator=undefined} = State) ->
+command(#state{regulator = undefined} = State) ->
     {call, ?MODULE, start_link, start_link_args(State)};
 command(State) ->
-    frequency([{8, {call, ?MODULE, spawn_client, spawn_client_args(State)}},
-               {8, {call, timer, sleep, sleep_args(State)}},
-               {4, {call, ?MODULE, continue, continue_args(State)}},
-               {3, {call, ?MODULE, done, done_args(State)}},
-               {3, {call, ?MODULE, cancel, cancel_args(State)}},
-               {2, {call, ?MODULE, down, down_args(State)}}]).
+    frequency([
+        {8, {call, ?MODULE, spawn_client, spawn_client_args(State)}},
+        {8, {call, timer, sleep, sleep_args(State)}},
+        {4, {call, ?MODULE, continue, continue_args(State)}},
+        {3, {call, ?MODULE, done, done_args(State)}},
+        {3, {call, ?MODULE, cancel, cancel_args(State)}},
+        {2, {call, ?MODULE, down, down_args(State)}}
+    ]).
 
 precondition(State, {call, _, start_link, Args}) ->
     start_link_pre(State, Args);
-precondition(#state{regulator=undefined}, _) ->
+precondition(#state{regulator = undefined}, _) ->
     false;
 precondition(State, {call, _, sleep, Args}) ->
     sleep_pre(State, Args);
@@ -103,8 +119,8 @@ precondition(State, {call, _, down, Args}) ->
 precondition(_State, _Call) ->
     true.
 
-next_state(#state{sleep=true} = State, Value, Call) ->
-    next_state(State#state{sleep=false}, Value, Call);
+next_state(#state{sleep = true} = State, Value, Call) ->
+    next_state(State#state{sleep = false}, Value, Call);
 next_state(State, Value, {call, _, start_link, Args}) ->
     start_link_next(State, Value, Args);
 next_state(State, Value, {call, _, spawn_client, Args}) ->
@@ -127,9 +143,9 @@ postcondition(State, {call, _, start_link, Args}, Result) ->
 postcondition(State, _, _) ->
     post(State).
 
-cleanup(#state{regulator=undefined}) ->
+cleanup(#state{regulator = undefined}) ->
     ok;
-cleanup(#state{regulator=Regulator}) ->
+cleanup(#state{regulator = Regulator}) ->
     sys:terminate(Regulator, normal).
 
 start_link(Arg) ->
@@ -140,9 +156,8 @@ start_link(Arg) ->
                 {'EXIT', _, Reason} ->
                     process_flag(trap_exit, Trap),
                     Error
-            after
-                100 ->
-                    exit({timeout, Error})
+            after 100 ->
+                exit({timeout, Error})
             end;
         {ok, Pid} ->
             process_flag(trap_exit, Trap),
@@ -151,16 +166,20 @@ start_link(Arg) ->
 
 init({QueueInfo, {Limit, Interval, Min, Max}}) ->
     {QueueSpec, Meters} = queue(QueueInfo),
-    ValveSpec = {sregulator_rate_valve, #{limit => Limit,
-                                          interval => Interval,
-                                          min => Min,
-                                          max => Max}},
+    ValveSpec =
+        {sregulator_rate_valve, #{
+            limit => Limit,
+            interval => Interval,
+            min => Min,
+            max => Max
+        }},
     {ok, {QueueSpec, ValveSpec, Meters}}.
 
 queue({pie, Target}) ->
     Interval = Target * 10,
-    {{sbroker_timeout_queue, #{timeout => Interval}},
-     [{sprotector_pie_meter, #{target => Target, interval => Interval}}]};
+    {{sbroker_timeout_queue, #{timeout => Interval}}, [
+        {sprotector_pie_meter, #{target => Target, interval => Interval}}
+    ]};
 queue({codel, Target}) ->
     {{sbroker_codel_queue, #{target => Target, interval => Target * 10}}, []};
 queue({timeout, Target}) ->
@@ -173,20 +192,32 @@ queue_spec() ->
     {oneof([pie]), choose(10, 30)}.
 
 valve_spec() ->
-    {choose(0, 5), oneof([50, 100, 150]),
-     frequency([{5, 0}, {1, choose(1, 2)}]), oneof([choose(2, 5), infinity])}.
+    {
+        choose(0, 5),
+        oneof([50, 100, 150]),
+        frequency([{5, 0}, {1, choose(1, 2)}]),
+        oneof([choose(2, 5), infinity])
+    }.
 
 start_link_args(_) ->
     [spec()].
 
-start_link_pre(#state{regulator=Regulator}, _) ->
+start_link_pre(#state{regulator = Regulator}, _) ->
     Regulator =:= undefined.
 
 start_link_next(_, Value, [{{Queue, Target}, {Limit, Interval, Min, Max}}]) ->
     Regulator = {call, erlang, element, [2, Value]},
     Start = {call, erlang, element, [3, Value]},
-    #state{target=Target, limit=Limit, interval=Interval, min=Min, max=Max,
-           queue=Queue, regulator=Regulator, start=Start}.
+    #state{
+        target = Target,
+        limit = Limit,
+        interval = Interval,
+        min = Min,
+        max = Max,
+        queue = Queue,
+        regulator = Regulator,
+        start = Start
+    }.
 
 start_link_post(_, _, {ok, Regulator, _}) when is_pid(Regulator) ->
     true;
@@ -197,30 +228,30 @@ spawn_client(Regulator) ->
     {ok, Pid, MRef} = proc_lib:start(?MODULE, client_init, [Regulator]),
     {Pid, MRef}.
 
-spawn_client_args(#state{queue=pie, regulator=Regulator}) ->
+spawn_client_args(#state{queue = pie, regulator = Regulator}) ->
     [{via, sprotector, {Regulator, ask}}];
-spawn_client_args(#state{regulator=Regulator}) ->
+spawn_client_args(#state{regulator = Regulator}) ->
     [Regulator].
 
-spawn_client_next(#state{clients=Clients} = State, Value, _) ->
-    State#state{clients=Clients ++ [Value]}.
+spawn_client_next(#state{clients = Clients} = State, Value, _) ->
+    State#state{clients = Clients ++ [Value]}.
 
-sleep_args(#state{target=Target}) ->
+sleep_args(#state{target = Target}) ->
     [choose(min(Target, 10), Target * 10)].
 
-sleep_pre(#state{sleep=Sleep}, _) ->
+sleep_pre(#state{sleep = Sleep}, _) ->
     not Sleep.
 
 sleep_next(State, _, _) ->
-    State#state{sleep=true}.
+    State#state{sleep = true}.
 
 continue(Client) ->
     call(Client, continue).
 
-continue_args(#state{clients=[]})      -> [undefined];
-continue_args(#state{clients=Clients}) -> [elements(Clients)].
+continue_args(#state{clients = []}) -> [undefined];
+continue_args(#state{clients = Clients}) -> [elements(Clients)].
 
-continue_pre(#state{clients=Clients}, [Client]) ->
+continue_pre(#state{clients = Clients}, [Client]) ->
     lists:member(Client, Clients).
 
 continue_next(State, _, _) ->
@@ -273,8 +304,17 @@ post(State) ->
             do_post(State, true)
     end.
 
-do_post(#state{clients=Clients, limit=Limit, interval=Interval, min=Min,
-               max=Max, start=Start}, Retry) ->
+do_post(
+    #state{
+        clients = Clients,
+        limit = Limit,
+        interval = Interval,
+        min = Min,
+        max = Max,
+        start = Start
+    },
+    Retry
+) ->
     Now = erlang:monotonic_time(milli_seconds),
     States = [call(Client, state) || Client <- Clients],
     Go = length([go || {go, _} <- States]),
@@ -294,7 +334,9 @@ do_post(#state{clients=Clients, limit=Limit, interval=Interval, min=Min,
         Await > 0, Go < Min ->
             Retry andalso ct:pal("Too many await: ~p", [Await]),
             false;
-        Await > 0, Go < Max, RecentDone + Go < Min + Limit,
+        Await > 0,
+        Go < Max,
+        RecentDone + Go < Min + Limit,
         Start + Interval < Now ->
             Retry andalso ct:pal("Too many await: ~p", [Await]),
             false;

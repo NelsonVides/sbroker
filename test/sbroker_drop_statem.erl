@@ -37,9 +37,7 @@ args() ->
     ?LET({Out, Drop, Max}, gen_args(), #{out => Out, drop => Drop, max => Max}).
 
 gen_args() ->
-    {oneof([out, out_r]),
-     oneof([drop, drop_r]),
-     oneof([choose(0, 5), infinity])}.
+    {oneof([out, out_r]), oneof([drop, drop_r]), oneof([choose(0, 5), infinity])}.
 
 time_dependence(undefined) ->
     independent.

@@ -1,14 +1,12 @@
-{application, sbroker,
- [{description, "Low level pooling library"},
-  {vsn, "1.0.0"},
-  {mod, {sbroker_app, []}},
-  {registered, []},
-  {applications,
-    [kernel,stdlib,sasl]},
-  {env,
-    [{brokers, []}, {regulators, []}]},
-  {modules, []},
-  {maintainers, ["James Fish"]},
-  {licenses, ["Apache v2.0"]},
-  {links, [{"Github", "https://github.com/fishcakez/sbroker"}]}
- ]}.
+{application, sbroker, [
+    {description, "Low level pooling library"},
+    {vsn, "1.0.0"},
+    {mod, {sbroker_app, []}},
+    {registered, []},
+    {applications, [kernel, stdlib, sasl]},
+    {env, [{brokers, []}, {regulators, []}]},
+    {modules, []},
+    {maintainers, ["James Fish"]},
+    {licenses, ["Apache v2.0"]},
+    {links, [{"Github", "https://github.com/fishcakez/sbroker"}]}
+]}.

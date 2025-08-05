@@ -30,7 +30,7 @@
 -export([timeout/2]).
 
 -record(state, {queues, time, rand}).
--record(queue, {ask, interval, start_interval, rem_interval=0}).
+-record(queue, {ask, interval, start_interval, rem_interval = 0}).
 
 module() ->
     sregulator_update_meter.
@@ -40,56 +40,69 @@ args() ->
     {regulators(), term_to_binary(Seed)}.
 
 regulators() ->
-    oneof([[{oneof([ask, ask_r]), config()}],
-           [{ask, config()}, {ask_r, config()}],
-           [{ask_r, config()}, {ask, config()}]]).
+    oneof([
+        [{oneof([ask, ask_r]), config()}],
+        [{ask, config()}, {ask_r, config()}],
+        [{ask_r, config()}, {ask, config()}]
+    ]).
 
 config() ->
     ?LET(Update, choose(1, 5), #{update => Update}).
 
 init(Time, {Queues, BinSeed}) ->
-    NQueues = [#queue{ask=Ask,
-                      interval=erlang:convert_time_unit(Interval, milli_seconds,
-                                                        native)} ||
-               {Ask, #{update := Interval}} <- Queues],
+    NQueues = [
+        #queue{
+            ask = Ask,
+            interval = erlang:convert_time_unit(
+                Interval,
+                milli_seconds,
+                native
+            )
+        }
+     || {Ask, #{update := Interval}} <- Queues
+    ],
     Rand = rand:seed_s(binary_to_term(BinSeed)),
-    State = #state{queues=NQueues, time=Time, rand=Rand},
+    State = #state{queues = NQueues, time = Time, rand = Rand},
     {State, timeout(State, Time)}.
 
 update_next(State, Time, _, _, _, _) ->
     update_next(State, Time).
 
-update_next(#state{time=PrevTime, rand=Rand, queues=Queues} = State, Time) ->
-    Update = fun(#queue{rem_interval=Rem, interval=Interval} = Queue, NRand) ->
-                     case Rem+PrevTime-Time of
-                         NRem when NRem > 0 ->
-                             {Queue#queue{rem_interval=NRem}, NRand};
-                         _ ->
-                             {NRem, NRand2} =
-                                 sbroker_util:uniform_interval_s(Interval,
-                                                                 NRand),
-                             NQueue = Queue#queue{start_interval=Time,
-                                                  rem_interval=NRem},
-                            {NQueue, NRand2}
-                     end
-             end,
+update_next(#state{time = PrevTime, rand = Rand, queues = Queues} = State, Time) ->
+    Update = fun(#queue{rem_interval = Rem, interval = Interval} = Queue, NRand) ->
+        case Rem + PrevTime - Time of
+            NRem when NRem > 0 ->
+                {Queue#queue{rem_interval = NRem}, NRand};
+            _ ->
+                {NRem, NRand2} =
+                    sbroker_util:uniform_interval_s(
+                        Interval,
+                        NRand
+                    ),
+                NQueue = Queue#queue{
+                    start_interval = Time,
+                    rem_interval = NRem
+                },
+                {NQueue, NRand2}
+        end
+    end,
     {NQueues, NRand} = lists:mapfoldl(Update, Rand, Queues),
     NQueues2 = lists:keysort(#queue.rem_interval, lists:reverse(NQueues)),
-    NState = State#state{time=Time, queues=NQueues2, rand=NRand},
+    NState = State#state{time = Time, queues = NQueues2, rand = NRand},
     {NState, timeout(NState, Time)}.
 
 update_post(State, Time, _, _, _, RelativeTime) ->
     update_post(State, Time, RelativeTime).
 
-update_post(#state{time=PrevTime, queues=Queues} = State, Time, RelativeTime) ->
-    Update = fun(#queue{rem_interval=Rem, ask=Ask}, Acc) ->
-                     case Rem+PrevTime-Time of
-                         NRem when NRem > 0 ->
-                             true;
-                         _ ->
-                             Acc andalso update_post(Ask, RelativeTime)
-                     end
-             end,
+update_post(#state{time = PrevTime, queues = Queues} = State, Time, RelativeTime) ->
+    Update = fun(#queue{rem_interval = Rem, ask = Ask}, Acc) ->
+        case Rem + PrevTime - Time of
+            NRem when NRem > 0 ->
+                true;
+            _ ->
+                Acc andalso update_post(Ask, RelativeTime)
+        end
+    end,
     {_, Timeout} = update_next(State, Time),
     {lists:foldl(Update, true, Queues), Timeout}.
 
@@ -102,52 +115,67 @@ do_update_post(Queue, ExpRelativeTime) ->
     receive
         {update, cast, ExpRelativeTime} ->
             true
-    after
-        0 ->
-            flush_update_post(Queue, ExpRelativeTime)
+    after 0 ->
+        flush_update_post(Queue, ExpRelativeTime)
     end.
 
 flush_update_post(Queue, ExpRelativeTime) ->
     receive
         {update, cast, ObsRelativeTime} ->
-            ct:pal("Relative Time update for ~p~nExpected: ~p~nObserved: ~p",
-                   [Queue, ExpRelativeTime, ObsRelativeTime]),
+            ct:pal(
+                "Relative Time update for ~p~nExpected: ~p~nObserved: ~p",
+                [Queue, ExpRelativeTime, ObsRelativeTime]
+            ),
             false
-    after
-        0 ->
-            ct:pal("Did not receive update for ~p", [Queue]),
-            false
+    after 0 ->
+        ct:pal("Did not receive update for ~p", [Queue]),
+        false
     end.
 
-change(#state{queues=OldQueues} = State, Time, {Queues, BinSeed}) ->
-    NQueues = [#queue{ask=Ask,
-                      interval=erlang:convert_time_unit(Interval, milli_seconds,
-                                                        native)} ||
-               {Ask, #{update := Interval}} <- Queues],
+change(#state{queues = OldQueues} = State, Time, {Queues, BinSeed}) ->
+    NQueues = [
+        #queue{
+            ask = Ask,
+            interval = erlang:convert_time_unit(
+                Interval,
+                milli_seconds,
+                native
+            )
+        }
+     || {Ask, #{update := Interval}} <- Queues
+    ],
     Rand = rand:seed_s(binary_to_term(BinSeed)),
-    Change = fun(#queue{ask=Ask, interval=Interval} = Queue, NRand) ->
-                     case lists:keyfind(Ask, #queue.ask, OldQueues) of
-                         #queue{start_interval=undefined} ->
-                             {Queue, NRand};
-                         #queue{start_interval=Start} ->
-                             {Current, NRand2} =
-                                sbroker_util:uniform_interval_s(Interval,
-                                                                NRand),
-                             Rem = max((Start+Current) - Time, 0),
-                             NQueue = Queue#queue{start_interval=Start,
-                                                  rem_interval=Rem},
-                             {NQueue, NRand2};
-                         false ->
-                             {Queue, NRand}
-                     end
-             end,
+    Change = fun(#queue{ask = Ask, interval = Interval} = Queue, NRand) ->
+        case lists:keyfind(Ask, #queue.ask, OldQueues) of
+            #queue{start_interval = undefined} ->
+                {Queue, NRand};
+            #queue{start_interval = Start} ->
+                {Current, NRand2} =
+                    sbroker_util:uniform_interval_s(
+                        Interval,
+                        NRand
+                    ),
+                Rem = max((Start + Current) - Time, 0),
+                NQueue = Queue#queue{
+                    start_interval = Start,
+                    rem_interval = Rem
+                },
+                {NQueue, NRand2};
+            false ->
+                {Queue, NRand}
+        end
+    end,
     {NQueues2, NRand} = lists:mapfoldl(Change, Rand, NQueues),
     NQueues3 = lists:keysort(#queue.rem_interval, lists:reverse(NQueues2)),
-    NState = State#state{queues=NQueues3, rand=NRand, time=Time},
+    NState = State#state{queues = NQueues3, rand = NRand, time = Time},
     {NState, timeout(NState, Time)}.
 
-timeout(#state{time=PrevTime, queues=Queues}, Time) ->
-    MinRem = lists:foldl(fun(#queue{rem_interval=QRem}, AccRem) ->
-                                 min(QRem, AccRem)
-                         end, infinity, Queues),
+timeout(#state{time = PrevTime, queues = Queues}, Time) ->
+    MinRem = lists:foldl(
+        fun(#queue{rem_interval = QRem}, AccRem) ->
+            min(QRem, AccRem)
+        end,
+        infinity,
+        Queues
+    ),
     Time + max(MinRem + PrevTime - Time, 0).

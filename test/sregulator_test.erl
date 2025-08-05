@@ -32,7 +32,7 @@
 %% public api
 
 -spec start_link() -> {ok, Pid} when
-      Pid :: pid().
+    Pid :: pid().
 start_link() ->
     sregulator:start_link(?MODULE, undefined, [{read_time_after, 2}]).
 

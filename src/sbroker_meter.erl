@@ -119,17 +119,24 @@
 -callback init(Time :: integer(), Args :: any()) ->
     {State :: any(), UpdateTime :: integer() | infinity}.
 
--callback handle_update(QueueDelay :: non_neg_integer(),
-                        ProcessDelay :: non_neg_integer(),
-                        RelativeTime :: integer(), Time :: integer(),
-                        State :: any()) ->
+-callback handle_update(
+    QueueDelay :: non_neg_integer(),
+    ProcessDelay :: non_neg_integer(),
+    RelativeTime :: integer(),
+    Time :: integer(),
+    State :: any()
+) ->
     {NState :: any(), UpdateTime :: integer() | infinity}.
 
 -callback handle_info(Msg :: any(), Time :: integer(), State :: any()) ->
     {NState :: any(), UpdateTime :: integer() | infinity}.
 
--callback code_change(OldVsn :: any(), Time :: integer(), State :: any(),
-                      Extra :: any()) ->
+-callback code_change(
+    OldVsn :: any(),
+    Time :: integer(),
+    State :: any(),
+    Extra :: any()
+) ->
     {NState :: any(), TimeoutTime :: integer() | infinity}.
 
 -callback config_change(Args :: any(), Time :: integer(), State :: any()) ->
@@ -142,22 +149,23 @@
 
 %% @private
 -spec code_change(Module, OldVsn, Send, Time, State, Extra) ->
-    {NState, TimeoutTime} when
-      Module :: module(),
-      OldVsn :: any(),
-      Send :: integer(),
-      Time :: integer(),
-      State :: any(),
-      Extra :: any(),
-      NState :: any(),
-      TimeoutTime :: integer() | infinity.
+    {NState, TimeoutTime}
+when
+    Module :: module(),
+    OldVsn :: any(),
+    Send :: integer(),
+    Time :: integer(),
+    State :: any(),
+    Extra :: any(),
+    NState :: any(),
+    TimeoutTime :: integer() | infinity.
 code_change(Mod, OldVsn, _, Time, State, Extra) ->
     Mod:code_change(OldVsn, Time, State, Extra).
 
 %% @private
 -spec terminate(Module, Reason, State) -> any() when
-      Module :: module(),
-      Reason :: sbroker_handlers:reason(),
-      State :: any().
+    Module :: module(),
+    Reason :: sbroker_handlers:reason(),
+    State :: any().
 terminate(Mod, Reason, State) ->
     Mod:terminate(Reason, State).

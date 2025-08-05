@@ -51,19 +51,33 @@
 %% common_test api
 
 all() ->
-    [{group, srand},
-     {group, sscheduler}].
+    [
+        {group, srand},
+        {group, sscheduler}
+    ].
 
 suite() ->
     [{timetrap, {seconds, 120}}].
 
 groups() ->
-    [{whereis, [parallel], [whereis_pid, whereis_local, whereis_global,
-                            whereis_via, whereis_empty]},
-     {send, [parallel], [send_pid, send_local, send_global, send_via,
-                         send_empty]},
-     {srand, [{group, whereis}, {group, send}]},
-     {sscheduler, [{group, whereis}, {group, send}]}].
+    [
+        {whereis, [parallel], [
+            whereis_pid,
+            whereis_local,
+            whereis_global,
+            whereis_via,
+            whereis_empty
+        ]},
+        {send, [parallel], [
+            send_pid,
+            send_local,
+            send_global,
+            send_via,
+            send_empty
+        ]},
+        {srand, [{group, whereis}, {group, send}]},
+        {sscheduler, [{group, whereis}, {group, send}]}
+    ].
 
 init_per_suite(Config) ->
     Config.
@@ -110,8 +124,7 @@ whereis_local(Config) ->
     Self = Via:whereis_name({{?MODULE, node()}}),
     Self = Via:whereis_name({{?MODULE, node()}, {?MODULE, node()}}),
 
-    {'EXIT', {badnode, node}} = (catch Via:whereis_name({{?MODULE,
-                                                                 node}})),
+    {'EXIT', {badnode, node}} = (catch Via:whereis_name({{?MODULE, node}})),
 
     erlang:unregister(?MODULE),
 
@@ -119,8 +132,7 @@ whereis_local(Config) ->
     undefined = Via:whereis_name({?MODULE, ?MODULE}),
 
     undefined = Via:whereis_name({{?MODULE, node()}}),
-    undefined = Via:whereis_name({{?MODULE, node()},
-                                          {?MODULE, node()}}),
+    undefined = Via:whereis_name({{?MODULE, node()}, {?MODULE, node()}}),
 
     ok.
 
@@ -168,10 +180,16 @@ send_pid(Config) ->
     Ref = make_ref(),
 
     Via:send({Self}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     Via:send({Self, Self}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     ok.
 
@@ -181,16 +199,28 @@ send_local(Config) ->
     Ref = make_ref(),
 
     Via:send({?MODULE}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     Via:send({?MODULE, ?MODULE}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     Self = Via:send({{?MODULE, node()}}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     Self = Via:send({{?MODULE, node()}, {?MODULE, node()}}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     erlang:unregister(?MODULE),
 
@@ -214,8 +244,9 @@ send_local(Config) ->
         _ ->
             exit(no_exit)
     catch
-        exit:{noproc, {Via, send, [{{?MODULE, Node}}, Ref]}}
-          when Node =:= node() ->
+        exit:{noproc, {Via, send, [{{?MODULE, Node}}, Ref]}} when
+            Node =:= node()
+        ->
             ok
     end,
 
@@ -223,13 +254,11 @@ send_local(Config) ->
         _ ->
             exit(no_exit)
     catch
-        exit:{noproc,
-              {Via, send,
-               [{{?MODULE, Node2}, {?MODULE, Node2}}, Ref]}}
-          when Node2 =:= node() ->
+        exit:{noproc, {Via, send, [{{?MODULE, Node2}, {?MODULE, Node2}}, Ref]}} when
+            Node2 =:= node()
+        ->
             ok
     end,
-
 
     ok.
 
@@ -240,10 +269,16 @@ send_global(Config) ->
     Ref = make_ref(),
 
     Via:send({Name}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     Via:send({Name, Name}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     global:unregister_name({?MODULE, global}),
 
@@ -272,10 +307,16 @@ send_via(Config) ->
     Ref = make_ref(),
 
     Via:send({Name}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     Via:send({Name, Name}, Ref),
-    receive Ref -> ok after 100 -> exit(no_msg) end,
+    receive
+        Ref -> ok
+    after 100 -> exit(no_msg)
+    end,
 
     global:unregister_name({?MODULE, via}),
 

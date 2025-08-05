@@ -92,178 +92,218 @@
 -export_type([spec/0]).
 
 -callback handle_fq_out(Time :: integer(), State :: any()) ->
-    {SendTime :: integer(), From :: {pid(), Tag :: any()}, Value :: any(),
-     Ref :: reference(), NState :: any(), TimeoutTime :: integer() | infinity} |
-    {empty, NState :: any(), RemoveTime :: integer() | infinity}.
+    {
+        SendTime :: integer(),
+        From :: {pid(), Tag :: any()},
+        Value :: any(),
+        Ref :: reference(),
+        NState :: any(),
+        TimeoutTime :: integer() | infinity
+    }
+    | {empty, NState :: any(), RemoveTime :: integer() | infinity}.
 
--record(state, {module :: module(),
-                index :: index(),
-                args :: any(),
-                robin = queue:new() :: robin_queue(Key),
-                remove_time :: integer() | infinity,
-                next :: integer() | infinity,
-                empties :: #{Key => any()},
-                queues :: #{Key => any()}}).
+-record(state, {
+    module :: module(),
+    index :: index(),
+    args :: any(),
+    robin = queue:new() :: robin_queue(Key),
+    remove_time :: integer() | infinity,
+    next :: integer() | infinity,
+    empties :: #{Key => any()},
+    queues :: #{Key => any()}
+}).
 
 %% public API
 
 %% @private
 -spec init(Q, Time, {Module, Args, Index}) -> {State, TimeoutTime} when
-      Q :: sbroker_queue:internal_queue(),
-      Time :: integer(),
-      Module :: module(),
-      Args :: any(),
-      Index :: index(),
-      State :: #state{},
-      TimeoutTime :: integer() | infinity.
+    Q :: sbroker_queue:internal_queue(),
+    Time :: integer(),
+    Module :: module(),
+    Args :: any(),
+    Index :: index(),
+    State :: #state{},
+    TimeoutTime :: integer() | infinity.
 init(Q, Time, {Module, Args, Index}) ->
     Index = index(Index),
     InternalQs = to_lists(Index, Q),
     {Qs, Robin, Next2} = from_lists(Time, Module, Args, infinity, InternalQs),
-    State = #state{module=Module, index=Index, args=Args, robin=Robin,
-                   remove_time=infinity, next=Next2, empties=#{}, queues=Qs},
+    State = #state{
+        module = Module,
+        index = Index,
+        args = Args,
+        robin = Robin,
+        remove_time = infinity,
+        next = Next2,
+        empties = #{},
+        queues = Qs
+    },
     {State, Next2}.
 
 %% @private
 -spec handle_in(SendTime, From, Value, Time, State) ->
-    {NState, TimeoutNext} when
-      SendTime :: integer(),
-      From :: {pid(), any()},
-      Value :: any(),
-      Time :: integer(),
-      State :: #state{},
-      NState :: #state{},
-      TimeoutNext :: integer() | infinity.
-handle_in(SendTime, {Pid, _} = From, Value, Time,
-          #state{index=Index, queues=Qs} = State) ->
+    {NState, TimeoutNext}
+when
+    SendTime :: integer(),
+    From :: {pid(), any()},
+    Value :: any(),
+    Time :: integer(),
+    State :: #state{},
+    NState :: #state{},
+    TimeoutNext :: integer() | infinity.
+handle_in(
+    SendTime,
+    {Pid, _} = From,
+    Value,
+    Time,
+    #state{index = Index, queues = Qs} = State
+) ->
     QKey = index(Index, Pid, Value),
     {NRobin, NEs, NQ, QNext} = in(QKey, SendTime, From, Value, Time, State),
     {NQs, NNext} = timeout(QKey, NQ, QNext, Qs, Time, State),
-    NState = State#state{queues=NQs, empties=NEs, robin=NRobin, next=NNext},
+    NState = State#state{queues = NQs, empties = NEs, robin = NRobin, next = NNext},
     {remove(Time, NState), NNext}.
 
 %% @private
 -spec handle_out(Time, State) ->
-    {SendTime, From, Value, Ref, NState, TimeoutNext} | {empty, NState} when
-      Time :: integer(),
-      State :: #state{},
-      SendTime :: integer(),
-      From :: {pid(), any()},
-      Value :: any(),
-      Ref :: reference(),
-      NState :: #state{},
-      TimeoutNext :: integer() | infinity.
-handle_out(Time,
-           #state{module=Module, robin=Robin, empties=Es, queues=Qs} = State) ->
+    {SendTime, From, Value, Ref, NState, TimeoutNext} | {empty, NState}
+when
+    Time :: integer(),
+    State :: #state{},
+    SendTime :: integer(),
+    From :: {pid(), any()},
+    Value :: any(),
+    Ref :: reference(),
+    NState :: #state{},
+    TimeoutNext :: integer() | infinity.
+handle_out(
+    Time,
+    #state{module = Module, robin = Robin, empties = Es, queues = Qs} = State
+) ->
     out(queue:out(Robin), Time, Module, Es, Qs, State).
 
 %% @private
 -spec handle_timeout(Time, State) -> {NState, TimeoutNext} when
-      Time :: integer(),
-      State :: #state{},
-      NState :: #state{},
-      TimeoutNext :: integer() | infinity.
-handle_timeout(Time, #state{next=Next} = State) when Time < Next ->
+    Time :: integer(),
+    State :: #state{},
+    NState :: #state{},
+    TimeoutNext :: integer() | infinity.
+handle_timeout(Time, #state{next = Next} = State) when Time < Next ->
     {remove(Time, State), Next};
-handle_timeout(Time, #state{module=Module, queues=Qs} = State) ->
+handle_timeout(Time, #state{module = Module, queues = Qs} = State) ->
     {NQs, Next} = map(fun(_, Q) -> Module:handle_timeout(Time, Q) end, Qs),
-    {remove(Time, State#state{queues=NQs, next=Next}), Next}.
+    {remove(Time, State#state{queues = NQs, next = Next}), Next}.
 
 %% @private
 -spec handle_cancel(Tag, Time, State) -> {Reply, NState, TimeoutNext} when
-      Tag :: any(),
-      Time :: integer(),
-      State :: #state{},
-      Reply :: false | pos_integer(),
-      NState :: #state{},
-      TimeoutNext :: integer() | infinity.
-handle_cancel(Tag, Time, #state{module=Module, queues=Qs} = State) ->
+    Tag :: any(),
+    Time :: integer(),
+    State :: #state{},
+    Reply :: false | pos_integer(),
+    NState :: #state{},
+    TimeoutNext :: integer() | infinity.
+handle_cancel(Tag, Time, #state{module = Module, queues = Qs} = State) ->
     QList = maps:to_list(Qs),
     {Reply, NQs, Next} = cancel(QList, Module, Tag, Time, false, infinity, []),
-    {Reply, remove(Time, State#state{queues=NQs, next=Next}), Next}.
+    {Reply, remove(Time, State#state{queues = NQs, next = Next}), Next}.
 
 %% @private
 -spec handle_info(Msg, Time, State) -> {NState, TimeoutNext} when
-      Msg :: any(),
-      Time :: integer(),
-      State :: #state{},
-      NState :: #state{},
-      TimeoutNext :: integer() | infinity.
-handle_info(Msg, Time, #state{module=Module, queues=Qs, empties=Es} = State) ->
+    Msg :: any(),
+    Time :: integer(),
+    State :: #state{},
+    NState :: #state{},
+    TimeoutNext :: integer() | infinity.
+handle_info(Msg, Time, #state{module = Module, queues = Qs, empties = Es} = State) ->
     {NQs, Next} = map(fun(_, Q) -> Module:handle_info(Msg, Time, Q) end, Qs),
     {NEs, RemoveTime} = empty_info(Module, Msg, Time, Es),
-    NState = State#state{queues=NQs, empties=NEs, next=Next,
-                         remove_time=RemoveTime},
+    NState = State#state{
+        queues = NQs,
+        empties = NEs,
+        next = Next,
+        remove_time = RemoveTime
+    },
     {NState, Next}.
 
 %% @private
 -spec code_change(OldVsn, Time, State, Extra) -> {NState, NextTimeout} when
-      OldVsn :: any(),
-      Time :: integer(),
-      State :: #state{},
-      Extra :: any(),
-      NState :: #state{},
-      NextTimeout :: integer() | infinity.
-code_change(_, Time, #state{next=Next} = State, _) ->
+    OldVsn :: any(),
+    Time :: integer(),
+    State :: #state{},
+    Extra :: any(),
+    NState :: #state{},
+    NextTimeout :: integer() | infinity.
+code_change(_, Time, #state{next = Next} = State, _) ->
     % Can only handle code changes for this module, sbroker/sregulator won't
     % pass a change for other modules.
     {State, max(Time, Next)}.
 
 %% @private
 -spec config_change({Module, Args, Index}, Time, State) ->
-    {NState, TimeoutTime} when
-      Module :: module(),
-      Args :: any(),
-      Index :: index(),
-      Time :: integer(),
-      State :: #state{},
-      NState :: #state{},
-      TimeoutTime :: integer() | infinity.
-config_change({Module, Args, Index}, Time,
-              #state{module=Module, index=Index} = State) ->
+    {NState, TimeoutTime}
+when
+    Module :: module(),
+    Args :: any(),
+    Index :: index(),
+    Time :: integer(),
+    State :: #state{},
+    NState :: #state{},
+    TimeoutTime :: integer() | infinity.
+config_change(
+    {Module, Args, Index},
+    Time,
+    #state{module = Module, index = Index} = State
+) ->
     Change = fun(_, Q) ->
-                     Module:config_change(Args, Time, Q)
-             end,
+        Module:config_change(Args, Time, Q)
+    end,
     change(Change, Module, Args, State);
-config_change({Module2, Args, Index}, Time,
-              #state{module=Module, index=Index} = State) ->
+config_change(
+    {Module2, Args, Index},
+    Time,
+    #state{module = Module, index = Index} = State
+) ->
     Change = fun(_, Q) ->
-                     InternalQ = Module:terminate(change, Q),
-                     Module2:init(InternalQ, Time, Args)
-             end,
+        InternalQ = Module:terminate(change, Q),
+        Module2:init(InternalQ, Time, Args)
+    end,
     change(Change, Module2, Args, State);
 config_change({_, _, _} = Arg, Time, State) ->
     init(terminate(change, State), Time, Arg).
 
 %% @private
 -spec len(State) -> Len when
-      State :: #state{},
-      Len :: non_neg_integer().
-len(#state{module=Module, queues=Qs}) ->
+    State :: #state{},
+    Len :: non_neg_integer().
+len(#state{module = Module, queues = Qs}) ->
     maps:fold(fun(_, Q, Len) -> Module:len(Q) + Len end, 0, Qs).
 
 %% @private
 -spec send_time(State) -> SendTime | empty when
-      State :: #state{},
-      SendTime :: integer().
-send_time(#state{module=Module, queues=Qs}) ->
-    maps:fold(fun(_, Q, SendTime) -> min(Module:send_time(Q), SendTime) end,
-              empty, Qs).
+    State :: #state{},
+    SendTime :: integer().
+send_time(#state{module = Module, queues = Qs}) ->
+    maps:fold(
+        fun(_, Q, SendTime) -> min(Module:send_time(Q), SendTime) end,
+        empty,
+        Qs
+    ).
 
 %% @private
 -spec terminate(Reason, State) -> InternalQ when
-      Reason :: sbroker_handlers:reason(),
-      State :: #state{},
-      InternalQ :: sbroker_queue:internal_queue().
-terminate(Reason, #state{module=Module, queues=Qs, empties=Es})
-  when Reason == change; Reason == stop ->
+    Reason :: sbroker_handlers:reason(),
+    State :: #state{},
+    InternalQ :: sbroker_queue:internal_queue().
+terminate(Reason, #state{module = Module, queues = Qs, empties = Es}) when
+    Reason == change; Reason == stop
+->
     Terminate = fun(_, Q, Acc) ->
-                        InternalQ = Module:terminate(Reason, Q),
-                        queue:to_list(InternalQ) ++ Acc
-                end,
+        InternalQ = Module:terminate(Reason, Q),
+        queue:to_list(InternalQ) ++ Acc
+    end,
     EmptyTerminate = fun(QKey, {Q, _}, Acc) ->
-                             Terminate(QKey, Q, Acc)
-                     end,
+        Terminate(QKey, Q, Acc)
+    end,
     QList = maps:fold(EmptyTerminate, maps:fold(Terminate, [], Qs), Es),
     queue:from_list(lists:sort(QList));
 terminate(Reason, _) ->
@@ -282,8 +322,9 @@ index(Index) when is_atom(Index) ->
     end;
 index({element, N} = Index) when is_integer(N), N > 0 ->
     Index;
-index({hash, Index, Range})
-  when is_integer(Range), Range >= 1, Range =< 32#4000000 ->
+index({hash, Index, Range}) when
+    is_integer(Range), Range >= 1, Range =< 32#4000000
+->
     {hash, index(Index), Range};
 index(Other) ->
     error(badarg, [Other]).
@@ -303,8 +344,9 @@ index({element, Elem}, _, Value) when tuple_size(Value) >= Elem ->
     element(Elem, Value);
 index({element, _}, _, _) ->
     undefined;
-index({hash, Index, Range}, Pid, Value)
-  when is_atom(Index); element(1, Index) =/= hash ->
+index({hash, Index, Range}, Pid, Value) when
+    is_atom(Index); element(1, Index) =/= hash
+->
     erlang:phash2(index(Index, Pid, Value), Range).
 
 to_lists(Index, InternalQ) ->
@@ -335,8 +377,14 @@ from_lists([{QKey, List} | Rest], Time, Module, Args, Next, QKeys, Qs) ->
 from_lists([], _, _, _, Next, QKeys, Qs) ->
     {Qs, queue:from_list(QKeys), Next}.
 
-in(QKey, SendTime, {Pid, _} = From, Value, Time,
-   #state{robin=Robin, queues=Qs, empties=Es, module=Module, args=Args}) ->
+in(
+    QKey,
+    SendTime,
+    {Pid, _} = From,
+    Value,
+    Time,
+    #state{robin = Robin, queues = Qs, empties = Es, module = Module, args = Args}
+) ->
     case find_queue(QKey, Qs, Es) of
         {ok, Q} ->
             {NQ, QNext} = Module:handle_in(SendTime, From, Value, Time, Q),
@@ -367,14 +415,15 @@ find_queue(QKey, Es) ->
             error
     end.
 
-timeout(QKey, Q, QNext, Qs, Time, #state{next=Next}) when Time < Next ->
+timeout(QKey, Q, QNext, Qs, Time, #state{next = Next}) when Time < Next ->
     {maps:put(QKey, Q, Qs), min(QNext, Next)};
-timeout(QKey, Q, QNext, Qs, Time, #state{module=Module}) ->
-    Timeout = fun(QKey2, _) when QKey2 == QKey ->
-                      {Q, QNext};
-                 (_, Q2) ->
-                      Module:handle_timeout(Time, Q2)
-              end,
+timeout(QKey, Q, QNext, Qs, Time, #state{module = Module}) ->
+    Timeout = fun
+        (QKey2, _) when QKey2 == QKey ->
+            {Q, QNext};
+        (_, Q2) ->
+            Module:handle_timeout(Time, Q2)
+    end,
     case maps:is_key(QKey, Qs) of
         true ->
             map(Timeout, Qs);
@@ -385,20 +434,24 @@ timeout(QKey, Q, QNext, Qs, Time, #state{module=Module}) ->
 out({{value, QKey}, Robin}, Time, Module, Es, Qs, State) ->
     {ok, Q} = maps:find(QKey, Qs),
     case Module:handle_fq_out(Time, Q) of
-       {_, _, _, _, NQ, QNext} = Result ->
+        {_, _, _, _, NQ, QNext} = Result ->
             NRobin = queue:in(QKey, Robin),
             {NQs, NNext} = timeout(QKey, NQ, QNext, Qs, Time, State),
-            NState = State#state{robin=NRobin, empties=Es, queues=NQs,
-                                 next=NNext},
+            NState = State#state{
+                robin = NRobin,
+                empties = Es,
+                queues = NQs,
+                next = NNext
+            },
             NState2 = remove(Time, NState),
             % Consecutive descending setelement is efficient
             NResult = setelement(6, Result, NNext),
             setelement(5, NResult, NState2);
-        {empty, NQ, QRemoveTime} when QRemoveTime > Time->
+        {empty, NQ, QRemoveTime} when QRemoveTime > Time ->
             NQs = maps:remove(QKey, Qs),
             NEs = maps:put(QKey, {NQ, QRemoveTime}, Es),
             NRemoveTime = min(State#state.remove_time, QRemoveTime),
-            NState = State#state{remove_time=NRemoveTime},
+            NState = State#state{remove_time = NRemoveTime},
             out(queue:out(Robin), Time, Module, NEs, NQs, NState);
         {empty, NQ, _} ->
             Mod = State#state.module,
@@ -407,7 +460,7 @@ out({{value, QKey}, Robin}, Time, Module, Es, Qs, State) ->
             out(queue:out(Robin), Time, Module, Es, NQs, State)
     end;
 out({empty, Robin}, Time, _, Es, Qs, State) when map_size(Qs) == 0 ->
-    NState = State#state{robin=Robin, empties=Es, queues=Qs, next=infinity},
+    NState = State#state{robin = Robin, empties = Es, queues = Qs, next = infinity},
     {empty, remove(Time, NState)}.
 
 map(Fun, Qs) ->
@@ -422,8 +475,9 @@ map([], _, Next, Qs) ->
 empty_info(Mod, Msg, Time, Es) ->
     empty_info(maps:to_list(Es), Mod, Msg, Time, infinity, []).
 
-empty_info([{QKey, {Q, QRemoveTime}} | Rest], Mod, Msg, Time, RemoveTime, Es)
-  when QRemoveTime > Time ->
+empty_info([{QKey, {Q, QRemoveTime}} | Rest], Mod, Msg, Time, RemoveTime, Es) when
+    QRemoveTime > Time
+->
     {NQ, _} = Mod:handle_info(Msg, Time, Q),
     NRemoveTime = min(QRemoveTime, RemoveTime),
     NEs = [{QKey, {NQ, QRemoveTime}} | Es],
@@ -434,17 +488,18 @@ empty_info([{_, {Q, _}} | Rest], Mod, Msg, Time, RemoveTime, Es) ->
 empty_info([], _, _, _, RemoveTime, Es) ->
     {maps:from_list(Es), RemoveTime}.
 
-remove(Time, #state{remove_time=RemoveTime} = State) when RemoveTime > Time ->
+remove(Time, #state{remove_time = RemoveTime} = State) when RemoveTime > Time ->
     State;
-remove(Time, #state{module=Mod, empties=Es} = State) ->
+remove(Time, #state{module = Mod, empties = Es} = State) ->
     {NEs, RemoveTime} = do_remove(Mod, Time, Es),
-    State#state{empties=NEs, remove_time=RemoveTime}.
+    State#state{empties = NEs, remove_time = RemoveTime}.
 
 do_remove(Mod, Time, Es) ->
     do_remove(maps:to_list(Es), Mod, Time, infinity, []).
 
-do_remove([{_, {_, QRemoveTime}} = Item | Rest], Mod, Time, RemoveTime, Es)
-  when QRemoveTime > Time ->
+do_remove([{_, {_, QRemoveTime}} = Item | Rest], Mod, Time, RemoveTime, Es) when
+    QRemoveTime > Time
+->
     do_remove(Rest, Mod, Time, min(QRemoveTime, RemoveTime), [Item | Es]);
 do_remove([{_, {Q, _}} | Rest], Mod, Time, RemoveTime, Es) ->
     _ = Mod:terminate(chance, Q),
@@ -467,12 +522,23 @@ cancel_reply(Reply, false) ->
 cancel_reply(Reply, QReply) ->
     Reply + QReply.
 
-change(Change, Module, Args,
-       #state{queues=Qs, empties=Es, robin=Robin} = State) ->
+change(
+    Change,
+    Module,
+    Args,
+    #state{queues = Qs, empties = Es, robin = Robin} = State
+) ->
     NRobin = queue:join(Robin, queue:from_list(maps:keys(Es))),
     {NQs, Next} = change_map(Change, Qs, Es),
-    NState = State#state{module=Module, args=Args, queues=NQs, empties=#{},
-                         robin=NRobin, next=Next, remove_time=infinity},
+    NState = State#state{
+        module = Module,
+        args = Args,
+        queues = NQs,
+        empties = #{},
+        robin = NRobin,
+        next = Next,
+        remove_time = infinity
+    },
     {NState, Next}.
 
 change_map(Fun, Qs, Es) ->

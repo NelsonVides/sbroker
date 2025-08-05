@@ -38,24 +38,26 @@
 
 %% types
 
--record(state, {config :: [open | closed],
-                opens :: [open | closed],
-                open_time :: closed | integer(),
-                map :: sregulator_valve:internal_map()}).
+-record(state, {
+    config :: [open | closed],
+    opens :: [open | closed],
+    open_time :: closed | integer(),
+    map :: sregulator_valve:internal_map()
+}).
 
 %% sregulator_valve api
 
 init(Map, Time, Opens) ->
-    handle(Time, #state{config=Opens, opens=Opens, map=Map, open_time=closed}).
+    handle(Time, #state{config = Opens, opens = Opens, map = Map, open_time = closed}).
 
-handle_ask(Pid, Ref, Time, #state{map=Map, open_time=Open} = State) ->
+handle_ask(Pid, Ref, Time, #state{map = Map, open_time = Open} = State) ->
     NMap = maps:put(Ref, Pid, Map),
-    {Status, NState, Timeout} = handle(Time, State#state{map=NMap}),
+    {Status, NState, Timeout} = handle(Time, State#state{map = NMap}),
     {go, Open, Status, NState, Timeout}.
 
-handle_done(Ref, Time, #state{map=Map} = State) ->
+handle_done(Ref, Time, #state{map = Map} = State) ->
     NMap = maps:remove(Ref, Map),
-    {Open, NState, Timeout} = handle(Time, State#state{map=NMap}),
+    {Open, NState, Timeout} = handle(Time, State#state{map = NMap}),
     case maps:is_key(Ref, Map) of
         true ->
             {done, Open, NState, Timeout};
@@ -63,7 +65,7 @@ handle_done(Ref, Time, #state{map=Map} = State) ->
             {error, Open, NState, Timeout}
     end.
 
-handle_continue(Ref, Time, #state{map=Map} = State) ->
+handle_continue(Ref, Time, #state{map = Map} = State) ->
     {Open, NState, Timeout} = handle(Time, State),
     case maps:is_key(Ref, Map) of
         true when Open == open ->
@@ -71,7 +73,7 @@ handle_continue(Ref, Time, #state{map=Map} = State) ->
             {go, Time, Open2, NState2, Timeout2};
         true when Open == closed ->
             NMap = maps:remove(Ref, Map),
-            {Open2, NState2, Timeout2} = handle(Time, NState#state{map=NMap}),
+            {Open2, NState2, Timeout2} = handle(Time, NState#state{map = NMap}),
             {done, Open2, NState2, Timeout2};
         false ->
             {error, Open, NState, Timeout}
@@ -80,39 +82,39 @@ handle_continue(Ref, Time, #state{map=Map} = State) ->
 handle_update(_, Time, State) ->
     handle(Time, State).
 
-handle_info({'DOWN', Ref, process, _, _}, Time, #state{map=Map} = State) ->
+handle_info({'DOWN', Ref, process, _, _}, Time, #state{map = Map} = State) ->
     NMap = maps:remove(Ref, Map),
-    handle(Time, State#state{map=NMap});
-handle_info(_,  Time, State) ->
+    handle(Time, State#state{map = NMap});
+handle_info(_, Time, State) ->
     handle(Time, State).
 
 handle_timeout(Time, State) ->
     handle(Time, State).
 
-code_change(_, Time, #state{config=Opens} = State, _) ->
-    handle(Time, State#state{config=Opens, opens=Opens}).
+code_change(_, Time, #state{config = Opens} = State, _) ->
+    handle(Time, State#state{config = Opens, opens = Opens}).
 
-config_change(Opens, Time, #state{config=Opens} = State) ->
+config_change(Opens, Time, #state{config = Opens} = State) ->
     handle(Time, State);
 config_change(Opens, Time, State) ->
-    handle(Time, State#state{config=Opens, opens=Opens}).
+    handle(Time, State#state{config = Opens, opens = Opens}).
 
-size(#state{map=Map}) ->
+size(#state{map = Map}) ->
     map_size(Map).
 
-open_time(#state{open_time=Open}) ->
+open_time(#state{open_time = Open}) ->
     Open.
 
-terminate(_, #state{map=Map}) ->
+terminate(_, #state{map = Map}) ->
     Map.
 
 %% Internal
 
-handle(_, #state{opens=[], config=[]} = State) ->
-    {closed, State#state{open_time=closed}, infinity};
-handle(Time, #state{opens=[], config=Config} = State) ->
-    handle(Time, State#state{opens=Config});
-handle(Time, #state{opens=[open|Opens]} = State) ->
-    {open, State#state{opens=Opens, open_time=Time}, infinity};
-handle(_, #state{opens=[closed|Opens]} = State) ->
-    {closed, State#state{opens=Opens, open_time=closed}, infinity}.
+handle(_, #state{opens = [], config = []} = State) ->
+    {closed, State#state{open_time = closed}, infinity};
+handle(Time, #state{opens = [], config = Config} = State) ->
+    handle(Time, State#state{opens = Config});
+handle(Time, #state{opens = [open | Opens]} = State) ->
+    {open, State#state{opens = Opens, open_time = Time}, infinity};
+handle(_, #state{opens = [closed | Opens]} = State) ->
+    {closed, State#state{opens = Opens, open_time = closed}, infinity}.

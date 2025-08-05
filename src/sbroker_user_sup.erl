@@ -38,47 +38,49 @@
 %% public API
 
 -spec start(Module, Name) -> {ok, Pid} | {error, Reason} when
-      Module :: sbroker_user | sregulator_user,
-      Name :: sbroker:name() | sregulator:name(),
-      Pid :: pid() | undefined,
-      Reason :: term().
+    Module :: sbroker_user | sregulator_user,
+    Name :: sbroker:name() | sregulator:name(),
+    Pid :: pid() | undefined,
+    Reason :: term().
 start(Module, Name) ->
     supervisor:start_child(?MODULE, child(Module, Name)).
 
 -spec restart(Module, Name) -> {ok, Pid} | {error, Reason} when
-      Module :: sbroker_user | sregulator_user,
-      Name :: sbroker:name() | sregulator:name(),
-      Pid :: pid() | undefined,
-      Reason :: term().
+    Module :: sbroker_user | sregulator_user,
+    Name :: sbroker:name() | sregulator:name(),
+    Pid :: pid() | undefined,
+    Reason :: term().
 restart(Module, Name) ->
     supervisor:restart_child(?MODULE, {Module, Name}).
 
 -spec terminate(Module, Name) -> ok | {error, not_found} when
-      Module :: sbroker_user | sregulator_user,
-      Name :: sbroker:name() | sregulator:name().
+    Module :: sbroker_user | sregulator_user,
+    Name :: sbroker:name() | sregulator:name().
 terminate(Module, Name) ->
     supervisor:terminate_child(?MODULE, {Module, Name}).
 
 -spec delete(Module, Name) -> ok | {error, Reason} when
-      Module :: sbroker_user | sregulator_user,
-      Name :: sbroker:name() | sregulator:name(),
-      Reason :: running | restarting | not_found.
+    Module :: sbroker_user | sregulator_user,
+    Name :: sbroker:name() | sregulator:name(),
+    Reason :: running | restarting | not_found.
 delete(Module, Name) ->
     supervisor:delete_child(?MODULE, {Module, Name}).
 
 -spec which_children(Module) -> [{Name, Pid, Type, Modules}] when
-      Module :: sbroker_user | sregulator_user,
-      Name :: sbroker:name() | sregulator:name(),
-      Pid :: undefined | pid(),
-      Type :: worker,
-      Modules :: dynamic.
+    Module :: sbroker_user | sregulator_user,
+    Name :: sbroker:name() | sregulator:name(),
+    Pid :: undefined | pid(),
+    Type :: worker,
+    Modules :: dynamic.
 which_children(Module) ->
-    [{Name, Pid, Type, Modules} ||
-     {{Mod, Name}, Pid, Type, Modules} <- supervisor:which_children(?MODULE),
-      Mod == Module].
+    [
+        {Name, Pid, Type, Modules}
+     || {{Mod, Name}, Pid, Type, Modules} <- supervisor:which_children(?MODULE),
+        Mod == Module
+    ].
 
 -spec start_link() -> {ok, Pid} when
-      Pid :: pid().
+    Pid :: pid().
 start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
@@ -105,5 +107,4 @@ children(Module, List) ->
     [child(Module, Name) || {Name, _} <- List].
 
 child(Module, Name) ->
-    {{Module, Name}, {Module, start_link, [Name]},
-     permanent, 5000, worker, dynamic}.
+    {{Module, Name}, {Module, start_link, [Name]}, permanent, 5000, worker, dynamic}.

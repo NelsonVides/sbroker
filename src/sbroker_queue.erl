@@ -190,28 +190,41 @@
 -callback init(Q :: internal_queue(), Time :: integer(), Args :: any()) ->
     {State :: any(), TimeoutTime :: integer() | infinity}.
 
--callback handle_in(SendTime :: integer(),
-                    From :: {Sender :: pid(), Tag :: any()}, Value :: any(),
-                    Time :: integer(), State :: any()) ->
+-callback handle_in(
+    SendTime :: integer(),
+    From :: {Sender :: pid(), Tag :: any()},
+    Value :: any(),
+    Time :: integer(),
+    State :: any()
+) ->
     {NState :: any(), TimeoutTime :: integer() | infinity}.
 
 -callback handle_out(Time :: integer(), State :: any()) ->
-    {SendTime :: integer(), From :: {pid(), Tag :: any()}, Value :: any(),
-     Ref :: reference(), NState :: any(), TimeoutTime :: integer() | infinity} |
-    {empty, NState :: any()}.
+    {
+        SendTime :: integer(),
+        From :: {pid(), Tag :: any()},
+        Value :: any(),
+        Ref :: reference(),
+        NState :: any(),
+        TimeoutTime :: integer() | infinity
+    }
+    | {empty, NState :: any()}.
 
 -callback handle_timeout(Time :: integer(), State :: any()) ->
     {NState :: any(), TimeoutTime :: integer() | infinity}.
 
 -callback handle_cancel(Tag :: any(), Time :: integer(), State :: any()) ->
-    {Reply :: false | pos_integer(), NState :: any(),
-     TimeoutTime :: integer() | infinity}.
+    {Reply :: false | pos_integer(), NState :: any(), TimeoutTime :: integer() | infinity}.
 
 -callback handle_info(Msg :: any(), Time :: integer(), State :: any()) ->
     {NState :: any(), TimeoutTime :: integer() | infinity}.
 
--callback code_change(OldVsn :: any(), Time :: integer(), State :: any(),
-                      Extra :: any()) ->
+-callback code_change(
+    OldVsn :: any(),
+    Time :: integer(),
+    State :: any(),
+    Extra :: any()
+) ->
     {NState :: any(), TimeoutTime :: integer() | infinity}.
 
 -callback config_change(Args :: any(), Time :: integer(), State :: any()) ->
@@ -230,18 +243,18 @@
 %%
 %% Call `drop/3' when dropping a request from a queue.
 -spec drop(From, SendTime, Time) -> ok when
-      From :: {pid(), Tag :: any()},
-      SendTime :: integer(),
-      Time :: integer().
+    From :: {pid(), Tag :: any()},
+    SendTime :: integer(),
+    Time :: integer().
 drop(From, SendTime, Time) ->
-   _ = gen:reply(From, {drop, Time-SendTime}),
-   ok.
+    _ = gen:reply(From, {drop, Time - SendTime}),
+    ok.
 
 %% sbroker_handlers api
 
 %% @private
 -spec initial_state() -> Q when
-      Q :: internal_queue().
+    Q :: internal_queue().
 initial_state() ->
     queue:new().
 
@@ -259,21 +272,23 @@ init(Mod, Q, _, Now, Args) ->
 
 %% @private
 -spec code_change(Module, OldVsn, Send, Time, State, Extra) ->
-    {NState, TimeoutTime} when
-      Module :: module(),
-      OldVsn :: any(),
-      Send :: integer(),
-      Time :: integer(),
-      State :: any(),
-      Extra :: any(),
-      NState :: any(),
-      TimeoutTime :: integer() | infinity.
+    {NState, TimeoutTime}
+when
+    Module :: module(),
+    OldVsn :: any(),
+    Send :: integer(),
+    Time :: integer(),
+    State :: any(),
+    Extra :: any(),
+    NState :: any(),
+    TimeoutTime :: integer() | infinity.
 code_change(Mod, OldVsn, _, Time, State, Extra) ->
     Mod:code_change(OldVsn, Time, State, Extra).
 
 %% @private
 -spec config_change(Module, Args, Send, Time, State) ->
-    {NState, TimeoutTime} when
+    {NState, TimeoutTime}
+when
     Module :: module(),
     Args :: any(),
     Send :: integer(),
@@ -286,10 +301,10 @@ config_change(Mod, Args, _, Now, State) ->
 
 %% @private
 -spec terminate(Module, Reason, State) -> Q when
-      Module :: module(),
-      Reason :: sbroker_handlers:reason(),
-      State :: any(),
-      Q :: internal_queue().
+    Module :: module(),
+    Reason :: sbroker_handlers:reason(),
+    State :: any(),
+    Q :: internal_queue().
 terminate(Mod, Reason, State) ->
     Q = Mod:terminate(Reason, State),
     case queue:is_queue(Q) of
