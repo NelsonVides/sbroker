@@ -107,11 +107,13 @@
     update_next :: integer()
 }).
 
+-type state() :: #state{}.
+
 %% @private
 -spec init(Time, Spec) -> {State, Time} when
     Time :: integer(),
     Spec :: spec(),
-    State :: #state{}.
+    State :: state().
 init(Time, Spec) ->
     AskPie = init(Time, ask, Spec),
     BidPie = init(Time, ask_r, Spec),
@@ -129,8 +131,8 @@ when
     ProcessDelay :: non_neg_integer(),
     RelativeTime :: integer(),
     Time :: integer(),
-    State :: #state{},
-    NState :: #state{},
+    State :: state(),
+    NState :: state(),
     Next :: integer().
 handle_update(QueueDelay, _, RelativeTime, Time, State) ->
     AskSojourn = sojourn(QueueDelay, RelativeTime),
@@ -141,7 +143,7 @@ handle_update(QueueDelay, _, RelativeTime, Time, State) ->
 -spec handle_info(Msg, Time, State) -> {State, Next} when
     Msg :: term(),
     Time :: integer(),
-    State :: #state{},
+    State :: state(),
     Next :: integer().
 handle_info(_, Time, State) ->
     handle(Time, State).
@@ -150,7 +152,7 @@ handle_info(_, Time, State) ->
 -spec code_change(OldVsn, Time, State, Extra) -> {State, Next} when
     OldVsn :: term(),
     Time :: integer(),
-    State :: #state{},
+    State :: state(),
     Extra :: term(),
     Next :: integer().
 code_change(_, Time, State, _) ->
@@ -160,8 +162,8 @@ code_change(_, Time, State, _) ->
 -spec config_change(Spec, Time, State) -> {NState, Next} when
     Spec :: spec(),
     Time :: integer(),
-    State :: #state{},
-    NState :: #state{},
+    State :: state(),
+    NState :: state(),
     Next :: integer().
 config_change(
     Spec,
@@ -185,7 +187,7 @@ config_change(
 %% @private
 -spec terminate(Reason, State) -> true when
     Reason :: term(),
-    State :: #state{}.
+    State :: state().
 terminate(_, _) ->
     sprotector_server:unregister(self()).
 
