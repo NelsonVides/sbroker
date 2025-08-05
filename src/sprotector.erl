@@ -27,7 +27,7 @@
 %% To use `sprotector' with `via' use names of the form
 %% `{via, sprotector, {Broker, ask | ask_r}}'. Where `{Broker, ...}' is
 %% a tuple containing
-%% `pid() | atom() | {global, any()} | {via, module(), any()} | {atom(), node()}'.
+%% `pid() | atom() | {global, term()} | {via, module(), term()} | {atom(), node()}'.
 %% The lookup will succeed if the approximate queue length is less than or equal
 %% to the minimum queue length or below the the maximum and the drop probability
 %% allows. Otherwise the call exits with reason `drop'.
@@ -91,7 +91,7 @@ whereis_name({Process, Key}) ->
 %% otherwise exits.
 -spec send({Process, ask | ask_r}, Msg) -> ok when
     Process :: process(),
-    Msg :: any().
+    Msg :: term().
 send(Process, Msg) ->
     try whereis_name(Process) of
         Pid when is_pid(Pid) ->

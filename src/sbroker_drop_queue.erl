@@ -68,23 +68,25 @@
     queue :: sbroker_queue:internal_queue()
 }).
 
+-type state() :: #state{}.
+
 %% @private
 -spec init(Q, Time, Spec) -> {State, infinity} when
     Q :: sbroker_queue:internal_queue(),
     Time :: integer(),
     Spec :: spec(),
-    State :: #state{}.
+    State :: state().
 init(Q, Time, Arg) ->
     from_queue(Q, queue:len(Q), Time, Arg).
 
 %% @private
 -spec handle_in(SendTime, From, Value, Time, State) -> {NState, infinity} when
     SendTime :: integer(),
-    From :: {pid(), any()},
-    Value :: any(),
+    From :: {pid(), term()},
+    Value :: term(),
     Time :: integer(),
-    State :: #state{},
-    NState :: #state{}.
+    State :: state(),
+    NState :: state().
 handle_in(
     SendTime,
     From,
@@ -123,12 +125,12 @@ handle_in(
     {SendTime, From, Value, Ref, NState, infinity} | {empty, NState}
 when
     Time :: integer(),
-    State :: #state{},
+    State :: state(),
     SendTime :: integer(),
-    From :: {pid(), any()},
-    Value :: any(),
+    From :: {pid(), term()},
+    Value :: term(),
     Ref :: reference(),
-    NState :: #state{}.
+    NState :: state().
 handle_out(_Time, #state{len = 0} = State) ->
     {empty, State};
 handle_out(_, #state{out = out, len = Len, queue = Q} = State) ->
@@ -144,12 +146,12 @@ handle_out(_, #state{out = out_r, len = Len, queue = Q} = State) ->
     | {empty, NState, RemoveTime}
 when
     Time :: integer(),
-    State :: #state{},
+    State :: state(),
     SendTime :: integer(),
-    From :: {pid(), any()},
-    Value :: any(),
+    From :: {pid(), term()},
+    Value :: term(),
     Ref :: reference(),
-    NState :: #state{},
+    NState :: state(),
     NextTimeout :: integer() | infinity,
     RemoveTime :: integer().
 handle_fq_out(Time, State) ->
@@ -162,11 +164,11 @@ handle_fq_out(Time, State) ->
 
 %% @private
 -spec handle_cancel(Tag, Time, State) -> {Cancelled, NState, infinity} when
-    Tag :: any(),
+    Tag :: term(),
     Time :: integer(),
-    State :: #state{},
+    State :: state(),
     Cancelled :: false | pos_integer(),
-    NState :: #state{}.
+    NState :: state().
 handle_cancel(Tag, _, #state{len = Len, queue = Q} = State) ->
     Cancel = fun
         ({_, {_, Tag2}, _, Ref}) when Tag2 =:= Tag ->
@@ -186,16 +188,16 @@ handle_cancel(Tag, _, #state{len = Len, queue = Q} = State) ->
 %% @private
 -spec handle_timeout(Time, State) -> {State, infinity} when
     Time :: integer(),
-    State :: #state{}.
+    State :: state().
 handle_timeout(_Time, State) ->
     {State, infinity}.
 
 %% @private
 -spec handle_info(Msg, Time, State) -> {NState, infinity} when
-    Msg :: any(),
+    Msg :: term(),
     Time :: integer(),
-    State :: #state{},
-    NState :: #state{}.
+    State :: state(),
+    NState :: state().
 handle_info({'DOWN', Ref, _, _, _}, _, #state{queue = Q} = State) ->
     NQ = queue:filter(fun({_, _, _, Ref2}) -> Ref2 =/= Ref end, Q),
     {State#state{len = queue:len(NQ), queue = NQ}, infinity};
@@ -204,11 +206,11 @@ handle_info(_, _, State) ->
 
 %% @private
 -spec code_change(OldVsn, Time, State, Extra) -> {NState, infinity} when
-    OldVsn :: any(),
+    OldVsn :: term(),
     Time :: integer(),
-    State :: #state{},
-    Extra :: any(),
-    NState :: #state{}.
+    State :: state(),
+    Extra :: term(),
+    NState :: state().
 code_change(_, _, State, _) ->
     {State, infinity}.
 
@@ -216,21 +218,21 @@ code_change(_, _, State, _) ->
 -spec config_change(Spec, Time, State) -> {NState, infinity} when
     Spec :: spec(),
     Time :: integer(),
-    State :: #state{},
-    NState :: #state{}.
+    State :: state(),
+    NState :: state().
 config_change(Spec, Time, #state{len = Len, queue = Q}) ->
     from_queue(Q, Len, Time, Spec).
 
 %% @private
 -spec len(State) -> Len when
-    State :: #state{},
+    State :: state(),
     Len :: non_neg_integer().
 len(#state{len = Len}) ->
     Len.
 
 %% @private
 -spec send_time(State) -> SendTime | empty when
-    State :: #state{},
+    State :: state(),
     SendTime :: integer().
 send_time(#state{len = 0}) ->
     empty;
@@ -240,8 +242,8 @@ send_time(#state{queue = Q}) ->
 
 %% @private
 -spec terminate(Reason, State) -> Q when
-    Reason :: any(),
-    State :: #state{},
+    Reason :: term(),
+    State :: state(),
     Q :: sbroker_queue:internal_queue().
 terminate(_, #state{queue = Q}) ->
     Q.

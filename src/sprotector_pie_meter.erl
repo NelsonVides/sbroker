@@ -139,7 +139,7 @@ handle_update(QueueDelay, _, RelativeTime, Time, State) ->
 
 %% @private
 -spec handle_info(Msg, Time, State) -> {State, Next} when
-    Msg :: any(),
+    Msg :: term(),
     Time :: integer(),
     State :: #state{},
     Next :: integer().
@@ -148,10 +148,10 @@ handle_info(_, Time, State) ->
 
 %% @private
 -spec code_change(OldVsn, Time, State, Extra) -> {State, Next} when
-    OldVsn :: any(),
+    OldVsn :: term(),
     Time :: integer(),
     State :: #state{},
-    Extra :: any(),
+    Extra :: term(),
     Next :: integer().
 code_change(_, Time, State, _) ->
     handle(Time, State).
@@ -184,7 +184,7 @@ config_change(
 
 %% @private
 -spec terminate(Reason, State) -> true when
-    Reason :: any(),
+    Reason :: term(),
     State :: #state{}.
 terminate(_, _) ->
     sprotector_server:unregister(self()).

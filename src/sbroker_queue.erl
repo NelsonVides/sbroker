@@ -23,8 +23,8 @@
 %% callback is `init/3', which starts the queue:
 %% ```
 %% -callback init(InternalQueue :: internal_queue(), Time :: integer(),
-%%                Args :: any()) ->
-%%      {State :: any(), TimeoutTime :: integer() | infinity}.
+%%                Args :: term()) ->
+%%      {State :: term(), TimeoutTime :: integer() | infinity}.
 %% '''
 %% `InternalQueue' is the internal queue of requests, it is a `queue:queue()'
 %% with items of the form `{SendTime, From, Value, Reference}'. `SendTime' is
@@ -53,20 +53,20 @@
 %% When inserting a request into the queue, `handle_in/6':
 %% ```
 %% -callback handle_in(SendTime :: integer(),
-%%                     From :: {Sender :: pid(), Tag :: any()}, Value :: any(),
-%%                     Time :: integer(), State :: any()) ->
-%%     {NState :: any(), TimeoutTime :: integer() | infinity}.
+%%                     From :: {Sender :: pid(), Tag :: term()}, Value :: term(),
+%%                     Time :: integer(), State :: term()) ->
+%%     {NState :: term(), TimeoutTime :: integer() | infinity}.
 %% '''
 %% The variables are equivalent to those in `init/3', with `NState' being the
 %% new state.
 %%
 %% When removing a request from the queue, `handle_out/2':
 %% ```
-%% -callback handle_out(Time :: integer(), State :: any()) ->
-%%     {SendTime :: integer(), From :: {Sender :: pid(), Tag :: any()},
-%%      Value:: any(), Ref :: reference, NState :: any(),
+%% -callback handle_out(Time :: integer(), State :: term()) ->
+%%     {SendTime :: integer(), From :: {Sender :: pid(), Tag :: term()},
+%%      Value:: term(), Ref :: reference, NState :: term(),
 %%      TimeoutTime :: integer() | infinity} |
-%%     {empty, NState :: any()}.
+%%     {empty, NState :: term()}.
 %% '''
 %%
 %% The variables are equivalent to those in `init/3', with `NState' being the
@@ -76,16 +76,16 @@
 %%
 %% When a timeout occurs, `handle_timeout/2':
 %% ```
-%% -callback handle_timeout(Time :: integer(), State :: any()) ->
-%%     {NState :: any(), TimeoutTime :: integer() | infinity}.
+%% -callback handle_timeout(Time :: integer(), State :: term()) ->
+%%     {NState :: term(), TimeoutTime :: integer() | infinity}.
 %% '''
 %% The variables are equivalent to those in `init/3', with `NState' being the
 %% new state.
 %%
 %% When cancelling requests, `handle_cancel/3':
 %% ```
-%% -callback handle_cancel(Tag :: any(), Time :: integer(), State :: any()) ->
-%%     {Reply :: false | pos_integer(), NState :: any(),
+%% -callback handle_cancel(Tag :: term(), Time :: integer(), State :: term()) ->
+%%     {Reply :: false | pos_integer(), NState :: term(),
 %%      TimeoutTime :: integer() | infinity}.
 %% '''
 %% `Tag' is a response tag, which is part of the `From' tuple passed via
@@ -100,8 +100,8 @@
 %%
 %% When handling a message, `handle_info/3':
 %% ```
-%% -callback handle_info(Msg :: any(), Time :: integer(), State :: any()) ->
-%%     {NState :: any(), TimeoutTime :: integer() | infinity}.
+%% -callback handle_info(Msg :: term(), Time :: integer(), State :: term()) ->
+%%     {NState :: term(), TimeoutTime :: integer() | infinity}.
 %% '''
 %% `Msg' is the message, and may be intended for another queue.
 %%
@@ -110,9 +110,9 @@
 %%
 %% When changing the state due to a code change, `code_change/4':
 %% ```
-%% -callback code_change(OldVsn :: any(), Time :: integer(), State :: any(),
-%%                       Extra :: any()) ->
-%%      {NState :: any(), TimeoutTime :: integer() | infinity}.
+%% -callback code_change(OldVsn :: term(), Time :: integer(), State :: term(),
+%%                       Extra :: term()) ->
+%%      {NState :: term(), TimeoutTime :: integer() | infinity}.
 %% '''
 %% On an upgrade `OldVsn' is version the state was created with and on an
 %% downgrade is the same form except `{down, OldVsn}'. `OldVsn' is defined by
@@ -125,15 +125,15 @@
 %%
 %% When changing the configuration of a queue, `config_change/4':
 %% ```
-%% -callback config_change(Args :: any(), Time :: integer(), State :: any()) ->
-%%      {NState :: any(), TimeoutTime :: integer() | infinity}.
+%% -callback config_change(Args :: term(), Time :: integer(), State :: term()) ->
+%%      {NState :: term(), TimeoutTime :: integer() | infinity}.
 %% '''
 %% The variables are equivalent to those in `init/3', with `NState' being the
 %% new state.
 %%
 %% When returning the number of queued requests, `len/1':
 %% ```
-%% -callback len(State :: any()) -> Len :: non_neg_integer().
+%% -callback len(State :: term()) -> Len :: non_neg_integer().
 %% '''
 %% `State' is the current state of the queue and `Len' is the number of queued
 %% requests. This callback must be idempotent and so not drop any requests.
@@ -141,7 +141,7 @@
 %% When returning the send time of the oldest request in the queue,
 %% `send_time/1':
 %% ```
-%% -callback send_time(State :: any()) -> SendTime :: integer() | empty.
+%% -callback send_time(State :: term()) -> SendTime :: integer() | empty.
 %% '''
 %% `State' is the current state of the queue and `SendTime' is the send time of
 %% the oldest request, if not requests then `empty'. This callback must be
@@ -149,7 +149,7 @@
 %%
 %% When cleaning up the queue, `terminate/2':
 %% ```
-%% -callback terminate(Reason :: sbroker_handlers:reason(), State :: any()) ->
+%% -callback terminate(Reason :: sbroker_handlers:reason(), State :: term()) ->
 %%      InternalQueue :: internal_queue().
 %% '''
 %% `Reason' is `stop' if the queue is being shutdown, `change' if the queue is
@@ -183,58 +183,58 @@
 %% types
 
 -type internal_queue() ::
-    queue:queue({integer(), {pid(), any()}, any(), reference()}).
+    queue:queue({integer(), {pid(), term()}, term(), reference()}).
 
 -export_type([internal_queue/0]).
 
--callback init(Q :: internal_queue(), Time :: integer(), Args :: any()) ->
-    {State :: any(), TimeoutTime :: integer() | infinity}.
+-callback init(Q :: internal_queue(), Time :: integer(), Args :: term()) ->
+    {State :: term(), TimeoutTime :: integer() | infinity}.
 
 -callback handle_in(
     SendTime :: integer(),
-    From :: {Sender :: pid(), Tag :: any()},
-    Value :: any(),
+    From :: {Sender :: pid(), Tag :: term()},
+    Value :: term(),
     Time :: integer(),
-    State :: any()
+    State :: term()
 ) ->
-    {NState :: any(), TimeoutTime :: integer() | infinity}.
+    {NState :: term(), TimeoutTime :: integer() | infinity}.
 
--callback handle_out(Time :: integer(), State :: any()) ->
+-callback handle_out(Time :: integer(), State :: term()) ->
     {
         SendTime :: integer(),
-        From :: {pid(), Tag :: any()},
-        Value :: any(),
+        From :: {pid(), Tag :: term()},
+        Value :: term(),
         Ref :: reference(),
-        NState :: any(),
+        NState :: term(),
         TimeoutTime :: integer() | infinity
     }
-    | {empty, NState :: any()}.
+    | {empty, NState :: term()}.
 
--callback handle_timeout(Time :: integer(), State :: any()) ->
-    {NState :: any(), TimeoutTime :: integer() | infinity}.
+-callback handle_timeout(Time :: integer(), State :: term()) ->
+    {NState :: term(), TimeoutTime :: integer() | infinity}.
 
--callback handle_cancel(Tag :: any(), Time :: integer(), State :: any()) ->
-    {Reply :: false | pos_integer(), NState :: any(), TimeoutTime :: integer() | infinity}.
+-callback handle_cancel(Tag :: term(), Time :: integer(), State :: term()) ->
+    {Reply :: false | pos_integer(), NState :: term(), TimeoutTime :: integer() | infinity}.
 
--callback handle_info(Msg :: any(), Time :: integer(), State :: any()) ->
-    {NState :: any(), TimeoutTime :: integer() | infinity}.
+-callback handle_info(Msg :: term(), Time :: integer(), State :: term()) ->
+    {NState :: term(), TimeoutTime :: integer() | infinity}.
 
 -callback code_change(
-    OldVsn :: any(),
+    OldVsn :: term(),
     Time :: integer(),
-    State :: any(),
-    Extra :: any()
+    State :: term(),
+    Extra :: term()
 ) ->
-    {NState :: any(), TimeoutTime :: integer() | infinity}.
+    {NState :: term(), TimeoutTime :: integer() | infinity}.
 
--callback config_change(Args :: any(), Time :: integer(), State :: any()) ->
-    {NState :: any(), TimeoutTime :: integer() | infinity}.
+-callback config_change(Args :: term(), Time :: integer(), State :: term()) ->
+    {NState :: term(), TimeoutTime :: integer() | infinity}.
 
--callback len(State :: any()) -> Len :: non_neg_integer().
+-callback len(State :: term()) -> Len :: non_neg_integer().
 
--callback send_time(State :: any()) -> SendTime :: integer() | empty.
+-callback send_time(State :: term()) -> SendTime :: integer() | empty.
 
--callback terminate(Reason :: sbroker_handlers:reason(), State :: any()) ->
+-callback terminate(Reason :: sbroker_handlers:reason(), State :: term()) ->
     Q :: internal_queue().
 
 %% public api
@@ -243,7 +243,7 @@
 %%
 %% Call `drop/3' when dropping a request from a queue.
 -spec drop(From, SendTime, Time) -> ok when
-    From :: {pid(), Tag :: any()},
+    From :: {pid(), Tag :: term()},
     SendTime :: integer(),
     Time :: integer().
 drop(From, SendTime, Time) ->
@@ -264,8 +264,8 @@ initial_state() ->
     Q :: internal_queue(),
     Send :: integer(),
     Time :: integer(),
-    Args :: any(),
-    State :: any(),
+    Args :: term(),
+    State :: term(),
     TimeoutTime :: integer() | infinity.
 init(Mod, Q, _, Now, Args) ->
     Mod:init(Q, Now, Args).
@@ -275,12 +275,12 @@ init(Mod, Q, _, Now, Args) ->
     {NState, TimeoutTime}
 when
     Module :: module(),
-    OldVsn :: any(),
+    OldVsn :: term(),
     Send :: integer(),
     Time :: integer(),
-    State :: any(),
-    Extra :: any(),
-    NState :: any(),
+    State :: term(),
+    Extra :: term(),
+    NState :: term(),
     TimeoutTime :: integer() | infinity.
 code_change(Mod, OldVsn, _, Time, State, Extra) ->
     Mod:code_change(OldVsn, Time, State, Extra).
@@ -290,11 +290,11 @@ code_change(Mod, OldVsn, _, Time, State, Extra) ->
     {NState, TimeoutTime}
 when
     Module :: module(),
-    Args :: any(),
+    Args :: term(),
     Send :: integer(),
     Time :: integer(),
-    State :: any(),
-    NState :: any(),
+    State :: term(),
+    NState :: term(),
     TimeoutTime :: integer() | infinity.
 config_change(Mod, Args, _, Now, State) ->
     Mod:config_change(Args, Now, State).
@@ -303,7 +303,7 @@ config_change(Mod, Args, _, Now, State) ->
 -spec terminate(Module, Reason, State) -> Q when
     Module :: module(),
     Reason :: sbroker_handlers:reason(),
-    State :: any(),
+    State :: term(),
     Q :: internal_queue().
 terminate(Mod, Reason, State) ->
     Q = Mod:terminate(Reason, State),

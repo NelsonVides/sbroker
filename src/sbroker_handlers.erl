@@ -20,38 +20,38 @@
 %% @private
 -module(sbroker_handlers).
 
--callback initial_state() -> BehaviourState :: any().
+-callback initial_state() -> BehaviourState :: term().
 
 -callback init(
     Mod :: module(),
-    BehaviourState :: any(),
+    BehaviourState :: term(),
     Send :: integer(),
     Time :: integer(),
-    Args :: any()
+    Args :: term()
 ) ->
-    {State :: any(), TimeoutNext :: integer() | infinity}.
+    {State :: term(), TimeoutNext :: integer() | infinity}.
 
 -callback code_change(
     Mod :: module(),
-    OldVsn :: any(),
+    OldVsn :: term(),
     Send :: integer(),
     Time :: integer(),
-    State :: any(),
-    Extra :: any()
+    State :: term(),
+    Extra :: term()
 ) ->
-    {NState :: any(), TimeoutNext :: integer() | infinity}.
+    {NState :: term(), TimeoutNext :: integer() | infinity}.
 
 -callback config_change(
     Mod :: module(),
-    Args :: any(),
+    Args :: term(),
     Send :: integer(),
     Time :: integer(),
-    State :: any()
+    State :: term()
 ) ->
-    {NState :: any(), TimeoutNext :: integer() | infinity}.
+    {NState :: term(), TimeoutNext :: integer() | infinity}.
 
--callback terminate(Mod :: module(), Reason :: reason(), State :: any()) ->
-    BehaviourState :: any().
+-callback terminate(Mod :: module(), Reason :: reason(), State :: term()) ->
+    BehaviourState :: term().
 
 -export([init/5]).
 -export([meters_info/4]).
@@ -65,15 +65,15 @@
 -type reason() ::
     stop
     | change
-    | {exit | throw | error, any(), stacktrace()}
-    | {bad_return_value, any()}.
+    | {exit | throw | error, term(), stacktrace()}
+    | {bad_return_value, term()}.
 
 -export_type([reason/0]).
 
 -type name() ::
     {local, atom()}
-    | {global, any()}
-    | {via, module(), any()}
+    | {global, term()}
+    | {via, module(), term()}
     | {module(), pid()}.
 
 -type stacktrace() ::
@@ -91,32 +91,32 @@ when
     Inits :: [{Behaviour, Mod, Args}, ...],
     Behaviour :: module(),
     Mod :: module(),
-    Args :: any(),
+    Args :: term(),
     MeterArgs :: [{MeterMod, MeterArg}],
     MeterMod :: module(),
-    MeterArg :: any(),
+    MeterArg :: term(),
     Name :: name(),
     Callbacks :: [{Behaviour, Mod, State, TimeoutTime}, ...],
-    State :: any(),
+    State :: term(),
     TimeoutTime :: integer() | infinity,
-    ExitReason :: any(),
+    ExitReason :: term(),
     Meters :: [{MeterMod, MeterState}],
-    MeterState :: any().
+    MeterState :: term().
 init(Send, Time, Inits, Meters, Name) ->
     init(Send, Time, Inits, Meters, Name, []).
 
 -spec meters_info(Msg, Time, Meters, Name) ->
     {ok, NMeters, TimeoutTime} | {stop, ExitReason}
 when
-    Msg :: any(),
+    Msg :: term(),
     Time :: integer(),
     Meters :: [{Mod, State}],
     Mod :: module(),
-    State :: any(),
+    State :: term(),
     Name :: name(),
     NMeters :: [{Mod, State}],
     TimeoutTime :: integer() | infinity,
-    ExitReason :: any().
+    ExitReason :: term().
 meters_info(Msg, Time, Meters, Name) ->
     meters_info(Msg, Time, Meters, Name, [], infinity).
 
@@ -136,12 +136,12 @@ when
     Time :: integer(),
     Meters :: [{Mod, State}],
     Mod :: module(),
-    State :: any(),
+    State :: term(),
     Name :: name(),
     NMeters :: [{Mod, NState}],
-    NState :: any(),
+    NState :: term(),
     TimeoutTime :: integer() | infinity,
-    ExitReason :: any().
+    ExitReason :: term().
 meters_update(QDelay, PDelay, RTime, Time, Meters, Name) ->
     meters_update(QDelay, PDelay, RTime, Time, Meters, Name, [], infinity).
 
@@ -153,19 +153,19 @@ when
     Callbacks :: [{Behaviour, Mod, State, TimeoutTime}, ...],
     Behaviour :: module(),
     Mod :: module(),
-    State :: any(),
+    State :: term(),
     TimeoutTime :: integer() | infinity,
     Meters :: [{MeterMod, MeterState}],
     MeterMod :: module(),
-    MeterState :: any(),
+    MeterState :: term(),
     ChangeMod :: module(),
-    OldVsn :: any(),
-    Extra :: any(),
+    OldVsn :: term(),
+    Extra :: term(),
     NCallbacks :: [{Behaviour, Mod, NState, NTimeoutTime}, ...],
-    NState :: any(),
+    NState :: term(),
     NTimeoutTime :: integer() | infinity,
     NMeters :: [{MeterMod, NMeterState}],
-    NMeterState :: any().
+    NMeterState :: term().
 code_change(Send, Now, Callbacks, Meters, ChangeMod, OldVsn, Extra) ->
     NCallbacks = do_code_change(
         Send,
@@ -191,21 +191,21 @@ when
     Changes :: [{Behaviour, Mod1, State1, Mod2, Args2}, ...],
     Behaviour :: module(),
     Mod1 :: module(),
-    State1 :: any(),
+    State1 :: term(),
     Mod2 :: module(),
-    Args2 :: any(),
+    Args2 :: term(),
     Meters :: [{MeterMod, MeterState}],
     MeterMod :: module(),
-    MeterState :: any(),
+    MeterState :: term(),
     MeterArgs :: [{MeterMod, MeterArg}],
-    MeterArg :: any(),
+    MeterArg :: term(),
     Name :: name(),
     Callbacks :: [{Behaviour, Mod2, State2, TimeoutTime}, ...],
-    State2 :: any(),
+    State2 :: term(),
     TimeoutTime :: integer() | infinity,
     NMeters :: [{MeterMod, NMeterState}],
-    NMeterState :: any(),
-    ExitReason :: any().
+    NMeterState :: term(),
+    ExitReason :: term().
 config_change(Send, Now, Changes, Meters, MeterArgs, Name) ->
     case change(Send, Now, Changes, Name, []) of
         {ok, Callbacks} ->
@@ -222,13 +222,13 @@ config_change(Send, Now, Changes, Meters, MeterArgs, Name) ->
 ) ->
     {stop, NewExitReason}
 when
-    Reason :: reason() | {stop, ExitReason :: any()},
+    Reason :: reason() | {stop, ExitReason :: term()},
     Behaviour :: module(),
     Module :: module(),
     ModReason :: reason(),
-    State :: any(),
+    State :: term(),
     Name :: name(),
-    NewExitReason :: any().
+    NewExitReason :: term().
 terminate(Reason, Callbacks, Meters, Name) ->
     Meters2 = [{sbroker_meter, Mod, stop, State} || {Mod, State} <- Meters],
     terminate(Reason, Callbacks ++ Meters2, Name).
@@ -238,11 +238,11 @@ terminate(Reason, Callbacks, Meters, Name) ->
     Type :: start_error | handler_crashed,
     Mod :: module(),
     Reason :: reason(),
-    State :: any(),
+    State :: term(),
     Name ::
         {local, atom()}
-        | {global, any()}
-        | {via, module(), any()}
+        | {global, term()}
+        | {via, module(), term()}
         | {module(), pid()}.
 report(Behaviour, Type, Mod, Reason, State, Name) ->
     NReason = report_reason(Reason),
@@ -251,9 +251,9 @@ report(Behaviour, Type, Mod, Reason, State, Name) ->
 
 -spec exit_reason(Reason) -> ExitReason when
     Reason ::
-        {exit | throw | error, any(), stacktrace()}
-        | {bad_return_value, any()},
-    ExitReason :: any().
+        {exit | throw | error, term(), stacktrace()}
+        | {bad_return_value, term()},
+    ExitReason :: term().
 exit_reason({throw, Value, Stack}) ->
     {{nocatch, Value}, Stack};
 exit_reason({exit, Reason, _}) ->

@@ -115,7 +115,7 @@ handle_update(
 
 %% @private
 -spec handle_info(Msg, Time, State) -> {State, UpdateNext} when
-    Msg :: any(),
+    Msg :: term(),
     Time :: integer(),
     State :: #state{},
     UpdateNext :: integer().
@@ -124,10 +124,10 @@ handle_info(_, Time, State) ->
 
 %% @private
 -spec code_change(OldVsn, Time, State, Extra) -> {State, UpdateNext} when
-    OldVsn :: any(),
+    OldVsn :: term(),
     Time :: integer(),
     State :: #state{},
-    Extra :: any(),
+    Extra :: term(),
     UpdateNext :: integer().
 code_change(_, Time, State, _) ->
     handle(Time, State).
@@ -149,7 +149,7 @@ config_change(Spec, Time, _) ->
 
 %% @private
 -spec terminate(Reason, State) -> true when
-    Reason :: any(),
+    Reason :: term(),
     State :: #state{}.
 terminate(_, _) ->
     sbetter_server:unregister(self()).

@@ -22,7 +22,7 @@
 %% behaviour messaging using `via' names, e.g.
 %% `{via, sscheduler, {Process,...}}'. The third element, `{Process,...}', is a
 %% tuple containing pids (`pid()') and/or process names (`atom()',
-%% `{global, any()}', `{via, module(), any()}' or `{atom(), node()}'). An
+%% `{global, term()}', `{via, module(), term()}' or `{atom(), node()}'). An
 %% element is chosen based on the scheduler id, if the element is a `pid()' it
 %% is returned, otherwise the `pid()' of the process name is looked up.
 %%
@@ -71,7 +71,7 @@ whereis_name(Processes) when is_tuple(Processes) ->
 %% the name. Otherwise exits.
 -spec send(Processes, Msg) -> ok when
     Processes :: tuple(),
-    Msg :: any().
+    Msg :: term().
 send(Processes, Msg) ->
     case whereis_name(Processes) of
         Pid when is_pid(Pid) ->

@@ -26,7 +26,7 @@
 %% To use `sbetter' with `via' use names of the form
 %% `{via, sbetter, {{Broker, ...}, ask | ask_r}}'. Where `{Broker, ...}' is
 %% a tuple containing
-%% `pid() | atom() | {global, any()} | {via, module(), any()} | {atom(), node()}'.
+%% `pid() | atom() | {global, term()} | {via, module(), term()} | {atom(), node()}'.
 %% The process with the small value/shortest sojourn time of two random
 %% processes for the `ask' (or `ask_r') queue will be called. The sojourn time
 %% includes the message queue delay and the time spent waiting in the internal
@@ -147,7 +147,7 @@ whereis_name({Processes, Key}) when is_tuple(Processes) ->
 when
     Processes :: tuple(),
     Method :: method(),
-    Msg :: any().
+    Msg :: term().
 send(Name, Msg) ->
     case whereis_name(Name) of
         Pid when is_pid(Pid) ->

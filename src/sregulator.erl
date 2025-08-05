@@ -135,35 +135,35 @@
     pid()
     | atom()
     | {atom(), node()}
-    | {global, any()}
-    | {via, module(), any()}.
--type name() :: {local, atom()} | {global, any()} | {via, module(), any()}.
+    | {global, term()}
+    | {via, module(), term()}.
+-type name() :: {local, atom()} | {global, term()} | {via, module(), term()}.
 -type debug_option() ::
     trace
     | log
     | {log, pos_integer()}
     | statistics
     | {log_to_file, file:filename()}
-    | {install, {fun(), any()}}.
+    | {install, {fun(), term()}}.
 -type start_option() ::
     {debug, debug_option()}
     | {timeout, timeout()}
     | {spawn_opt, [proc_lib:spawn_option()]}
     | {read_time_after, non_neg_integer() | infinity}.
--type start_return() :: {ok, pid()} | ignore | {error, any()}.
--type handler_spec() :: {module(), any()}.
+-type start_return() :: {ok, pid()} | ignore | {error, term()}.
+-type handler_spec() :: {module(), term()}.
 
 -export_type([regulator/0]).
 -export_type([name/0]).
 -export_type([handler_spec/0]).
 
--callback init(Args :: any()) ->
+-callback init(Args :: term()) ->
     {ok, {QueueSpec :: handler_spec(), ValveSpec :: handler_spec(), [MeterSpec :: handler_spec()]}}
     | ignore.
 
 -record(config, {
     mod :: module(),
-    args :: any(),
+    args :: term(),
     parent :: pid(),
     dbg :: [sys:dbg_opt()],
     name :: name() | pid(),
@@ -178,7 +178,7 @@
     next = infinity :: integer() | infinity,
     seq :: non_neg_integer(),
     read_after :: non_neg_integer() | infinity,
-    meters :: [{module(), any()}]
+    meters :: [{module(), term()}]
 }).
 
 -dialyzer(no_return).
@@ -288,7 +288,7 @@ async_ask(Regulator) ->
 %% `{await, Tag, Process}'.
 %%
 %% `To' is a tuple containing the process, `pid()', to send the reply to and
-%% `Tag', `any()', that idenitifes the reply containing the result of the
+%% `Tag', `term()', that idenitifes the reply containing the result of the
 %% request. `Process' is the `pid()' of the regulator or `{atom(), node()}' if
 %% the regulator is registered locally on a different node.
 %%
@@ -300,7 +300,7 @@ async_ask(Regulator) ->
     Regulator :: regulator(),
     To :: {Pid, Tag},
     Pid :: pid(),
-    Tag :: any(),
+    Tag :: term(),
     Process :: pid() | {atom(), node()}.
 async_ask(Regulator, {Pid, _} = To) when is_pid(Pid) ->
     sbroker_gen:async_call(Regulator, ask, Pid, To).
@@ -345,11 +345,11 @@ dynamic_ask(Regulator) ->
 %% @see async_ask/1
 %% @see async_ask/2
 -spec await(Tag, Timeout) -> Go | Drop when
-    Tag :: any(),
+    Tag :: term(),
     Timeout :: timeout(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
     Ref :: reference(),
-    Value :: any(),
+    Value :: term(),
     RelativeTime :: integer(),
     SojournTime :: non_neg_integer(),
     Drop :: {drop, SojournTime}.
@@ -368,7 +368,7 @@ await(Tag, Timeout) ->
 %% @equiv cancel(Regulator, Tag, infinity)
 -spec cancel(Regulator, Tag) -> Count | false when
     Regulator :: regulator(),
-    Tag :: any(),
+    Tag :: term(),
     Count :: pos_integer().
 cancel(Regulator, Tag) ->
     cancel(Regulator, Tag, infinity).
@@ -383,7 +383,7 @@ cancel(Regulator, Tag) ->
 %% @see async_ask/2
 -spec cancel(Regulator, Tag, Timeout) -> Count | false when
     Regulator :: regulator(),
-    Tag :: any(),
+    Tag :: term(),
     Timeout :: timeout(),
     Count :: pos_integer().
 cancel(Regulator, Tag, Timeout) ->
@@ -396,7 +396,7 @@ cancel(Regulator, Tag, Timeout) ->
 %% @see cancel/3
 -spec dirty_cancel(Regulator, Tag) -> ok when
     Regulator :: regulator(),
-    Tag :: any().
+    Tag :: term().
 dirty_cancel(Regulator, Tag) ->
     sbroker_gen:send(Regulator, {cancel, dirty, Tag}).
 
@@ -515,7 +515,7 @@ cast(Regulator, Value) when is_integer(Value) ->
 %% @equiv change_config(Regulator, infinity)
 -spec change_config(Regulator) -> ok | {error, Reason} when
     Regulator :: regulator(),
-    Reason :: any().
+    Reason :: term().
 change_config(Regulator) ->
     change_config(Regulator, infinity).
 
@@ -527,7 +527,7 @@ change_config(Regulator) ->
 -spec change_config(Regulator, Timeout) -> ok | {error, Reason} when
     Regulator :: regulator(),
     Timeout :: timeout(),
-    Reason :: any().
+    Reason :: term().
 change_config(Regulator, Timeout) ->
     sbroker_gen:simple_call(Regulator, change_config, undefined, Timeout).
 
@@ -573,7 +573,7 @@ size(Regulator, Timeout) ->
 %% @see gen_server:start_link/3
 -spec start_link(Module, Args, Opts) -> StartReturn when
     Module :: module(),
-    Args :: any(),
+    Args :: term(),
     Opts :: [start_option()],
     StartReturn :: start_return().
 start_link(Mod, Args, Opts) ->
@@ -586,7 +586,7 @@ start_link(Mod, Args, Opts) ->
 -spec start_link(Name, Module, Args, Opts) -> StartReturn when
     Name :: name(),
     Module :: module(),
-    Args :: any(),
+    Args :: term(),
     Opts :: [start_option()],
     StartReturn :: start_return().
 start_link(Name, Mod, Args, Opts) ->

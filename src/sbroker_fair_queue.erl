@@ -24,7 +24,7 @@
 %% queues based on an index and dequeues from the internal queues fairly. Its
 %% argument, `spec()', is of the form:
 %% ```
-%% {Module :: module(), Args :: any(), Index :: index()}
+%% {Module :: module(), Args :: term(), Index :: index()}
 %% '''
 %% `Module' and `Args' are the module and arguments of the underlying
 %% `sbroker_queue'. `Module' must implement the `sbroker_fair_queue' behaviour.
@@ -48,11 +48,11 @@
 %% and empty queues removed using the `handle_fq_out/2' callback, instead of the
 %% usual `handle_out/2':
 %% ```
-%% -callback handle_fq_out(Time :: integer(), State :: any()) ->
-%%     {SendTime :: integer(), From :: {Sender :: pid(), Tag :: any()},
-%%      Value:: any(), Ref :: reference, NState :: any(),
+%% -callback handle_fq_out(Time :: integer(), State :: term()) ->
+%%     {SendTime :: integer(), From :: {Sender :: pid(), Tag :: term()},
+%%      Value:: term(), Ref :: reference, NState :: term(),
 %%      TimeoutTime :: integer() | infinity} |
-%%     {empty, NState :: any(), RemoveTime :: integer() | infinity}.
+%%     {empty, NState :: term(), RemoveTime :: integer() | infinity}.
 %% '''
 %% The variables are equivalent to those of the `sbroker_queue' callback
 %% `handle_out/2' with the addition of `RemoveTime', which is the time (or
@@ -85,33 +85,35 @@
 
 -type key() :: application | node | pid | value | {element, pos_integer()}.
 -type index() :: key() | {hash, key(), 1..32#4000000}.
--type spec() :: {Module :: module(), Args :: any(), Index :: index()}.
+-type spec() :: {Module :: module(), Args :: term(), Index :: index()}.
 
 -export_type([key/0]).
 -export_type([index/0]).
 -export_type([spec/0]).
 
--callback handle_fq_out(Time :: integer(), State :: any()) ->
+-callback handle_fq_out(Time :: integer(), State :: term()) ->
     {
         SendTime :: integer(),
-        From :: {pid(), Tag :: any()},
-        Value :: any(),
+        From :: {pid(), Tag :: term()},
+        Value :: term(),
         Ref :: reference(),
-        NState :: any(),
+        NState :: term(),
         TimeoutTime :: integer() | infinity
     }
-    | {empty, NState :: any(), RemoveTime :: integer() | infinity}.
+    | {empty, NState :: term(), RemoveTime :: integer() | infinity}.
 
 -record(state, {
     module :: module(),
     index :: index(),
-    args :: any(),
+    args :: term(),
     robin = queue:new() :: robin_queue(Key),
     remove_time :: integer() | infinity,
     next :: integer() | infinity,
-    empties :: #{Key => any()},
-    queues :: #{Key => any()}
+    empties :: #{Key => term()},
+    queues :: #{Key => term()}
 }).
+
+-type state() :: #state{}.
 
 %% public API
 
@@ -120,9 +122,9 @@
     Q :: sbroker_queue:internal_queue(),
     Time :: integer(),
     Module :: module(),
-    Args :: any(),
+    Args :: term(),
     Index :: index(),
-    State :: #state{},
+    State :: state(),
     TimeoutTime :: integer() | infinity.
 init(Q, Time, {Module, Args, Index}) ->
     Index = index(Index),
@@ -145,11 +147,11 @@ init(Q, Time, {Module, Args, Index}) ->
     {NState, TimeoutNext}
 when
     SendTime :: integer(),
-    From :: {pid(), any()},
-    Value :: any(),
+    From :: {pid(), term()},
+    Value :: term(),
     Time :: integer(),
-    State :: #state{},
-    NState :: #state{},
+    State :: state(),
+    NState :: state(),
     TimeoutNext :: integer() | infinity.
 handle_in(
     SendTime,
@@ -169,12 +171,12 @@ handle_in(
     {SendTime, From, Value, Ref, NState, TimeoutNext} | {empty, NState}
 when
     Time :: integer(),
-    State :: #state{},
+    State :: state(),
     SendTime :: integer(),
-    From :: {pid(), any()},
-    Value :: any(),
+    From :: {pid(), term()},
+    Value :: term(),
     Ref :: reference(),
-    NState :: #state{},
+    NState :: state(),
     TimeoutNext :: integer() | infinity.
 handle_out(
     Time,
@@ -185,8 +187,8 @@ handle_out(
 %% @private
 -spec handle_timeout(Time, State) -> {NState, TimeoutNext} when
     Time :: integer(),
-    State :: #state{},
-    NState :: #state{},
+    State :: state(),
+    NState :: state(),
     TimeoutNext :: integer() | infinity.
 handle_timeout(Time, #state{next = Next} = State) when Time < Next ->
     {remove(Time, State), Next};
@@ -196,11 +198,11 @@ handle_timeout(Time, #state{module = Module, queues = Qs} = State) ->
 
 %% @private
 -spec handle_cancel(Tag, Time, State) -> {Reply, NState, TimeoutNext} when
-    Tag :: any(),
+    Tag :: term(),
     Time :: integer(),
-    State :: #state{},
+    State :: state(),
     Reply :: false | pos_integer(),
-    NState :: #state{},
+    NState :: state(),
     TimeoutNext :: integer() | infinity.
 handle_cancel(Tag, Time, #state{module = Module, queues = Qs} = State) ->
     QList = maps:to_list(Qs),
@@ -209,10 +211,10 @@ handle_cancel(Tag, Time, #state{module = Module, queues = Qs} = State) ->
 
 %% @private
 -spec handle_info(Msg, Time, State) -> {NState, TimeoutNext} when
-    Msg :: any(),
+    Msg :: term(),
     Time :: integer(),
-    State :: #state{},
-    NState :: #state{},
+    State :: state(),
+    NState :: state(),
     TimeoutNext :: integer() | infinity.
 handle_info(Msg, Time, #state{module = Module, queues = Qs, empties = Es} = State) ->
     {NQs, Next} = map(fun(_, Q) -> Module:handle_info(Msg, Time, Q) end, Qs),
@@ -227,11 +229,11 @@ handle_info(Msg, Time, #state{module = Module, queues = Qs, empties = Es} = Stat
 
 %% @private
 -spec code_change(OldVsn, Time, State, Extra) -> {NState, NextTimeout} when
-    OldVsn :: any(),
+    OldVsn :: term(),
     Time :: integer(),
-    State :: #state{},
-    Extra :: any(),
-    NState :: #state{},
+    State :: state(),
+    Extra :: term(),
+    NState :: state(),
     NextTimeout :: integer() | infinity.
 code_change(_, Time, #state{next = Next} = State, _) ->
     % Can only handle code changes for this module, sbroker/sregulator won't
@@ -243,11 +245,11 @@ code_change(_, Time, #state{next = Next} = State, _) ->
     {NState, TimeoutTime}
 when
     Module :: module(),
-    Args :: any(),
+    Args :: term(),
     Index :: index(),
     Time :: integer(),
-    State :: #state{},
-    NState :: #state{},
+    State :: state(),
+    NState :: state(),
     TimeoutTime :: integer() | infinity.
 config_change(
     {Module, Args, Index},
@@ -273,14 +275,14 @@ config_change({_, _, _} = Arg, Time, State) ->
 
 %% @private
 -spec len(State) -> Len when
-    State :: #state{},
+    State :: state(),
     Len :: non_neg_integer().
 len(#state{module = Module, queues = Qs}) ->
     maps:fold(fun(_, Q, Len) -> Module:len(Q) + Len end, 0, Qs).
 
 %% @private
 -spec send_time(State) -> SendTime | empty when
-    State :: #state{},
+    State :: state(),
     SendTime :: integer().
 send_time(#state{module = Module, queues = Qs}) ->
     maps:fold(
@@ -292,7 +294,7 @@ send_time(#state{module = Module, queues = Qs}) ->
 %% @private
 -spec terminate(Reason, State) -> InternalQ when
     Reason :: sbroker_handlers:reason(),
-    State :: #state{},
+    State :: state(),
     InternalQ :: sbroker_queue:internal_queue().
 terminate(Reason, #state{module = Module, queues = Qs, empties = Es}) when
     Reason == change; Reason == stop

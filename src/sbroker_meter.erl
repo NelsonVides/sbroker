@@ -22,8 +22,8 @@
 %% A custom meter must implement the `sbroker_meter' behaviour. The first
 %% callback is `init/2', which starts the meter:
 %% ```
-%% -callback init(Time :: integer(), Args :: any()) ->
-%%      {State :: any(), UpdateTime :: integer() | infinity}.
+%% -callback init(Time :: integer(), Args :: term()) ->
+%%      {State :: term(), UpdateTime :: integer() | infinity}.
 %% '''
 %% `Time' is the time, in `native' time units, of the meter at creation. Some
 %% other callbacks will receive the current time of the meter as the second last
@@ -45,8 +45,8 @@
 %% -callback handle_update(QueueDelay :: non_neg_integer(),
 %%                         ProcessDelay :: non_neg_integer(),
 %%                         RelativeTime :: integer(), Time :: integer(),
-%%                         State :: any()) ->
-%%      {NState :: any(), UpdateTime :: integer() | infinity}.
+%%                         State :: term()) ->
+%%      {NState :: term(), UpdateTime :: integer() | infinity}.
 %% '''
 %% `QueueDelay' is the approximate time a message spends in the message queue of
 %% the process. `ProcessDelay' is the average time spent processing a message
@@ -60,8 +60,8 @@
 %%
 %% When handling a message, `handle_info/3':
 %% ```
-%% -callback handle_info(Msg :: any(), Time :: integer(), State :: any()) ->
-%%     {NState :: any(), TimeoutTime :: integer() | infinity}.
+%% -callback handle_info(Msg :: term(), Time :: integer(), State :: term()) ->
+%%     {NState :: term(), TimeoutTime :: integer() | infinity}.
 %% '''
 %% `Msg' is the message, and may be intended for another callback.
 %%
@@ -73,9 +73,9 @@
 %%
 %% When changing the state due to a code change, `code_change/4':
 %% ```
-%% -callback code_change(OldVsn :: any(), Time :: integer(), State :: any(),
-%%                       Extra :: any()) ->
-%%      {NState :: any(), TimeoutTime :: integer() | infinity}.
+%% -callback code_change(OldVsn :: term(), Time :: integer(), State :: term(),
+%%                       Extra :: term()) ->
+%%      {NState :: term(), TimeoutTime :: integer() | infinity}.
 %% '''
 %% On an upgrade `OldVsn' is version the state was created with and on an
 %% downgrade is the same form except `{down, OldVsn}'. `OldVsn' is defined by
@@ -88,16 +88,16 @@
 %%
 %% When changing the configuration of a queue, `config_change/4':
 %% ```
-%% -callback config_change(Args :: any(), Time :: integer(), State :: any()) ->
-%%      {NState :: any(), TimeoutTime :: integer() | infinity}.
+%% -callback config_change(Args :: term(), Time :: integer(), State :: term()) ->
+%%      {NState :: term(), TimeoutTime :: integer() | infinity}.
 %% '''
 %% The variables are equivalent to those in `init/2', with `NState' being the
 %% new state.
 %%
 %% When cleaning up the meter, `terminate/2':
 %% ```
-%% -callback terminate(Reason :: sbroker_handlers:reason(), State :: any()) ->
-%%      any().
+%% -callback terminate(Reason :: sbroker_handlers:reason(), State :: term()) ->
+%%      term().
 %% '''
 %% `Reason' is `stop' if the meter is being shutdown, `change' if the meter is
 %% being replaced by another meter, `{bad_return_value, Return}' if a previous
@@ -116,34 +116,34 @@
 
 %% types
 
--callback init(Time :: integer(), Args :: any()) ->
-    {State :: any(), UpdateTime :: integer() | infinity}.
+-callback init(Time :: integer(), Args :: term()) ->
+    {State :: term(), UpdateTime :: integer() | infinity}.
 
 -callback handle_update(
     QueueDelay :: non_neg_integer(),
     ProcessDelay :: non_neg_integer(),
     RelativeTime :: integer(),
     Time :: integer(),
-    State :: any()
+    State :: term()
 ) ->
-    {NState :: any(), UpdateTime :: integer() | infinity}.
+    {NState :: term(), UpdateTime :: integer() | infinity}.
 
--callback handle_info(Msg :: any(), Time :: integer(), State :: any()) ->
-    {NState :: any(), UpdateTime :: integer() | infinity}.
+-callback handle_info(Msg :: term(), Time :: integer(), State :: term()) ->
+    {NState :: term(), UpdateTime :: integer() | infinity}.
 
 -callback code_change(
-    OldVsn :: any(),
+    OldVsn :: term(),
     Time :: integer(),
-    State :: any(),
-    Extra :: any()
+    State :: term(),
+    Extra :: term()
 ) ->
-    {NState :: any(), TimeoutTime :: integer() | infinity}.
+    {NState :: term(), TimeoutTime :: integer() | infinity}.
 
--callback config_change(Args :: any(), Time :: integer(), State :: any()) ->
-    {NState :: any(), UpdateTime :: integer() | infinity}.
+-callback config_change(Args :: term(), Time :: integer(), State :: term()) ->
+    {NState :: term(), UpdateTime :: integer() | infinity}.
 
--callback terminate(Reason :: sbroker_handlers:reason(), State :: any()) ->
-    any().
+-callback terminate(Reason :: sbroker_handlers:reason(), State :: term()) ->
+    term().
 
 %% private api
 
@@ -152,20 +152,20 @@
     {NState, TimeoutTime}
 when
     Module :: module(),
-    OldVsn :: any(),
+    OldVsn :: term(),
     Send :: integer(),
     Time :: integer(),
-    State :: any(),
-    Extra :: any(),
-    NState :: any(),
+    State :: term(),
+    Extra :: term(),
+    NState :: term(),
     TimeoutTime :: integer() | infinity.
 code_change(Mod, OldVsn, _, Time, State, Extra) ->
     Mod:code_change(OldVsn, Time, State, Extra).
 
 %% @private
--spec terminate(Module, Reason, State) -> any() when
+-spec terminate(Module, Reason, State) -> term() when
     Module :: module(),
     Reason :: sbroker_handlers:reason(),
-    State :: any().
+    State :: term().
 terminate(Mod, Reason, State) ->
     Mod:terminate(Reason, State).

@@ -25,7 +25,7 @@
 %% valve is slow to get a match for an interval and clear it once the valve
 %% gets matches fast for an interval. Its argument, `spec()', is of the form:
 %% ```
-%% #{alarm    => Alarm :: any(), % default: {underload, self()}
+%% #{alarm    => Alarm :: term(), % default: {underload, self()}
 %%   target   => Target :: integer(), % default: 100
 %%   interval => Interval :: pos_integer()}. % default: 1000
 %% '''
@@ -58,7 +58,7 @@
 
 -type spec() ::
     #{
-        alarm => Alarm :: any(),
+        alarm => Alarm :: term(),
         target => Target :: integer(),
         interval => Interval :: pos_integer()
     }.
@@ -66,16 +66,18 @@
 -record(state, {
     target :: integer(),
     interval :: pos_integer(),
-    alarm_id :: any(),
+    alarm_id :: term(),
     status = clear :: clear | set,
     toggle_next = infinity :: integer() | infinity
 }).
+
+-type state() :: #state{}.
 
 %% @private
 -spec init(Time, Spec) -> {State, infinity} when
     Time :: integer(),
     Spec :: spec(),
-    State :: #state{}.
+    State :: state().
 init(_, Spec) ->
     AlarmId = sbroker_util:alarm(underload, Spec),
     Target = sbroker_util:relative_target(Spec),
@@ -91,8 +93,8 @@ when
     ProcessDelay :: non_neg_integer(),
     RelativeTime :: integer(),
     Time :: integer(),
-    State :: #state{},
-    NState :: #state{},
+    State :: state(),
+    NState :: state(),
     Next :: integer() | infinity.
 handle_update(
     _,
@@ -151,20 +153,20 @@ handle_update(
 
 %% @private
 -spec handle_info(Msg, Time, State) -> {State, Next} when
-    Msg :: any(),
+    Msg :: term(),
     Time :: integer(),
-    State :: #state{},
+    State :: state(),
     Next :: integer() | infinity.
 handle_info(_, Time, #state{toggle_next = ToggleNext} = State) ->
     {State, max(Time, ToggleNext)}.
 
 %% @private
 -spec code_change(OldVsn, Time, State, Extra) -> {NState, Next} when
-    OldVsn :: any(),
+    OldVsn :: term(),
     Time :: integer(),
-    State :: #state{},
-    Extra :: any(),
-    NState :: #state{},
+    State :: state(),
+    Extra :: term(),
+    NState :: state(),
     Next :: integer() | infinity.
 code_change(_, Time, #state{toggle_next = ToggleNext} = State, _) ->
     {State, max(Time, ToggleNext)}.
@@ -173,8 +175,8 @@ code_change(_, Time, #state{toggle_next = ToggleNext} = State, _) ->
 -spec config_change(Spec, Time, State) -> {NState, Next} when
     Spec :: spec(),
     Time :: integer(),
-    State :: #state{},
-    NState :: #state{},
+    State :: state(),
+    NState :: state(),
     Next :: integer() | infinity.
 config_change(
     Spec,
@@ -210,8 +212,8 @@ config_change(
 
 %% @private
 -spec terminate(Reason, State) -> ok when
-    Reason :: any(),
-    State :: #state{}.
+    Reason :: term(),
+    State :: state().
 terminate(_, #state{status = set, alarm_id = AlarmId}) ->
     alarm_handler:clear_alarm(AlarmId);
 terminate(_, _) ->

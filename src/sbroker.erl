@@ -139,29 +139,29 @@
     pid()
     | atom()
     | {atom(), node()}
-    | {global, any()}
-    | {via, module(), any()}.
--type name() :: {local, atom()} | {global, any()} | {via, module(), any()}.
+    | {global, term()}
+    | {via, module(), term()}.
+-type name() :: {local, atom()} | {global, term()} | {via, module(), term()}.
 -type debug_option() ::
     trace
     | log
     | {log, pos_integer()}
     | statistics
     | {log_to_file, file:filename()}
-    | {install, {fun(), any()}}.
+    | {install, {fun(), term()}}.
 -type start_option() ::
     {debug, debug_option()}
     | {timeout, timeout()}
     | {spawn_opt, [proc_lib:spawn_option()]}
     | {read_time_after, non_neg_integer() | infinity}.
--type start_return() :: {ok, pid()} | ignore | {error, any()}.
--type handler_spec() :: {module(), any()}.
+-type start_return() :: {ok, pid()} | ignore | {error, term()}.
+-type handler_spec() :: {module(), term()}.
 
 -export_type([broker/0]).
 -export_type([name/0]).
 -export_type([handler_spec/0]).
 
--callback init(Args :: any()) ->
+-callback init(Args :: term()) ->
     {ok,
         {AskQueueSpec :: handler_spec(), AskRQueueSpec :: handler_spec(), [
             MeterSpec :: handler_spec()
@@ -170,7 +170,7 @@
 
 -record(config, {
     mod :: module(),
-    args :: any(),
+    args :: term(),
     parent :: pid(),
     dbg :: [sys:dbg_opt()],
     name :: name() | pid(),
@@ -185,7 +185,7 @@
     next = infinity :: integer() | infinity,
     seq :: non_neg_integer(),
     read_after :: non_neg_integer() | infinity,
-    meters :: [{module(), any()}]
+    meters :: [{module(), term()}]
 }).
 
 -dialyzer(no_return).
@@ -197,7 +197,7 @@
     Broker :: broker(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
     Ref :: reference(),
-    Value :: any(),
+    Value :: term(),
     RelativeTime :: integer(),
     SojournTime :: non_neg_integer(),
     Drop :: {drop, SojournTime}.
@@ -238,10 +238,10 @@ ask(Broker) ->
 %% `{drop, 0}' and does not send the request.
 -spec ask(Broker, ReqValue) -> Go | Drop when
     Broker :: broker(),
-    ReqValue :: any(),
+    ReqValue :: term(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
     Ref :: reference(),
-    Value :: any(),
+    Value :: term(),
     RelativeTime :: integer(),
     SojournTime :: non_neg_integer(),
     Drop :: {drop, SojournTime}.
@@ -253,7 +253,7 @@ ask(Broker, ReqValue) ->
     Broker :: broker(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
     Ref :: reference(),
-    Value :: any(),
+    Value :: term(),
     RelativeTime :: integer(),
     SojournTime :: non_neg_integer(),
     Drop :: {drop, SojournTime}.
@@ -265,10 +265,10 @@ ask_r(Broker) ->
 %% @see ask/2
 -spec ask_r(Broker, ReqValue) -> Go | Drop when
     Broker :: broker(),
-    ReqValue :: any(),
+    ReqValue :: term(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
     Ref :: reference(),
-    Value :: any(),
+    Value :: term(),
     RelativeTime :: integer(),
     SojournTime :: non_neg_integer(),
     Drop :: {drop, SojournTime}.
@@ -280,7 +280,7 @@ ask_r(Broker, ReqValue) ->
     Broker :: broker(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
     Ref :: reference(),
-    Value :: any(),
+    Value :: term(),
     RelativeTime :: 0 | neg_integer(),
     SojournTime :: non_neg_integer(),
     Drop :: {drop, SojournTime}.
@@ -303,10 +303,10 @@ nb_ask(Broker) ->
 %% @see ask/2
 -spec nb_ask(Broker, ReqValue) -> Go | Drop when
     Broker :: broker(),
-    ReqValue :: any(),
+    ReqValue :: term(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
     Ref :: reference(),
-    Value :: any(),
+    Value :: term(),
     RelativeTime :: 0 | neg_integer(),
     SojournTime :: non_neg_integer(),
     Drop :: {drop, SojournTime}.
@@ -318,7 +318,7 @@ nb_ask(Broker, ReqValue) ->
     Broker :: broker(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
     Ref :: reference(),
-    Value :: any(),
+    Value :: term(),
     RelativeTime :: 0 | neg_integer(),
     SojournTime :: non_neg_integer(),
     Drop :: {drop, SojournTime}.
@@ -331,10 +331,10 @@ nb_ask_r(Broker) ->
 %% @see nb_ask/2
 -spec nb_ask_r(Broker, ReqValue) -> Go | Drop when
     Broker :: broker(),
-    ReqValue :: any(),
+    ReqValue :: term(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
     Ref :: reference(),
-    Value :: any(),
+    Value :: term(),
     RelativeTime :: 0 | neg_integer(),
     SojournTime :: non_neg_integer(),
     Drop :: {drop, SojournTime}.
@@ -377,7 +377,7 @@ async_ask(Broker) ->
 %% @see async_ask/3
 -spec async_ask(Broker, ReqValue) -> {await, Tag, Process} | {drop, 0} when
     Broker :: broker(),
-    ReqValue :: any(),
+    ReqValue :: term(),
     Tag :: reference(),
     Process :: pid() | {atom(), node()}.
 async_ask(Broker, ReqValue) ->
@@ -387,7 +387,7 @@ async_ask(Broker, ReqValue) ->
 %% Returns `{await, Tag, Pid}'.
 %%
 %% `To' is a tuple containing the process, `pid()', to send the reply to and
-%% `Tag', `any()', that identifies the reply containing the result of the
+%% `Tag', `term()', that identifies the reply containing the result of the
 %% request. `Process' is the `pid()' of the broker or `{atom(), node()}' if the
 %% broker is registered locally on a different node. To cancel all requests
 %% identified by `Tag' on broker `Process' call `cancel(Process, Tag)'.
@@ -411,10 +411,10 @@ async_ask(Broker, ReqValue) ->
 %% @see cancel/2
 -spec async_ask(Broker, ReqValue, To) -> {await, Tag, Process} | {drop, 0} when
     Broker :: broker(),
-    ReqValue :: any(),
+    ReqValue :: term(),
     To :: {Pid, Tag},
     Pid :: pid(),
-    Tag :: any(),
+    Tag :: term(),
     Process :: pid() | {atom(), node()}.
 async_ask(Broker, ReqValue, To) ->
     sbroker_gen:async_call(Broker, ask, ReqValue, To).
@@ -434,7 +434,7 @@ async_ask_r(Broker) ->
 %% @see cancel/2
 -spec async_ask_r(Broker, ReqValue) -> {await, Tag, Process} | {drop, 0} when
     Broker :: broker(),
-    ReqValue :: any(),
+    ReqValue :: term(),
     Tag :: reference(),
     Process :: pid() | {atom(), node()}.
 async_ask_r(Broker, ReqValue) ->
@@ -448,10 +448,10 @@ async_ask_r(Broker, ReqValue) ->
     {await, Tag, Process} | {drop, 0}
 when
     Broker :: broker(),
-    ReqValue :: any(),
+    ReqValue :: term(),
     To :: {Pid, Tag},
     Pid :: pid(),
-    Tag :: any(),
+    Tag :: term(),
     Process :: pid() | {atom(), node()}.
 async_ask_r(Broker, ReqValue, To) ->
     sbroker_gen:async_call(Broker, bid, ReqValue, To).
@@ -461,7 +461,7 @@ async_ask_r(Broker, ReqValue, To) ->
     Broker :: broker(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
     Ref :: reference(),
-    Value :: any(),
+    Value :: term(),
     RelativeTime :: 0 | neg_integer(),
     SojournTime :: non_neg_integer(),
     Await :: {await, Tag, Pid},
@@ -491,10 +491,10 @@ dynamic_ask(Broker) ->
 %% @see async_ask/2
 -spec dynamic_ask(Broker, ReqValue) -> Go | Await | Drop when
     Broker :: broker(),
-    ReqValue :: any(),
+    ReqValue :: term(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
     Ref :: reference(),
-    Value :: any(),
+    Value :: term(),
     RelativeTime :: 0 | neg_integer(),
     SojournTime :: non_neg_integer(),
     Await :: {await, Tag, Pid},
@@ -509,7 +509,7 @@ dynamic_ask(Broker, ReqValue) ->
     Broker :: broker(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
     Ref :: reference(),
-    Value :: any(),
+    Value :: term(),
     RelativeTime :: 0 | neg_integer(),
     SojournTime :: non_neg_integer(),
     Await :: {await, Tag, Pid},
@@ -525,10 +525,10 @@ dynamic_ask_r(Broker) ->
 %% @see dynamic_ask/2
 -spec dynamic_ask_r(Broker, ReqValue) -> Go | Await | Drop when
     Broker :: broker(),
-    ReqValue :: any(),
+    ReqValue :: term(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
     Ref :: reference(),
-    Value :: any(),
+    Value :: term(),
     RelativeTime :: 0 | neg_integer(),
     SojournTime :: non_neg_integer(),
     Await :: {await, Tag, Pid},
@@ -547,11 +547,11 @@ dynamic_ask_r(Broker, ReqValue) ->
 %% @see async_ask/2
 %% @see async_ask_r/2
 -spec await(Tag, Timeout) -> Go | Drop when
-    Tag :: any(),
+    Tag :: term(),
     Timeout :: timeout(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
     Ref :: reference(),
-    Value :: any(),
+    Value :: term(),
     RelativeTime :: integer(),
     SojournTime :: non_neg_integer(),
     Drop :: {drop, SojournTime}.
@@ -570,7 +570,7 @@ await(Tag, Timeout) ->
 %% @equiv cancel(Broker, Tag, infinity)
 -spec cancel(Broker, Tag) -> Count | false when
     Broker :: broker(),
-    Tag :: any(),
+    Tag :: term(),
     Count :: pos_integer().
 cancel(Broker, Tag) ->
     cancel(Broker, Tag, infinity).
@@ -583,7 +583,7 @@ cancel(Broker, Tag) ->
 %% @see async_ask_r/1
 -spec cancel(Broker, Tag, Timeout) -> Count | false when
     Broker :: broker(),
-    Tag :: any(),
+    Tag :: term(),
     Timeout :: timeout(),
     Count :: pos_integer().
 cancel(Broker, Tag, Timeout) ->
@@ -596,14 +596,14 @@ cancel(Broker, Tag, Timeout) ->
 %% @see cancel/3
 -spec dirty_cancel(Broker, Tag) -> ok when
     Broker :: broker(),
-    Tag :: any().
+    Tag :: term().
 dirty_cancel(Broker, Tag) ->
     sbroker_gen:send(Broker, {cancel, dirty, Tag}).
 
 %% @equiv change_config(Broker, infinity)
 -spec change_config(Broker) -> ok | {error, Reason} when
     Broker :: broker(),
-    Reason :: any().
+    Reason :: term().
 change_config(Broker) ->
     change_config(Broker, infinity).
 
@@ -615,7 +615,7 @@ change_config(Broker) ->
 -spec change_config(Broker, Timeout) -> ok | {error, Reason} when
     Broker :: broker(),
     Timeout :: timeout(),
-    Reason :: any().
+    Reason :: term().
 change_config(Broker, Timeout) ->
     sbroker_gen:simple_call(Broker, change_config, undefined, Timeout).
 
@@ -660,7 +660,7 @@ len_r(Broker, Timeout) ->
 %% @see gen_server:start_link/3
 -spec start_link(Module, Args, Opts) -> StartReturn when
     Module :: module(),
-    Args :: any(),
+    Args :: term(),
     Opts :: [start_option()],
     StartReturn :: start_return().
 start_link(Mod, Args, Opts) ->
@@ -673,7 +673,7 @@ start_link(Mod, Args, Opts) ->
 -spec start_link(Name, Module, Args, Opts) -> StartReturn when
     Name :: name(),
     Module :: module(),
-    Args :: any(),
+    Args :: term(),
     Opts :: [start_option()],
     StartReturn :: start_return().
 start_link(Name, Mod, Args, Opts) ->

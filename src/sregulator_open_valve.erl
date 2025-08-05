@@ -59,6 +59,8 @@
     map :: sregulator_valve:internal_map()
 }).
 
+-type state() :: #state{}.
+
 %% sregulator_valve api
 
 %% @private
@@ -66,7 +68,7 @@
     Map :: sregulator_valve:internal_map(),
     Time :: integer(),
     Spec :: spec(),
-    State :: #state{}.
+    State :: state().
 init(Map, Time, Spec) ->
     Max = sbroker_util:max(Spec),
     handle(#state{max = Max, small_time = Time, map = Map}).
@@ -78,9 +80,9 @@ when
     Pid :: pid(),
     Ref :: reference(),
     Time :: integer(),
-    State :: #state{},
+    State :: state(),
     Open :: integer(),
-    NState :: #state{}.
+    NState :: state().
 handle_ask(Pid, Ref, _, #state{max = Max, small_time = Small, map = Map} = State) when
     map_size(Map) < Max
 ->
@@ -99,8 +101,8 @@ handle_ask(Pid, Ref, _, #state{max = Max, small_time = Small, map = Map} = State
 when
     Ref :: reference(),
     Time :: integer(),
-    State :: #state{},
-    NState :: #state{}.
+    State :: state(),
+    NState :: state().
 handle_done(Ref, Time, #state{max = Max, map = Map} = State) ->
     Before = map_size(Map),
     NMap = maps:remove(Ref, Map),
@@ -129,9 +131,9 @@ handle_done(Ref, Time, #state{max = Max, map = Map} = State) ->
 when
     Ref :: reference(),
     Time :: integer(),
-    State :: #state{},
+    State :: state(),
     Open :: integer(),
-    NState :: #state{}.
+    NState :: state().
 handle_continue(Ref, _, #state{max = Max, small_time = Small, map = Map} = State) when
     map_size(Map) < Max
 ->
@@ -167,17 +169,17 @@ handle_continue(Ref, _, #state{map = Map} = State) ->
 when
     Value :: integer(),
     Time :: integer(),
-    State :: #state{},
-    NState :: #state{}.
+    State :: state(),
+    NState :: state().
 handle_update(_, _, State) ->
     handle(State).
 
 %% @private
 -spec handle_info(Msg, Time, State) -> {open | closed, NState, infinity} when
-    Msg :: any(),
+    Msg :: term(),
     Time :: integer(),
-    State :: #state{},
-    NState :: #state{}.
+    State :: state(),
+    NState :: state().
 handle_info({'DOWN', Ref, _, _, _}, Time, #state{map = Map, max = Max} = State) ->
     Before = map_size(Map),
     NMap = maps:remove(Ref, Map),
@@ -193,19 +195,19 @@ handle_info(_, _, State) ->
 %% @private
 -spec handle_timeout(Time, State) -> {open | closed, NState, infinity} when
     Time :: integer(),
-    State :: #state{},
-    NState :: #state{}.
+    State :: state(),
+    NState :: state().
 handle_timeout(_, State) ->
     handle(State).
 
 %% @private
 -spec code_change(OldVsn, Time, State, Extra) -> {Status, NState, infinity} when
-    OldVsn :: any(),
+    OldVsn :: term(),
     Time :: integer(),
-    State :: #state{},
-    Extra :: any(),
+    State :: state(),
+    Extra :: term(),
     Status :: open | closed,
-    NState :: #state{}.
+    NState :: state().
 code_change(_, _, State, _) ->
     handle(State).
 
@@ -213,22 +215,22 @@ code_change(_, _, State, _) ->
 -spec config_change(Spec, Time, State) -> {open | closed, NState, infinity} when
     Spec :: spec(),
     Time :: integer(),
-    State :: #state{},
-    NState :: #state{}.
+    State :: state(),
+    NState :: state().
 config_change(Spec, _, State) ->
     Max = sbroker_util:max(Spec),
     handle(State#state{max = Max}).
 
 %% @private
 -spec size(State) -> Size when
-    State :: #state{},
+    State :: state(),
     Size :: non_neg_integer().
 size(#state{map = Map}) ->
     map_size(Map).
 
 %% @private
 -spec open_time(State) -> Open | closed when
-    State :: #state{},
+    State :: state(),
     Open :: integer().
 open_time(#state{map = Map, max = Max, small_time = Small}) when
     map_size(Map) < Max
@@ -239,8 +241,8 @@ open_time(#state{}) ->
 
 %% @private
 -spec terminate(Reason, State) -> Map when
-    Reason :: any(),
-    State :: #state{},
+    Reason :: term(),
+    State :: state(),
     Map :: sregulator_valve:internal_map().
 terminate(_, #state{map = Map}) ->
     Map.

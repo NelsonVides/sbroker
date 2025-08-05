@@ -21,7 +21,7 @@
 %% on choosing a random process. It is designed for use with OTP behaviour
 %% messaging using `via' names, e.g. `{via, srand, {Process,...}}'. The third
 %% element, `{Process,...}', is a tuple containing pids (`pid()') and/or
-%% process names (`atom()', `{global, any()}', `{via, module(), any()}' or
+%% process names (`atom()', `{global, term()}', `{via, module(), term()}' or
 %% `{atom(), node()}'). An element is chosen randomly, if the element is a
 %% `pid()' it is returned, otherwise the `pid()' of the process name is looked
 %% up.
@@ -70,7 +70,7 @@ whereis_name(Processes) when is_tuple(Processes) ->
 %% exits.
 -spec send(Processes, Msg) -> ok when
     Processes :: tuple(),
-    Msg :: any().
+    Msg :: term().
 send(Processes, Msg) ->
     case whereis_name(Processes) of
         Pid when is_pid(Pid) ->

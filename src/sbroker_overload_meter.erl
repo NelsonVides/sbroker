@@ -24,7 +24,7 @@
 %% message queue is slow for an interval and clear it once the message queue
 %% becomes fast for an interval. Its argument, `spec()', is of the form:
 %% ```
-%% #{alarm    => Alarm :: any(), % default: {overload, self()}
+%% #{alarm    => Alarm :: term(), % default: {overload, self()}
 %%   target   => Target :: non_neg_integer(), % default: 100
 %%   interval => Interval :: pos_integer()}. % default: 1000
 %% '''
@@ -55,7 +55,7 @@
 
 -type spec() ::
     #{
-        alarm => Alarm :: any(),
+        alarm => Alarm :: term(),
         target => Target :: non_neg_integer(),
         interval => Interval :: pos_integer()
     }.
@@ -65,7 +65,7 @@
 -record(state, {
     target :: non_neg_integer(),
     interval :: pos_integer(),
-    alarm_id :: any(),
+    alarm_id :: term(),
     status = clear :: clear | set,
     toggle_next = infinity :: integer() | infinity
 }).
@@ -148,7 +148,7 @@ handle_update(
 
 %% @private
 -spec handle_info(Msg, Time, State) -> {State, Next} when
-    Msg :: any(),
+    Msg :: term(),
     Time :: integer(),
     State :: #state{},
     Next :: integer() | infinity.
@@ -157,10 +157,10 @@ handle_info(_, Time, #state{toggle_next = ToggleNext} = State) ->
 
 %% @private
 -spec code_change(OldVsn, Time, State, Extra) -> {NState, Next} when
-    OldVsn :: any(),
+    OldVsn :: term(),
     Time :: integer(),
     State :: #state{},
-    Extra :: any(),
+    Extra :: term(),
     NState :: #state{},
     Next :: integer() | infinity.
 code_change(_, Time, #state{toggle_next = ToggleNext} = State, _) ->
@@ -207,7 +207,7 @@ config_change(
 
 %% @private
 -spec terminate(Reason, State) -> ok when
-    Reason :: any(),
+    Reason :: term(),
     State :: #state{}.
 terminate(_, #state{status = set, alarm_id = AlarmId}) ->
     alarm_handler:clear_alarm(AlarmId);

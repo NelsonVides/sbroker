@@ -201,7 +201,7 @@ limit(#{}) ->
     100.
 
 -spec alarm(Type, #{alarm => Alarm}) -> NAlarm when
-    Alarm :: any(),
+    Alarm :: term(),
     NAlarm :: {Type, pid()} | Alarm.
 alarm(_, #{alarm := Alarm}) -> Alarm;
 alarm(Type, #{}) -> {Type, self()}.

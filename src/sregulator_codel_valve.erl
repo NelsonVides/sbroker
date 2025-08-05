@@ -263,7 +263,7 @@ handle_update(_, Time, State) ->
 
 %% @private
 -spec handle_info(Msg, Time, State) -> {open | closed, NState, infinity} when
-    Msg :: any(),
+    Msg :: term(),
     Time :: integer(),
     State :: #state{},
     NState :: #state{}.
@@ -289,10 +289,10 @@ handle_timeout(Time, State) ->
 
 %% @private
 -spec code_change(OldVsn, Time, State, Extra) -> {Status, NState, infinity} when
-    OldVsn :: any(),
+    OldVsn :: term(),
     Time :: integer(),
     State :: #state{},
-    Extra :: any(),
+    Extra :: term(),
     Status :: open | closed,
     NState :: #state{}.
 code_change(_, Time, State, _) ->
@@ -342,7 +342,7 @@ open_time(#state{open_first = First}) ->
 
 %% @private
 -spec terminate(Reason, State) -> Map when
-    Reason :: any(),
+    Reason :: term(),
     State :: #state{},
     Map :: sregulator_valve:internal_map().
 terminate(_, #state{map = Map}) ->

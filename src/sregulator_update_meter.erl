@@ -72,13 +72,14 @@
     rand :: rand:state(),
     update_next :: integer()
 }).
+-type state() :: #state{}.
 
 %% @private
 -spec init(Time, Spec | {Spec, Seed}) -> {State, UpdateNext} when
     Time :: integer(),
     Spec :: spec(),
     Seed :: rand:export_state(),
-    State :: #state{},
+    State :: state(),
     UpdateNext :: integer().
 init(Time, {[Regulator], Seed}) ->
     Entry = entry(Regulator),
@@ -101,8 +102,8 @@ when
     ProcessDelay :: non_neg_integer(),
     RelativeTime :: integer(),
     Time :: integer(),
-    State :: #state{},
-    NState :: #state{},
+    State :: state(),
+    NState :: state(),
     UpdateNext :: integer().
 handle_update(_, _, _, Time, #state{update_next = UpdateNext} = State) when
     Time < UpdateNext
@@ -134,19 +135,19 @@ handle_update(_, _, RelativeTime, Time, #state{wheel = Wheel, rand = Rand}) ->
 
 %% @private
 -spec handle_info(Msg, Time, State) -> {State, UpdateNext} when
-    Msg :: any(),
+    Msg :: term(),
     Time :: integer(),
-    State :: #state{},
+    State :: state(),
     UpdateNext :: integer().
 handle_info(_, Time, State) ->
     handle(Time, State).
 
 %% @private
 -spec code_change(OldVsn, Time, State, Extra) -> {State, UpdateNext} when
-    OldVsn :: any(),
+    OldVsn :: term(),
     Time :: integer(),
-    State :: #state{},
-    Extra :: any(),
+    State :: state(),
+    Extra :: term(),
     UpdateNext :: integer().
 code_change(_, Time, State, _) ->
     handle(Time, State).
@@ -158,8 +159,8 @@ when
     Time :: integer(),
     Spec :: spec(),
     Seed :: rand:export_state(),
-    State :: #state{},
-    NState :: #state{},
+    State :: state(),
+    NState :: state(),
     UpdateNext :: integer().
 config_change(
     {Regulators, Seed},
@@ -185,8 +186,8 @@ config_change(Regulators, Time, #state{rand = Rand} = State) ->
 
 %% @private
 -spec terminate(Reason, State) -> ok when
-    Reason :: any(),
-    State :: #state{}.
+    Reason :: term(),
+    State :: state().
 terminate(_, _) ->
     ok.
 

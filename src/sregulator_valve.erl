@@ -23,8 +23,8 @@
 %% callback is `init/3', which starts the valve:
 %% ```
 %% -callback init(InternalMap :: internal_map(), Time :: integer(),
-%%                Args :: any()) ->
-%%      {Status :: open | closed, State :: any(),
+%%                Args :: term()) ->
+%%      {Status :: open | closed, State :: term(),
 %%       TimeoutTime :: integer() | infinity}.
 %% '''
 %% `InternalMap' is the internal map of running processes, it is a `map()' with
@@ -53,8 +53,8 @@
 %% When allowing a request to run, `handle_ask/4':
 %% ```
 %% -callback handle_ask(Ref :: reference(), Pid :: pid(), Time :: integer(),
-%%                      State :: any()) ->
-%%      {go, Open, Status :: open | closed, NState :: any(),
+%%                      State :: term()) ->
+%%      {go, Open, Status :: open | closed, NState :: term(),
 %%       TimeoutTime :: integer() | infinity}.
 %% '''
 %% `Ref' is a monitor reference of the sender, `Pid', as in the `InternalMap'
@@ -68,8 +68,8 @@
 %% When a request has finished, `handle_done/3':
 %% ```
 %% -callback handle_done(Ref :: reference(), Time :: integer(),
-%%                       State :: any()) ->
-%%      {Result :: done | error, Status :: open | closed, NState :: any(),
+%%                       State :: term()) ->
+%%      {Result :: done | error, Status :: open | closed, NState :: term(),
 %%       TimeoutTime :: integer() | infinity}.
 %% '''
 %% `Result' is `done' when the `Ref' is known by the valve and is removed, if
@@ -79,10 +79,10 @@
 %%
 %% When a request is asking to continue, `handle_continue/3':
 %% -callback handle_continue(Ref :: reference(), Time :: integer(),
-%%                       State :: any()) ->
+%%                       State :: term()) ->
 %%      {Result :: go, Open :: integer(), , Status :: open | closed,
-%%       NState :: any(), TimeoutTime :: integer() | infinity} |
-%%      {Result :: done | error, Status :: open | closed, NState :: any(),
+%%       NState :: term(), TimeoutTime :: integer() | infinity} |
+%%      {Result :: done | error, Status :: open | closed, NState :: term(),
 %%       TimeoutTime :: integer() | infinity}.
 %% '''
 %%
@@ -94,8 +94,8 @@
 %%
 %% When handling a message, `handle_info/3':
 %% ```
-%% -callback handle_info(Msg :: any(), Time :: integer(), State :: any()) ->
-%%     {Status :: open | closed, NState :: any(),
+%% -callback handle_info(Msg :: term(), Time :: integer(), State :: term()) ->
+%%     {Status :: open | closed, NState :: term(),
 %%      TimeoutTime :: integer() | infinity}.
 %% '''
 %% `Msg' is the message, and may be intended for another callback.
@@ -105,8 +105,8 @@
 %%
 %% When a timeout occurs, `handle_timeout/2':
 %% ```
-%% -callback handle_timeout(Time :: integer(), State :: any()) ->
-%%     {Status :: open | closed, NState :: any(),
+%% -callback handle_timeout(Time :: integer(), State :: term()) ->
+%%     {Status :: open | closed, NState :: term(),
 %%      TimeoutTime :: integer() | infinity}.
 %% '''
 %% The variables are equivalent to those in `init/3', with `NState' being the
@@ -114,9 +114,9 @@
 %%
 %% When changing the state due to a code change, `code_change/4':
 %% ```
-%% -callback code_change(OldVsn :: any(), Time :: integer(), State :: any(),
-%%                       Extra :: any()) ->
-%%      {NState :: any(), TimeoutTime :: integer() | infinity}.
+%% -callback code_change(OldVsn :: term(), Time :: integer(), State :: term(),
+%%                       Extra :: term()) ->
+%%      {NState :: term(), TimeoutTime :: integer() | infinity}.
 %% '''
 %% On an upgrade `OldVsn' is version the state was created with and on an
 %% downgrade is the same form except `{down, OldVsn}'. `OldVsn' is defined by
@@ -129,8 +129,8 @@
 %%
 %% When changing the configuration of a valve, `config_change/4':
 %% ```
-%% -callback config_change(Args :: any(), Time :: integer(), State :: any()) ->
-%%      {Status :: open | closed, NState :: any(),
+%% -callback config_change(Args :: term(), Time :: integer(), State :: term()) ->
+%%      {Status :: open | closed, NState :: term(),
 %%       TimeoutTime :: integer() | infinity}.
 %% '''
 %% The variables are equivalent to those in `init/3', with `NState' being the
@@ -138,7 +138,7 @@
 %%
 %% When returning the number of tasks monitored by the valve, `size/1':
 %% ```
-%% -callback size(State :: any()) -> Size :: non_neg_integer().
+%% -callback size(State :: term()) -> Size :: non_neg_integer().
 %% '''
 %%
 %% `State' is the current state of the valve and `Size' is the number of tasks
@@ -148,14 +148,14 @@
 %% When returning the open time for the time the valve opened or will open if
 %% no side effects before then, `open_time/1':
 %% ```
-%% -callback open_time(State :: any()) -> OpenTime :: integer() | closed.
+%% -callback open_time(State :: term()) -> OpenTime :: integer() | closed.
 %% '''
 %% `State' is the current state of the valve and `OpenTime' is the open time of
 %% the valve, if closed and will not open without a side effect then `closed'.
 %%
 %% When cleaning up the valve, `terminate/2':
 %% ```
-%% -callback terminate(Reason :: sbroker_handlers:reason(), State :: any()) ->
+%% -callback terminate(Reason :: sbroker_handlers:reason(), State :: term()) ->
 %%      InternalMap :: internal_map().
 %% '''
 %% `Reason' is `stop' if the valve is being shutdown, `change' if the valve is
@@ -188,79 +188,79 @@
 
 -export_type([internal_map/0]).
 
--callback init(Map :: internal_map(), Time :: integer(), Args :: any()) ->
-    {Status :: open | closed, State :: any(), TimeoutTime :: integer() | infinity}.
+-callback init(Map :: internal_map(), Time :: integer(), Args :: term()) ->
+    {Status :: open | closed, State :: term(), TimeoutTime :: integer() | infinity}.
 
 -callback handle_ask(
     Pid :: pid(),
     Ref :: reference(),
     Time :: integer(),
-    State :: any()
+    State :: term()
 ) ->
     {
         Result :: go,
         Open :: integer(),
         Status :: open | closed,
-        NState :: any(),
+        NState :: term(),
         TimeoutTime :: integer() | infinity
     }.
 
--callback handle_done(Ref :: reference(), Time :: integer(), State :: any()) ->
+-callback handle_done(Ref :: reference(), Time :: integer(), State :: term()) ->
     {
         Result :: done | error,
         Status :: open | closed,
-        NState :: any(),
+        NState :: term(),
         TimeoutTime :: integer() | infinity
     }.
 
 -callback handle_continue(
     Ref :: reference(),
     Time :: integer(),
-    State :: any()
+    State :: term()
 ) ->
     {
         Result :: go,
         Open :: integer(),
         Status :: open | closed,
-        NState :: any(),
+        NState :: term(),
         TimeoutTime :: integer() | infinity
     }
     | {
         Result :: done | error,
         Status :: open | closed,
-        NState :: any(),
+        NState :: term(),
         TimeoutTime :: integer() | infinity
     }.
 
 -callback handle_update(
     RelativeTime :: integer(),
     Time :: integer(),
-    State :: any()
+    State :: term()
 ) ->
-    {Status :: open | closed, NState :: any(), TimeoutTime :: integer() | infinity}.
+    {Status :: open | closed, NState :: term(), TimeoutTime :: integer() | infinity}.
 
--callback handle_info(Msg :: any(), Time :: integer(), State :: any()) ->
-    {Status :: open | closed, NState :: any(), TimeoutTime :: integer() | infinity}.
+-callback handle_info(Msg :: term(), Time :: integer(), State :: term()) ->
+    {Status :: open | closed, NState :: term(), TimeoutTime :: integer() | infinity}.
 
--callback handle_timeout(Time :: integer(), State :: any()) ->
-    {Status :: open | closed, NState :: any(), TimeoutTime :: integer() | infinity}.
+-callback handle_timeout(Time :: integer(), State :: term()) ->
+    {Status :: open | closed, NState :: term(), TimeoutTime :: integer() | infinity}.
 
 -callback code_change(
-    OldVsn :: any(),
+    OldVsn :: term(),
     Time :: integer(),
-    State :: any(),
-    Extra :: any()
+    State :: term(),
+    Extra :: term()
 ) ->
-    {Status :: open | closed, NState :: any(), TimeoutTime :: integer() | infinity}.
+    {Status :: open | closed, NState :: term(), TimeoutTime :: integer() | infinity}.
 
--callback config_change(Args :: any(), Time :: integer(), State :: any()) ->
-    {Status :: open | closed, NState :: any(), TimeoutTime :: integer() | infinity}.
+-callback config_change(Args :: term(), Time :: integer(), State :: term()) ->
+    {Status :: open | closed, NState :: term(), TimeoutTime :: integer() | infinity}.
 
--callback size(State :: any()) -> Size :: non_neg_integer().
+-callback size(State :: term()) -> Size :: non_neg_integer().
 
--callback open_time(State :: any()) -> Open :: integer() | closed.
+-callback open_time(State :: term()) -> Open :: integer() | closed.
 
--callback terminate(Reason :: sbroker_handlers:reason(), State :: any()) ->
+-callback terminate(Reason :: sbroker_handlers:reason(), State :: term()) ->
     Map :: internal_map().
 
 %% sbroker_handlers api
@@ -277,9 +277,9 @@ initial_state() ->
     Map :: internal_map(),
     Send :: integer(),
     Time :: integer(),
-    Args :: any(),
+    Args :: term(),
     Status :: open | closed,
-    State :: any(),
+    State :: term(),
     TimeoutTime :: integer() | infinity.
 init(Mod, Map, Send, _, Args) ->
     {Status, State, TimeoutTime} = Mod:init(Map, Send, Args),
@@ -290,14 +290,14 @@ init(Mod, Map, Send, _, Args) ->
     {{NStatus, NState}, TimeoutTime}
 when
     Module :: module(),
-    OldVsn :: any(),
+    OldVsn :: term(),
     Send :: integer(),
     Time :: integer(),
     Status :: open | closed,
-    State :: any(),
-    Extra :: any(),
+    State :: term(),
+    Extra :: term(),
     NStatus :: open | closed,
-    NState :: any(),
+    NState :: term(),
     TimeoutTime :: integer() | infinity.
 code_change(Mod, OldVsn, Send, _, {_, State}, Extra) ->
     {Status, NState, TimeoutTime} = Mod:code_change(OldVsn, Send, State, Extra),
@@ -308,13 +308,13 @@ code_change(Mod, OldVsn, Send, _, {_, State}, Extra) ->
     {{NStatus, NState}, TimeoutTime}
 when
     Module :: module(),
-    Args :: any(),
+    Args :: term(),
     Send :: integer(),
     Time :: integer(),
     Status :: open | closed,
-    State :: any(),
+    State :: term(),
     NStatus :: open | closed,
-    NState :: any(),
+    NState :: term(),
     TimeoutTime :: integer() | infinity.
 config_change(Mod, Args, Send, _, {_, State}) ->
     {Status, NState, TimeoutTime} = Mod:config_change(Args, Send, State),
@@ -325,7 +325,7 @@ config_change(Mod, Args, Send, _, {_, State}) ->
     Module :: module(),
     Reason :: sbroker_handlers:reason(),
     Status :: open | closed,
-    State :: any(),
+    State :: term(),
     Map :: internal_map().
 terminate(Mod, Reason, {_, State}) ->
     case Mod:terminate(Reason, State) of
