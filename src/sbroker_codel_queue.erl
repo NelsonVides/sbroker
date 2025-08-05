@@ -649,16 +649,16 @@ from_queue(Q, Len, Time, Spec) ->
         len = Len,
         queue = Q
     },
-    if
-        Len > Max andalso Drop =:= drop ->
+    case {Len > Max, Drop} of
+        {true, drop} ->
             {DropQ, NQ} = queue:split(Len - Max, Q),
             drop_queue(Time, DropQ),
             State#state{len = Max, queue = NQ};
-        Len > Max andalso Drop =:= drop_r ->
+        {true, drop_r} ->
             {NQ, DropQ} = queue:split(Max, Q),
             drop_queue(Time, DropQ),
             State#state{len = Max, queue = NQ};
-        true ->
+        _ ->
             State
     end.
 

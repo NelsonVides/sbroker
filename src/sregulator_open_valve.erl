@@ -108,19 +108,19 @@ handle_done(Ref, Time, #state{max = Max, map = Map} = State) ->
     NMap = maps:remove(Ref, Map),
     After = map_size(NMap),
     NState = State#state{map = NMap},
-    if
-        After < Before, Before =:= Max ->
+    case {After < Before, Before =:= Max, After < Max} of
+        {true, true, _} ->
             demonitor(Ref, [flush]),
             {done, open, NState#state{small_time = Time}, infinity};
-        After < Before, After < Max ->
+        {true, false, true} ->
             demonitor(Ref, [flush]),
             {done, open, NState, infinity};
-        After < Before ->
+        {true, false, false} ->
             demonitor(Ref, [flush]),
             {done, closed, NState, infinity};
-        After < Max ->
+        {false, _, true} ->
             {error, open, NState, infinity};
-        true ->
+        {false, _, false} ->
             {error, closed, NState, infinity}
     end.
 

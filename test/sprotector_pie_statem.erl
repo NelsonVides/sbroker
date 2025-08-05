@@ -167,20 +167,20 @@ update(
     P = (Current - Target) / Alpha + (Current - Old) / Beta,
 
     NP =
-        if
-            DropProb < 0.000001 ->
+        case DropProb of
+            D when D < 0.000001 ->
                 P / 2048;
-            DropProb < 0.00001 ->
+            D when D < 0.00001 ->
                 P / 512;
-            DropProb < 0.0001 ->
+            D when D < 0.0001 ->
                 P / 128;
-            DropProb < 0.001 ->
+            D when D < 0.001 ->
                 P / 32;
-            DropProb < 0.01 ->
+            D when D < 0.01 ->
                 P / 8;
-            DropProb < 0.1 ->
+            D when D < 0.1 ->
                 P / 2;
-            true ->
+            _ ->
                 P
         end,
 
@@ -189,10 +189,10 @@ update(
     NDropProb2 = max(0.0, min(1.0, NDropProb)),
 
     NDropProb3 =
-        if
-            Current == 0, Old == 0 ->
+        case {Current, Old} of
+            {0, 0} ->
                 NDropProb2 * 0.98;
-            true ->
+            _ ->
                 NDropProb2
         end,
 
@@ -216,14 +216,22 @@ enqueue(
         burst_allowance = BurstAllow
     } = Pie
 ) ->
-    if
-        DropProb == 0.0, Current < Target div 2, Old < Target div 2 ->
+    case
+        {
+            DropProb == 0.0,
+            Current < Target div 2,
+            Old < Target div 2,
+            BurstAllow > 0,
+            DropProb < 0.2
+        }
+    of
+        {true, true, true, _, _} ->
             {0.0, Pie#pie{burst_allowance = Burst}};
-        BurstAllow > 0 ->
+        {_, _, _, true, _} ->
             {0.0, Pie};
-        DropProb < 0.2, Old < Target div 2 ->
+        {_, _, true, false, true} ->
             {0.0, Pie};
-        true ->
+        _ ->
             {DropProb, Pie}
     end.
 
@@ -245,10 +253,10 @@ pie_change(
     NUpdate = erlang:convert_time_unit(Update, milli_seconds, native),
     NUpdateNext = min(Time + NUpdate, UpdateNext),
     NBurstAllow =
-        if
-            BurstAllow == 0 ->
+        case BurstAllow of
+            0 ->
                 0;
-            true ->
+            _ ->
                 max(0, BurstAllow - OldBurst + NBurst)
         end,
     NPie = Pie#pie{

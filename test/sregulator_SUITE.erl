@@ -146,10 +146,10 @@ ask(_) ->
     1 = sregulator:size(Regulator, ?TIMEOUT),
     {go, _, Regulator, RelativeTime, SojournTime} =
         sregulator:await(Ref, ?TIMEOUT),
-    if
-        SojournTime >= RelativeTime, SojournTime >= 0 ->
+    case {SojournTime >= RelativeTime, SojournTime >= 0} of
+        {true, true} ->
             ok;
-        true ->
+        _ ->
             exit({bad_times, RelativeTime, SojournTime})
     end.
 

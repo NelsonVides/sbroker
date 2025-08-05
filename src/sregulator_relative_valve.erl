@@ -184,17 +184,17 @@ handle_continue(
     } = State
 ) ->
     Size = map_size(Map),
-    if
-        Size < Min ->
+    case {Size, Last < Target} of
+        {S, _} when S < Min ->
             continue(Ref, Map, Size, Small, State, State);
-        Size =:= Min ->
+        {Min, _} ->
             continue(Ref, Map, Size, Time, State, State);
-        Size > Max ->
+        {S, _} when S > Max ->
             done(Ref, Map, Size, Time, State);
-        Last < Target ->
+        {_, true} ->
             NState = State#state{last = continue},
             continue(Ref, Map, Size, Updated, State, NState);
-        true ->
+        _ ->
             done(Ref, Map, Size, Time, State)
     end.
 

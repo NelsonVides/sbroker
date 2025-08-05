@@ -873,10 +873,10 @@ open_time_post(
 ) when
     length(L) < Min orelse (Status == open andalso length(L) < Max)
 ->
-    if
-        OpenTime =< Time ->
-            true;
+    case OpenTime =< Time of
         true ->
+            true;
+        false ->
             ct:pal(
                 "Open Time~nExpected: =<~p~nObserved: ~p",
                 [Time, OpenTime]
@@ -964,15 +964,15 @@ do_timeout_post(Expected, Observed) ->
     false.
 
 done_function(#state{list = L, min = Min}) ->
-    if
-        length(L) =< Min -> handle;
-        length(L) > Min -> handle_done
+    case length(L) =< Min of
+        true -> handle;
+        false -> handle_done
     end.
 
 ask_function(#state{list = L, min = Min}) ->
-    if
-        length(L) < Min -> handle;
-        length(L) >= Min -> handle_ask
+    case length(L) < Min of
+        true -> handle;
+        false -> handle_ask
     end.
 
 handle_update(Manager, RelativeTime, Time, ManState) ->

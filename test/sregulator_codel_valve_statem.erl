@@ -166,10 +166,10 @@ handle_ask(
 ->
     NState = State#state{opening = true},
     NCount =
-        if
-            Count > 2 andalso Now - OpenNext < 8 * Interval ->
-                Count - 2;
+        case Count > 2 andalso Now - OpenNext < 8 * Interval of
             true ->
+                Count - 2;
+            _ ->
                 1
         end,
     handle(control_law(Now, NState#state{count = NCount})).

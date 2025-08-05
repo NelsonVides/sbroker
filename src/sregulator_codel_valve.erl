@@ -161,17 +161,17 @@ handle_ask(
 ) ->
     NMap = maps:put(Ref, Pid, Map),
     NState = State#state{map = NMap},
-    if
-        map_size(NMap) < Min ->
+    case {map_size(NMap), First, Time >= Next, Time >= First} of
+        {Size, _, _, _} when Size < Min ->
             {go, Small, open, NState, infinity};
         %% open based on size of Min-1
-        map_size(NMap) =:= Min ->
+        {Min, _, _, _} ->
             go(Small, Time, NState);
         %% opening and fast for a consecutive interval
-        First == opening, Time >= Next ->
+        {_, opening, true, _} ->
             go(Next, Time, open_control(C + 1, Next, NState));
         %% fast for an initial interval
-        Time >= First ->
+        {_, _, _, true} ->
             go(First, Time, open_control(Time, NState))
     end.
 
@@ -211,20 +211,20 @@ handle_continue(
     } = State
 ) ->
     Size = map_size(Map),
-    if
-        Size < Min ->
+    case {Size, First, Time >= Next, Time >= First} of
+        {S, _, _, _} when S < Min ->
             continue(Ref, Map, Size, Small, Time, State, State);
-        Size =:= Min ->
+        {Min, _, _, _} ->
             continue(Ref, Map, Size, Time, Time, State, State);
-        Size > Max ->
+        {S, _, _, _} when S > Max ->
             done(Ref, Map, Size, Time, State);
-        First == opening, Time >= Next ->
+        {_, opening, true, _} ->
             NState = open_control(C + 1, Next, State),
             continue(Ref, Map, Size, Next, Time, State, NState);
-        is_integer(First), Time >= First ->
+        {_, F, _, true} when is_integer(F) ->
             NState = open_control(Time, State),
             continue(Ref, Map, Size, First, Time, State, NState);
-        true ->
+        _ ->
             done(Ref, Map, Size, Time, State)
     end.
 

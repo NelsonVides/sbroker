@@ -109,17 +109,17 @@ handle_update(
         toggle_next = ToggleNext
     } = State
 ) ->
-    if
-        -RelativeTime < Target andalso ToggleNext == infinity ->
+    case {-RelativeTime < Target, ToggleNext, ToggleNext > Time} of
+        {true, infinity, _} ->
             {State, ToggleNext};
-        -RelativeTime < Target ->
+        {true, _, _} ->
             {State#state{toggle_next = infinity}, infinity};
-        ToggleNext =:= infinity ->
+        {false, infinity, _} ->
             NToggleNext = Time + Interval,
             {State#state{toggle_next = NToggleNext}, NToggleNext};
-        ToggleNext > Time ->
+        {false, _, true} ->
             {State, ToggleNext};
-        true ->
+        _ ->
             alarm_handler:set_alarm({AlarmId, {valve_slow, self()}}),
             {State#state{status = set, toggle_next = infinity}, infinity}
     end;
@@ -136,18 +136,18 @@ handle_update(
         toggle_next = ToggleNext
     } = State
 ) ->
-    if
-        -RelativeTime < Target andalso ToggleNext == infinity ->
+    case {-RelativeTime < Target, ToggleNext, ToggleNext > Time} of
+        {true, infinity, _} ->
             NToggleNext = Time + Interval,
             {State#state{toggle_next = NToggleNext}, NToggleNext};
-        -RelativeTime < Target andalso ToggleNext > Time ->
+        {true, _, true} ->
             {State, ToggleNext};
-        -RelativeTime < Target ->
+        {true, _, _} ->
             alarm_handler:clear_alarm(AlarmId),
             {State#state{status = clear, toggle_next = infinity}, infinity};
-        ToggleNext =:= infinity ->
+        {false, infinity, _} ->
             {State, infinity};
-        true ->
+        _ ->
             {State#state{toggle_next = infinity}, infinity}
     end.
 
