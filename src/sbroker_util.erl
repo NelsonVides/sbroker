@@ -62,9 +62,11 @@ sojourn_target(#{target := _} = Spec) ->
 sojourn_target(#{}) ->
     native(100).
 
-% -spec sojourn_target(Queue, #{Queue => #{target => Target}}) -> NTarget when
-%     Target :: non_neg_integer(),
-%     NTarget :: non_neg_integer().
+-spec sojourn_target(Queue1, #{Queue2 => #{target => Target}}) -> NTarget when
+    Queue1 :: atom(),
+    Queue2 :: atom(),
+    Target :: non_neg_integer(),
+    NTarget :: non_neg_integer().
 sojourn_target(Queue, Spec) ->
     case Spec of
         #{Queue := #{target := Target}} when is_integer(Target), Target >= 0 ->
@@ -99,9 +101,11 @@ interval(#{interval := _} = Spec) ->
 interval(#{}) ->
     native(1000).
 
-% -spec interval(Queue, #{Queue => #{interval => Interval}}) -> NInterval when
-%     Interval :: pos_integer(),
-%     NInterval :: pos_integer().
+-spec interval(Queue1, #{Queue2 => #{interval => Interval}}) -> NInterval when
+    Queue1 :: atom(),
+    Queue2 :: atom(),
+    Interval :: pos_integer(),
+    NInterval :: pos_integer().
 interval(Queue, Spec) ->
     case Spec of
         #{Queue := #{interval := Interval}} when
@@ -162,9 +166,11 @@ max(#{max := _} = Spec) ->
 max(#{}) ->
     infinity.
 
-% -spec upper(Queue, #{Queue => #{upper => Upper}}) -> NUpper when
-%     Upper :: non_neg_integer(),
-%     NUpper :: non_neg_integer().
+-spec upper(Queue1, #{Queue2 => #{upper => Upper}}) -> NUpper when
+    Queue1 :: atom(),
+    Queue2 :: atom(),
+    Upper :: non_neg_integer(),
+    NUpper :: non_neg_integer().
 upper(Queue, Spec) ->
     case Spec of
         #{Queue := #{upper := Upper}} when is_integer(Upper), Upper >= 0 ->

@@ -27,6 +27,7 @@ start_link() ->
 
 %% supervisor API
 
+-spec init([]) -> {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}}.
 init([]) ->
     ServerSup =
         {sbroker_server_sup, {sbroker_server_sup, start_link, []}, permanent, infinity, supervisor,

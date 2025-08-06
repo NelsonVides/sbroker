@@ -171,6 +171,7 @@ start_link(Name) ->
 %% sregulator API
 
 ?DOC(false).
+-spec init(sbroker:name()) -> {ok, dynamic()} | ignore.
 init(Name) ->
     Regulators = application:get_env(sbroker, regulators, []),
     case lists:keyfind(Name, 1, Regulators) of

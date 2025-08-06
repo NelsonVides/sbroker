@@ -17,8 +17,10 @@
 
 %% application API
 
+-spec start(application:start_type(), term()) -> {ok, pid()} | {error, term()}.
 start(_, _) ->
     sbroker_sup:start_link().
 
+-spec stop(term()) -> ok.
 stop(_) ->
     ok.

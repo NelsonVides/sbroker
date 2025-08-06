@@ -31,8 +31,6 @@ processes with `sbetter`.
 -export([handle_call/3]).
 -export([handle_cast/2]).
 -export([handle_info/2]).
--export([code_change/3]).
--export([terminate/2]).
 
 %% macros
 
@@ -109,6 +107,7 @@ lookup(Pid, ask_r) ->
 %% gen_server API
 
 ?DOC(false).
+-spec init(atom()) -> {ok, ets:table()}.
 init(Table) ->
     _ = process_flag(trap_exit, true),
     Table = ets:new(
@@ -118,6 +117,8 @@ init(Table) ->
     {ok, Table}.
 
 ?DOC(false).
+-spec handle_call(dynamic(), gen_server:from(), ets:table()) ->
+    {reply, term(), ets:table()} | {stop, term(), ets:table()}.
 handle_call({register, Pid, AskValue, BidValue}, _, Table) ->
     link(Pid),
     {reply, insert_new(Table, Pid, AskValue, BidValue), Table};
@@ -129,10 +130,12 @@ handle_call(Call, _, Table) ->
     {stop, {bad_call, Call}, Table}.
 
 ?DOC(false).
+-spec handle_cast(term(), ets:table()) -> {stop, term(), ets:table()}.
 handle_cast(Cast, Table) ->
     {stop, {bad_cast, Cast}, Table}.
 
 ?DOC(false).
+-spec handle_info(term(), ets:table()) -> {noreply, ets:table()}.
 handle_info({'EXIT', Pid, _}, Table) ->
     delete(Table, Pid),
     {noreply, Table};
@@ -142,14 +145,6 @@ handle_info(Msg, Table) ->
         [Msg]
     ),
     {noreply, Table}.
-
-?DOC(false).
-code_change(_, State, _) ->
-    {ok, State}.
-
-?DOC(false).
-terminate(_, _) ->
-    ok.
 
 %% Helpers
 

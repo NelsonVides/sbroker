@@ -42,14 +42,14 @@
     | {timeout, timeout()}
     | {spawn_opt, [proc_lib:spawn_option()]}
     | {read_time_after, non_neg_integer() | infinity}.
--type start_return() :: {ok, pid()} | ignore | {error, term()}.
+-type start_return() :: {ok, pid()} | {ok, {pid(), reference()}} | ignore | {error, term()}.
 
 -spec call(Process, Label, Msg, Timeout) -> Reply when
     Process :: process(),
     Label :: atom(),
-    Msg :: term(),
+    Msg :: dynamic(),
     Timeout :: timeout(),
-    Reply :: term().
+    Reply :: dynamic().
 call(Process, Label, Msg, Timeout) ->
     try whereis(Process) of
         undefined ->
@@ -71,9 +71,9 @@ call(Process, Label, Msg, Timeout) ->
 -spec simple_call(Process, Label, Msg, Timeout) -> Reply when
     Process :: process(),
     Label :: atom(),
-    Msg :: term(),
+    Msg :: dynamic(),
     Timeout :: timeout(),
-    Reply :: term().
+    Reply :: dynamic().
 simple_call(Process, Label, Msg, Timeout) ->
     try gen:call(Process, Label, Msg, Timeout) of
         {ok, Reply} ->
@@ -87,7 +87,7 @@ simple_call(Process, Label, Msg, Timeout) ->
 -spec async_call(Process, Label, Msg) -> {await, Tag, NProcess} | {drop, 0} when
     Process :: process(),
     Label :: atom(),
-    Msg :: term(),
+    Msg :: dynamic(),
     Tag :: reference(),
     NProcess :: pid() | {atom(), node()}.
 async_call(Process, Label, Msg) ->
@@ -108,7 +108,7 @@ async_call(Process, Label, Msg) ->
 when
     Process :: process(),
     Label :: atom(),
-    Msg :: term(),
+    Msg :: dynamic(),
     To :: {Pid, Tag},
     Pid :: pid(),
     Tag :: reference(),
@@ -128,9 +128,9 @@ async_call(Process, Label, Msg, {Pid, Tag} = To) when is_pid(Pid) ->
 -spec dynamic_call(Process, Label, Msg, Timeout) -> Reply when
     Process :: process(),
     Label :: atom(),
-    Msg :: term(),
+    Msg :: dynamic(),
     Timeout :: timeout(),
-    Reply :: term().
+    Reply :: dynamic().
 dynamic_call(Process, Label, Msg, Timeout) ->
     try whereis(Process) of
         undefined ->
@@ -159,7 +159,7 @@ dynamic_call(Process, Label, Msg, Timeout) ->
 
 -spec send(Process, Msg) -> ok when
     Process :: process(),
-    Msg :: term().
+    Msg :: dynamic().
 send(Process, Msg) ->
     try whereis(Process) of
         undefined ->
@@ -211,6 +211,7 @@ start_link(Name, Behaviour, Mod, Args, Opts) ->
 
 %% gen api
 
+-spec init_it(pid(), pid(), name(), module(), {module(), term(), [term()]}, [term()]) -> no_return().
 init_it(Starter, Parent, Name, Behaviour, {Mod, Args, TimeOpts}, GenOpts) ->
     _ = put('$initial_call', {Mod, init, 1}),
     Behaviour:init_it(Starter, Parent, Name, Mod, Args, TimeOpts ++ GenOpts).

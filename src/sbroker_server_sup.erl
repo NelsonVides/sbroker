@@ -27,6 +27,7 @@ start_link() ->
 
 %% supervisor API
 
+-spec init([]) -> {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}}.
 init([]) ->
     BetterServer =
         {sbetter_server, {sbetter_server, start_link, []}, permanent, 5000, worker, [

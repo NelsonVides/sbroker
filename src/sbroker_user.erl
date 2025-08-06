@@ -170,6 +170,7 @@ start_link(Name) ->
 %% sbroker API
 
 ?DOC(false).
+-spec init(sbroker:name()) -> {ok, dynamic()} | ignore.
 init(Name) ->
     Brokers = application:get_env(sbroker, brokers, []),
     case lists:keyfind(Name, 1, Brokers) of

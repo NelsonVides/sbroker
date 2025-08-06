@@ -74,6 +74,7 @@ start_link() ->
 
 %% supervisor API
 
+-spec init([]) -> {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}}.
 init([]) ->
     {ok, {{one_for_one, 3, 30}, children()}}.
 

@@ -711,6 +711,13 @@ timeout(Broker) ->
 %% difference between ask and ask_r clearer.
 
 ?DOC(false).
+-spec init_it(Starter, Parent, Name, Module, Args, Opts) -> no_return() when
+    Starter :: pid(),
+    Parent :: pid(),
+    Name :: name() | pid(),
+    Module :: module(),
+    Args :: term(),
+    Opts :: [start_option()].
 init_it(Starter, Parent, Name, Mod, Args, Opts) ->
     DbgOpts = proplists:get_value(debug, Opts, []),
     Dbg = sys:debug_options(DbgOpts),
@@ -752,6 +759,10 @@ init_it(Starter, Parent, Name, Mod, Args, Opts) ->
 %% sys API
 
 ?DOC(false).
+-spec system_continue(Parent, Debug, Misc) -> no_return() when
+    Parent :: pid(),
+    Debug :: [sys:dbg_opt()],
+    Misc :: term().
 system_continue(Parent, Dbg, [State, Time, Asks, Bids, Config]) ->
     NConfig = Config#config{parent = Parent, dbg = Dbg},
     timeout(State, Time, Asks, Bids, NConfig);
@@ -764,6 +775,13 @@ system_continue(
     change(State, Change, Time, Asks, Bids, NConfig).
 
 ?DOC(false).
+-spec system_code_change(Misc, Module, OldVsn, Extra) -> 
+    {ok, Misc} | {ok, {change, Change, Misc}} | term() when
+    Misc :: term(),
+    Module :: module(),
+    OldVsn :: term(),
+    Extra :: term(),
+    Change :: term().
 system_code_change([_, _, _, _, #config{mod = Mod} = Config] = Misc, Mod, _, _) ->
     case config_change(Config) of
         {ok, Change} ->
@@ -795,6 +813,9 @@ system_code_change({change, Change, Misc}, Mod, OldVsn, Extra) ->
     {ok, {change, Change, code_change(Misc, Mod, OldVsn, Extra)}}.
 
 ?DOC(false).
+-spec system_get_state(Misc) -> {ok, State} when
+    Misc :: term(),
+    State :: term().
 system_get_state([
     _,
     #time{meters = Meters},
@@ -809,6 +830,11 @@ system_get_state({change, _, Misc}) ->
     system_get_state(Misc).
 
 ?DOC(false).
+-spec system_replace_state(StateFun, Misc) -> {ok, NState, NMisc} when
+    StateFun :: fun((State :: term()) -> NState :: term()),
+    Misc :: term(),
+    NState :: term(),
+    NMisc :: term().
 system_replace_state(
     Replace,
     [
@@ -834,6 +860,11 @@ system_replace_state(Replace, {change, Change, Misc}) ->
     {ok, States, {change, Change, NMisc}}.
 
 ?DOC(false).
+-spec system_terminate(Reason, Parent, Debug, Misc) -> no_return() when
+    Reason :: term(),
+    Parent :: pid(),
+    Debug :: [sys:dbg_opt()],
+    Misc :: term().
 system_terminate(Reason, Parent, Dbg, [_, Time, Asks, Bids, Config]) ->
     NConfig = Config#config{parent = Parent, dbg = Dbg},
     terminate({stop, Reason}, Time, Asks, Bids, NConfig);
@@ -841,6 +872,15 @@ system_terminate(Reason, Parent, Dbg, {change, _, Misc}) ->
     system_terminate(Reason, Parent, Dbg, Misc).
 
 ?DOC(false).
+-spec format_status(Opt, StatusData) -> Status when
+    Opt :: normal | terminate,
+    StatusData :: [PDict | SysState | Parent | Debug | Misc],
+    PDict :: [{term(), term()}],
+    SysState :: running | suspended,
+    Parent :: pid(),
+    Debug :: [sys:dbg_opt()],
+    Misc :: term(),
+    Status :: term().
 format_status(
     Opt,
     [
