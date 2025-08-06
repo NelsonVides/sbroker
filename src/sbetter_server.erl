@@ -113,7 +113,7 @@ init(Table) ->
     _ = process_flag(trap_exit, true),
     Table = ets:new(
         Table,
-        [named_table, set, public, {write_concurrency, true}]
+        [named_table, set, public, {write_concurrency, auto}]
     ),
     {ok, Table}.
 
