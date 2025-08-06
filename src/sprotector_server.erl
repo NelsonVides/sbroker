@@ -1,5 +1,4 @@
 -module(sprotector_server).
-
 -if(?OTP_RELEASE >= 27).
 -define(MODULEDOC(Str), -moduledoc(Str)).
 -define(DOC(Str), -doc(Str)).
@@ -12,6 +11,8 @@ Server for storing the `ask` and `ask_r` queue min, max and drop
 probabilities for overload protection and short circuiting for a process
 with `sprotector`.
 """).
+
+-include_lib("kernel/include/logger.hrl").
 
 -behaviour(gen_server).
 
@@ -205,10 +206,7 @@ handle_info({'EXIT', Pid, _}, Table) ->
     ets:delete(Table, Pid),
     {noreply, Table};
 handle_info(Msg, Table) ->
-    error_logger:error_msg(
-        "sprotector_server received unexpected message: ~p~n",
-        [Msg]
-    ),
+    ?LOG_ERROR(#{what => "sprotector_server received unexpected message: ~p~n", msg => Msg}),
     {noreply, Table}.
 
 %% Helpers

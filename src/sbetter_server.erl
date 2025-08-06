@@ -6,11 +6,12 @@
 -define(MODULEDOC(Str), -compile([])).
 -define(DOC(Str), -compile([])).
 -endif.
-
 ?MODULEDOC("""
 Server for storing the `ask` and `ask_r` values for load balanacing
 processes with `sbetter`.
 """).
+
+-include_lib("kernel/include/logger.hrl").
 
 -behaviour(gen_server).
 
@@ -140,10 +141,7 @@ handle_info({'EXIT', Pid, _}, Table) ->
     delete(Table, Pid),
     {noreply, Table};
 handle_info(Msg, Table) ->
-    error_logger:error_msg(
-        "sbetter_server received unexpected message: ~p~n",
-        [Msg]
-    ),
+    ?LOG_ERROR(#{what => "sbetter_server received unexpected message: ~p~n", msg => Msg}),
     {noreply, Table}.
 
 %% Helpers

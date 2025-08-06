@@ -8,6 +8,8 @@
 -endif.
 ?MODULEDOC(false).
 
+-include_lib("kernel/include/logger.hrl").
+
 -callback initial_state() -> BehaviourState :: term().
 
 -callback init(
@@ -627,7 +629,7 @@ send_report(Behaviour, start_error, Mod, Reason, Args, Name) ->
         "** When arguments == ~p~n"
         "** Reason == ~p~n",
     FormatArgs = [Tag, Behaviour, Mod, Name, Args, Reason],
-    error_logger:format(Format, FormatArgs);
+    ?LOG_ERROR(Format, FormatArgs);
 send_report(Behaviour, handler_crashed, Mod, Reason, State, Name) ->
     Tag = {Behaviour, handler_crashed},
     Format =
@@ -637,7 +639,7 @@ send_report(Behaviour, handler_crashed, Mod, Reason, State, Name) ->
         "** Reason == ~p~n",
     NState = format_state(Mod, State),
     Args = [Tag, Behaviour, Mod, Name, NState, Reason],
-    error_logger:format(Format, Args).
+    ?LOG_ERROR(Format, Args).
 
 format_state(Mod, State) ->
     case erlang:function_exported(Mod, format_status, 2) of
