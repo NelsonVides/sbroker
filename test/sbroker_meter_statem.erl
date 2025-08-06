@@ -124,7 +124,7 @@ time() ->
     ?LET(
         Time,
         choose(-10, 10),
-        erlang:convert_time_unit(Time, milli_seconds, native)
+        erlang:convert_time_unit(Time, millisecond, native)
     ).
 
 time(undefined) ->
@@ -135,7 +135,7 @@ time(Time) ->
         ?LET(
             Incr,
             choose(5, 5),
-            Time + erlang:convert_time_unit(Incr, milli_seconds, native)
+            Time + erlang:convert_time_unit(Incr, millisecond, native)
         )
     ]).
 
@@ -260,17 +260,17 @@ handle_update_args(#state{mod = Mod, time = Time, meter = M}) ->
         begin
             NQueueTime = erlang:convert_time_unit(
                 QueueTime,
-                milli_seconds,
+                millisecond,
                 native
             ),
             NProcessTime = erlang:convert_time_unit(
                 ProcessTime,
-                milli_seconds,
+                millisecond,
                 native
             ),
             NRelTime = erlang:convert_time_unit(
                 RelTime,
-                milli_seconds,
+                millisecond,
                 native
             ),
             [

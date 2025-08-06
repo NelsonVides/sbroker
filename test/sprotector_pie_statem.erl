@@ -125,9 +125,9 @@ timeout({AskPie, BidPie}, Time) ->
 %% Helpers
 
 pie_init(Time, #{target := Target, interval := Burst}, Update) ->
-    NTarget = erlang:convert_time_unit(Target, milli_seconds, native),
-    NBurst = erlang:convert_time_unit(Burst, milli_seconds, native),
-    NUpdate = erlang:convert_time_unit(Update, milli_seconds, native),
+    NTarget = erlang:convert_time_unit(Target, millisecond, native),
+    NBurst = erlang:convert_time_unit(Burst, millisecond, native),
+    NUpdate = erlang:convert_time_unit(Update, millisecond, native),
     Pie = #pie{
         target = NTarget,
         burst = NBurst,
@@ -248,9 +248,9 @@ pie_change(
     #{target := Target, interval := Burst},
     Update
 ) ->
-    NTarget = erlang:convert_time_unit(Target, milli_seconds, native),
-    NBurst = erlang:convert_time_unit(Burst, milli_seconds, native),
-    NUpdate = erlang:convert_time_unit(Update, milli_seconds, native),
+    NTarget = erlang:convert_time_unit(Target, millisecond, native),
+    NBurst = erlang:convert_time_unit(Burst, millisecond, native),
+    NUpdate = erlang:convert_time_unit(Update, millisecond, native),
     NUpdateNext = min(Time + NUpdate, UpdateNext),
     NBurstAllow =
         case BurstAllow of

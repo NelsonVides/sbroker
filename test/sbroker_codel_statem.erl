@@ -105,8 +105,8 @@ init(#{
     min := Min,
     max := Max
 }) ->
-    NTarget = erlang:convert_time_unit(Target, milli_seconds, native),
-    NInterval = erlang:convert_time_unit(Interval, milli_seconds, native),
+    NTarget = erlang:convert_time_unit(Target, millisecond, native),
+    NInterval = erlang:convert_time_unit(Interval, millisecond, native),
     {Out, Drop, Min, Max, #state{
         target = NTarget,
         interval = NInterval,
@@ -212,8 +212,8 @@ config_change(
         drop_next = DropNext
     } = State
 ) ->
-    NTarget = erlang:convert_time_unit(Target, milli_seconds, native),
-    NInterval = erlang:convert_time_unit(Interval, milli_seconds, native),
+    NTarget = erlang:convert_time_unit(Target, millisecond, native),
+    NInterval = erlang:convert_time_unit(Interval, millisecond, native),
     NFirstAbove = reduce(FirstAbove, Time + NInterval),
     NDropNext = reduce(DropNext, Time + NInterval),
     NState = State#state{

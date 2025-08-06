@@ -84,4 +84,4 @@ config_change(_, Spec, _) ->
 %% Internal
 
 timeout(infinity) -> infinity;
-timeout(Timeout) -> erlang:convert_time_unit(Timeout, milli_seconds, native).
+timeout(Timeout) -> erlang:convert_time_unit(Timeout, millisecond, native).

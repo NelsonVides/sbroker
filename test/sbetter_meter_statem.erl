@@ -54,9 +54,9 @@ init(
     Time,
     #{ask := #{upper := Ask}, ask_r := #{upper := Bid}, update := Update}
 ) ->
-    NAsk = erlang:convert_time_unit(Ask, milli_seconds, native),
-    NBid = erlang:convert_time_unit(Bid, milli_seconds, native),
-    NUpdate = erlang:convert_time_unit(Update, milli_seconds, native),
+    NAsk = erlang:convert_time_unit(Ask, millisecond, native),
+    NBid = erlang:convert_time_unit(Bid, millisecond, native),
+    NUpdate = erlang:convert_time_unit(Update, millisecond, native),
     {#state{ask_upper = NAsk, bid_upper = NBid, update = NUpdate}, Time}.
 
 update_next(#state{update = NUpdate} = State, Time, _, _, _, _) ->

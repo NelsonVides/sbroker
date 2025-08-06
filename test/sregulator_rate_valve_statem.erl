@@ -58,7 +58,7 @@ init(
     Size,
     Time
 ) ->
-    NInterval = erlang:convert_time_unit(Interval, milli_seconds, native),
+    NInterval = erlang:convert_time_unit(Interval, millisecond, native),
     case max(0, Size - (Min + Limit)) of
         Overflow when Overflow > 0 ->
             State = #state{
@@ -117,7 +117,7 @@ config_change(
     State
 ) ->
     {_, #state{intervals = Intervals}} = handle(Time, State),
-    NInterval = erlang:convert_time_unit(Interval, milli_seconds, native),
+    NInterval = erlang:convert_time_unit(Interval, millisecond, native),
     Active = max(0, Size - Min),
     case Limit - Active of
         NegOverflow when NegOverflow < 0 ->

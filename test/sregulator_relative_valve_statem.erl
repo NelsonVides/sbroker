@@ -52,7 +52,7 @@ gen_args() ->
     ).
 
 init(#{target := Target, min := Min, max := Max}, _, _) ->
-    NTarget = erlang:convert_time_unit(Target, milli_seconds, native),
+    NTarget = erlang:convert_time_unit(Target, millisecond, native),
     {Min, Max, closed, {NTarget, undefined}}.
 
 handle_update(Value, Time, {Target, _}) ->
@@ -75,6 +75,6 @@ config_change(
     Time,
     {_, Value}
 ) ->
-    NTarget = erlang:convert_time_unit(Target, milli_seconds, native),
+    NTarget = erlang:convert_time_unit(Target, millisecond, native),
     {Status, State} = handle(Time, {NTarget, Value}),
     {Min, Max, Status, State}.

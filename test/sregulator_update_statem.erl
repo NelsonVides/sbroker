@@ -55,7 +55,7 @@ init(Time, {Queues, BinSeed}) ->
             ask = Ask,
             interval = erlang:convert_time_unit(
                 Interval,
-                milli_seconds,
+                millisecond,
                 native
             )
         }
@@ -138,7 +138,7 @@ change(#state{queues = OldQueues} = State, Time, {Queues, BinSeed}) ->
             ask = Ask,
             interval = erlang:convert_time_unit(
                 Interval,
-                milli_seconds,
+                millisecond,
                 native
             )
         }

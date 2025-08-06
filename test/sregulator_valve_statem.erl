@@ -182,7 +182,7 @@ time() ->
     ?LET(
         Time,
         choose(-10, 10),
-        erlang:convert_time_unit(Time, milli_seconds, native)
+        erlang:convert_time_unit(Time, millisecond, native)
     ).
 
 time(undefined) ->
@@ -193,12 +193,12 @@ time(Time) ->
         ?LET(
             Incr,
             choose(5, 5),
-            Time + erlang:convert_time_unit(Incr, milli_seconds, native)
+            Time + erlang:convert_time_unit(Incr, millisecond, native)
         )
     ]).
 
 relative_time() ->
-    Max = erlang:convert_time_unit(10, milli_seconds, native),
+    Max = erlang:convert_time_unit(10, millisecond, native),
     frequency([
         {8, choose(-Max * 3, -Max)},
         {4, choose(-Max, 0)},

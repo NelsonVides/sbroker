@@ -52,12 +52,12 @@ init(Time, #{target := Target, interval := Interval, alarm := Alarm}) ->
     State = #state{
         target = erlang:convert_time_unit(
             Target,
-            milli_seconds,
+            millisecond,
             native
         ),
         interval = erlang:convert_time_unit(
             Interval,
-            milli_seconds,
+            millisecond,
             native
         ),
         alarm = Alarm,
@@ -85,12 +85,12 @@ change(
     NState = State#state{
         target = erlang:convert_time_unit(
             Target,
-            milli_seconds,
+            millisecond,
             native
         ),
         interval = erlang:convert_time_unit(
             Interval,
-            milli_seconds,
+            millisecond,
             native
         ),
         time = Time,

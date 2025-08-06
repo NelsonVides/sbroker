@@ -63,8 +63,8 @@ gen_args() ->
     ).
 
 init(#{target := Target, interval := Interval, min := Min, max := Max}, _, _) ->
-    NTarget = erlang:convert_time_unit(Target, milli_seconds, native),
-    NInterval = erlang:convert_time_unit(Interval, milli_seconds, native),
+    NTarget = erlang:convert_time_unit(Target, millisecond, native),
+    NInterval = erlang:convert_time_unit(Interval, millisecond, native),
     {Min, Max, closed, #state{target = NTarget, interval = NInterval}}.
 
 handle_update(Value, Time, State) ->
@@ -95,8 +95,8 @@ config_change(
         open_next = OpenNext
     } = State
 ) ->
-    NTarget = erlang:convert_time_unit(Target, milli_seconds, native),
-    NInterval = erlang:convert_time_unit(Interval, milli_seconds, native),
+    NTarget = erlang:convert_time_unit(Target, millisecond, native),
+    NInterval = erlang:convert_time_unit(Interval, millisecond, native),
     NFirstAbove = reduce(FirstAbove, Time + NInterval),
     NOpenNext = reduce(OpenNext, Time + NInterval),
     NState = State#state{

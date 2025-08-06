@@ -161,7 +161,7 @@ start_link(Arg) ->
             end;
         {ok, Pid} ->
             process_flag(trap_exit, Trap),
-            {ok, Pid, erlang:monotonic_time(milli_seconds)}
+            {ok, Pid, erlang:monotonic_time(millisecond)}
     end.
 
 init({QueueInfo, {Limit, Interval, Min, Max}}) ->
@@ -315,7 +315,7 @@ do_post(
     },
     Retry
 ) ->
-    Now = erlang:monotonic_time(milli_seconds),
+    Now = erlang:monotonic_time(millisecond),
     States = [call(Client, state) || Client <- Clients],
     Go = length([go || {go, _} <- States]),
     Await = length([await || {await, _} <- States]),
@@ -417,7 +417,7 @@ go(MRef, Regulator, VRef, Dones) ->
         {'DOWN', MRef, _, _, _} ->
             exit(normal);
         {MRef, From, continue} ->
-            Done = erlang:monotonic_time(milli_seconds),
+            Done = erlang:monotonic_time(millisecond),
             case sregulator:continue(Regulator, VRef) of
                 {go, VRef, Regulator, _, _} ->
                     gen:reply(From, go),
@@ -427,7 +427,7 @@ go(MRef, Regulator, VRef, Dones) ->
                     done(MRef, Regulator, [Done | Dones])
             end;
         {MRef, From, done} ->
-            Done = erlang:monotonic_time(milli_seconds),
+            Done = erlang:monotonic_time(millisecond),
             {stop, _} = sregulator:done(Regulator, VRef),
             gen:reply(From, stop),
             done(MRef, Regulator, [Done | Dones]);
@@ -436,7 +436,7 @@ go(MRef, Regulator, VRef, Dones) ->
             gen:reply(From, false),
             go(MRef, Regulator, VRef, Dones);
         {MRef, From, down} ->
-            Done = erlang:monotonic_time(milli_seconds),
+            Done = erlang:monotonic_time(millisecond),
             Regulator ! {'DOWN', VRef, process, self(), go},
             gen:reply(From, done),
             done(MRef, Regulator, [Done | Dones]);

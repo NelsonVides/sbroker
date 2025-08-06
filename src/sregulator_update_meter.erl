@@ -246,7 +246,7 @@ update([], Relative, Time, Rand, Wheel) ->
 
 insert(Next, Entry, Wheel) ->
     % Assume insert unlikely to collide as native time should have higher
-    % precision than milli_seconds and update intervals are randomised
+    % precision than millisecond and update intervals are randomised
     try gb_trees:insert(Next, [Entry], Wheel) of
         NWheel ->
             NWheel

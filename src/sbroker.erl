@@ -1055,7 +1055,7 @@ idle_timeout(#time{now = Now, next = Next1}, Next2) ->
             infinity;
         Next ->
             Diff = Next - Now,
-            Timeout = erlang:convert_time_unit(Diff, native, milli_seconds),
+            Timeout = erlang:convert_time_unit(Diff, native, millisecond),
             max(Timeout, 1)
     end.
 

@@ -206,4 +206,4 @@ uniform_interval_s(Interval, State) ->
 %% Internal
 
 native(Time) ->
-    erlang:convert_time_unit(Time, milli_seconds, native).
+    erlang:convert_time_unit(Time, millisecond, native).
