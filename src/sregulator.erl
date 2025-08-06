@@ -859,7 +859,7 @@ mark(Time) ->
 update_time(State, #time{seq = Seq, read_after = Seq} = Time, Q, V, Config) ->
     Now = erlang:monotonic_time(),
     update_meter(Now, State, Time, Q, V, Config);
-update_time(_, #time{seq = Seq} = Time, _, _, __) ->
+update_time(_, #time{seq = Seq} = Time, _, _, _) ->
     Time#time{seq = Seq + 1}.
 
 update_meter(Now, _, #time{meters = []} = Time, _, _, _) ->
@@ -1365,14 +1365,14 @@ config_meters(QMod, QArgs, VMod, VArgs, MeterArgs) ->
     end.
 
 check_meters(Meters) ->
-    check_meters(Meters, #{}).
+    check_meters(Meters, sets:new([{version, 2}])).
 
-check_meters([{Meter, _} | Rest], Acc) ->
-    case maps:is_key(Meter, Acc) of
+check_meters([{Meter, _} | Rest], Seen) ->
+    case sets:is_element(Meter, Seen) of
         true ->
             {error, {duplicate_meter, Meter}};
         false ->
-            check_meters(Rest, maps:put(Meter, meter, Acc))
+            check_meters(Rest, sets:add_element(Meter, Seen))
     end;
 check_meters([], _) ->
     ok;
