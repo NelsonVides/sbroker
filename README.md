@@ -1,6 +1,12 @@
 sbroker
 =======
 
+[![Hex.pm](https://img.shields.io/hexpm/v/sbroker.svg?maxAge=2592000?style=plastic)](https://hex.pm/packages/sbroker)
+[![Hex.pm](https://img.shields.io/hexpm/dt/sbroker.svg?maxAge=2592000)](https://hex.pm/packages/sbroker)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/sbroker/)
+[![GitHub Actions](https://github.com/NelsonVides/sbroker/actions/workflows/main.yml/badge.svg)](https://github.com/NelsonVides/sbroker/actions/workflows/main.yml)
+[![Codecov](https://codecov.io/github/NelsonVides/sbroker/graph/badge.svg?token=G9HB5UKNIY)](https://codecov.io/github/NelsonVides/sbroker)
+
 `sbroker` is a library that provides the building blocks for creating a pool
 and/or a load regulator. The main goals of the library are to minimise upper
 percentile latency by smart queuing, easily change the feature set live with
