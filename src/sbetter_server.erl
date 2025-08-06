@@ -1,25 +1,16 @@
-%%-------------------------------------------------------------------
-%%
-%% Copyright (c) 2016, James Fish <james@fishcakez.com>
-%%
-%% This file is provided to you under the Apache License,
-%% Version 2.0 (the "License"); you may not use this file
-%% except in compliance with the License. You may obtain
-%% a copy of the License at
-%%
-%% http://www.apache.org/licenses/LICENSE-2.0
-%%
-%% Unless required by applicable law or agreed to in writing,
-%% software distributed under the License is distributed on an
-%% "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-%% KIND, either express or implied. See the License for the
-%% specific language governing permissions and limitations
-%% under the License.
-%%
-%%-------------------------------------------------------------------
-%% @doc Server for storing the `ask' and `ask_r' values for load balanacing
-%% processes with `sbetter'.
 -module(sbetter_server).
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+
+?MODULEDOC("""
+Server for storing the `ask` and `ask_r` values for load balanacing
+processes with `sbetter`.
+""").
 
 -behaviour(gen_server).
 
@@ -49,12 +40,14 @@
 
 %% public API
 
-%% @doc Register the local process `Pid' with the server and sets the `ask' and
-%% `ask_r' values (such as sojourn times) as integer values `AskValue' and
-%% `AskRValue'.
-%%
-%% Returns `true' if the process is successfully registered, or `false' if
-%% already registered.
+?DOC("""
+Register the local process `Pid` with the server and sets the `ask` and
+`ask_r` values (such as sojourn times) as integer values `AskValue` and
+`AskRValue`.
+
+Returns `true` if the process is successfully registered, or `false` if
+already registered.
+""").
 -spec register(Pid, AskValue, AskRValue) -> Result when
     Pid :: pid(),
     AskValue :: integer(),
@@ -68,19 +61,23 @@ register(Pid, AskValue, BidValue) when
 ->
     gen_server:call(?MODULE, {register, Pid, AskValue, BidValue}, ?TIMEOUT).
 
-%% @doc Unregister the process `Pid' with the server.
-%%
-%% The server will synchronously unlink from `Pid'.
+?DOC("""
+Unregister the process `Pid` with the server.
+
+The server will synchronously unlink from `Pid`.
+""").
 -spec unregister(Pid) -> true when
     Pid :: pid().
 unregister(Pid) when is_pid(Pid), node(Pid) == node() ->
     gen_server:call(?MODULE, {unregister, Pid}, ?TIMEOUT).
 
-%% @doc Update the `ask' and `ask_r'  with values (such as sojourn times) as
-%% integer values `AskValue' and `AskRValue' for `Pid'.
-%%
-%% Returns `true' if the values were updated, or `false' if `Pid' is not
-%% registered with the server.
+?DOC("""
+Update the `ask` and `ask_r`  with values (such as sojourn times) as
+integer values `AskValue` and `AskRValue` for `Pid`.
+
+Returns `true` if the values were updated, or `false` if `Pid` is not
+registered with the server.
+""").
 -spec update(Pid, AskValue, AskRValue) -> Result when
     Pid :: pid(),
     AskValue :: integer(),
@@ -94,13 +91,13 @@ update(Pid, AskValue, BidValue) when
 
 %% private API
 
-%% @private
+?DOC(false).
 -spec start_link() -> {ok, Pid} when
     Pid :: pid().
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, ?MODULE, []).
 
-%% @private
+?DOC(false).
 -spec lookup(Pid, Key) -> SojournTime when
     Pid :: pid(),
     Key :: ask | ask_r,
@@ -112,7 +109,7 @@ lookup(Pid, ask_r) ->
 
 %% gen_server API
 
-%% @private
+?DOC(false).
 init(Table) ->
     _ = process_flag(trap_exit, true),
     Table = ets:new(
@@ -121,7 +118,7 @@ init(Table) ->
     ),
     {ok, Table}.
 
-%% @private
+?DOC(false).
 handle_call({register, Pid, AskValue, BidValue}, _, Table) ->
     link(Pid),
     {reply, insert_new(Table, Pid, AskValue, BidValue), Table};
@@ -132,11 +129,11 @@ handle_call({unregister, Pid}, _, Table) ->
 handle_call(Call, _, Table) ->
     {stop, {bad_call, Call}, Table}.
 
-%% @private
+?DOC(false).
 handle_cast(Cast, Table) ->
     {stop, {bad_cast, Cast}, Table}.
 
-%% @private
+?DOC(false).
 handle_info({'EXIT', Pid, _}, Table) ->
     delete(Table, Pid),
     {noreply, Table};
@@ -147,11 +144,11 @@ handle_info(Msg, Table) ->
     ),
     {noreply, Table}.
 
-%% @private
+?DOC(false).
 code_change(_, State, _) ->
     {ok, State}.
 
-%% @private
+?DOC(false).
 terminate(_, _) ->
     ok.
 

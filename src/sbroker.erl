@@ -1,87 +1,77 @@
-%%-------------------------------------------------------------------
-%%
-%% Copyright (c) 2015, James Fish <james@fishcakez.com>
-%%
-%% This file is provided to you under the Apache License,
-%% Version 2.0 (the "License"); you may not use this file
-%% except in compliance with the License. You may obtain
-%% a copy of the License at
-%%
-%% http://www.apache.org/licenses/LICENSE-2.0
-%%
-%% Unless required by applicable law or agreed to in writing,
-%% software distributed under the License is distributed on an
-%% "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-%% KIND, either express or implied. See the License for the
-%% specific language governing permissions and limitations
-%% under the License.
-%%
-%%-------------------------------------------------------------------
-%% @doc
-%% This module provides a process match making service. A process joins one of
-%% two queues and is matched with a process in the other queue. The queues are
-%% managed using `sbroker_queue' callback module per queue so that a different
-%% strategy can be used for both queues. Processes that die while in a queue are
-%% automatically removed to prevent matching with a process that is nolonger
-%% alive. A broker also uses an `sbroker_meter' callback module to monitor the
-%% queue and processing delays of the broker.
-%%
-%% There are two functions to join a queue: `ask/1' and `ask_r/1'. Processes
-%% that call `ask/1' are matched against processes that call `ask_r/1'. If no
-%% match is immediately available a process is queued in the relevant queue
-%% until a match becomes available. If queue management is used processes may be
-%% dropped without a match.
-%%
-%% Processes calling `ask/1' try to match with/dequeue a process in the `ask_r'
-%% queue. If no process exists they are queued in the `ask' queue and await a
-%% process to call `ask_r/1'.
-%%
-%% Similarly processes calling `ask_r/1' try to match with/dequeue a process
-%% in the `ask' queue. If no process exists they are queued in the `ask_r' queue
-%% and await a process to call `ask/1'.
-%%
-%% A broker requires a callback module. The callback modules implements one
-%% callback, `init/1', with single argument `Args'. `init/1' should return
-%% `{ok, {AskQueueSpec, AskRQueueSpec, [MeterSpec]})' or `ignore'.
-%% `AskQueueSpec' is the queue specification for the `ask' queue,
-%% `AskRQueueSpec' is the queue specification for the `ask_r' queue and
-%% `MeterSpec' is a meter specification. There can any number of meters but a
-%% meter module can only be included once. In the case of `ignore' the broker is
-%% not started and `start_link' returns `ignore'. As the callback modules are
-%% defined in the `init/1' callback a broker supports the `dynamic' modules
-%% supervisor child specification.
-%%
-%% Both queue and meter specifcations take the form: `{Module, Args}'. `Module'
-%% is the callback module and `Args' are its arguments.
-%%
-%% For example:
-%%
-%% ```
-%% -module(sbroker_example).
-%%
-%% -behaviour(sbroker).
-%%
-%% -export([start_link/0]).
-%% -export([ask/0]).
-%% -export([ask_r/1]).
-%% -export([init/1]).
-%%
-%% start_link() ->
-%%     sbroker:start_link({local, ?MODULE}, ?MODULE, [], []).
-%%
-%% ask() ->
-%%     sbroker:ask(?MODULE).
-%%
-%% ask_r() ->
-%%     sbroker:ask_r(?MODULE).
-%%
-%% init([]) ->
-%%     AskQueueSpec = {sbroker_codel_queue, #{}},
-%%     AskRQueueSpec = {sbroker_timeout_queue, #{}},
-%%     MeterSpec = {sbroker_overload_meter, #{alarm => {overload, ?MODULE}}},
-%%     {ok, {AskQueueSpec, AskRQueueSpec, [MeterSpec]}}.
-%% '''
 -module(sbroker).
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+
+?MODULEDOC("""
+This module provides a process match making service. A process joins one of
+two queues and is matched with a process in the other queue. The queues are
+managed using `sbroker_queue` callback module per queue so that a different
+strategy can be used for both queues. Processes that die while in a queue are
+automatically removed to prevent matching with a process that is nolonger
+alive. A broker also uses an `sbroker_meter` callback module to monitor the
+queue and processing delays of the broker.
+
+There are two functions to join a queue: `ask/1` and `ask_r/1`. Processes
+that call `ask/1` are matched against processes that call `ask_r/1`. If no
+match is immediately available a process is queued in the relevant queue
+until a match becomes available. If queue management is used processes may be
+dropped without a match.
+
+Processes calling `ask/1` try to match with/dequeue a process in the `ask_r`
+queue. If no process exists they are queued in the `ask` queue and await a
+process to call `ask_r/1`.
+
+Similarly processes calling `ask_r/1` try to match with/dequeue a process
+in the `ask` queue. If no process exists they are queued in the `ask_r` queue
+and await a process to call `ask/1`.
+
+A broker requires a callback module. The callback modules implements one
+callback, `init/1`, with single argument `Args`. `init/1` should return
+`{ok, {AskQueueSpec, AskRQueueSpec, [MeterSpec]})` or `ignore`.
+`AskQueueSpec` is the queue specification for the `ask` queue,
+`AskRQueueSpec` is the queue specification for the `ask_r` queue and
+`MeterSpec` is a meter specification. There can any number of meters but a
+meter module can only be included once. In the case of `ignore` the broker is
+not started and `start_link` returns `ignore`. As the callback modules are
+defined in the `init/1` callback a broker supports the `dynamic` modules
+supervisor child specification.
+
+Both queue and meter specifcations take the form: `{Module, Args}`. `Module`
+is the callback module and `Args` are its arguments.
+
+For example:
+
+```
+-module(sbroker_example).
+
+-behaviour(sbroker).
+
+-export([start_link/0]).
+-export([ask/0]).
+-export([ask_r/1]).
+-export([init/1]).
+
+start_link() ->
+    sbroker:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+ask() ->
+    sbroker:ask(?MODULE).
+
+ask_r() ->
+    sbroker:ask_r(?MODULE).
+
+init([]) ->
+    AskQueueSpec = {sbroker_codel_queue, #{}},
+    AskRQueueSpec = {sbroker_timeout_queue, #{}},
+    MeterSpec = {sbroker_overload_meter, #{alarm => {overload, ?MODULE}}},
+    {ok, {AskQueueSpec, AskRQueueSpec, [MeterSpec]}}.
+```
+""").
 
 %% public api
 
@@ -192,7 +182,7 @@
 
 %% public api
 
-%% @equiv ask(Broker, self())
+?DOC(#{equiv => ask(Broker, self())}).
 -spec ask(Broker) -> Go | Drop when
     Broker :: broker(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
@@ -204,38 +194,40 @@
 ask(Broker) ->
     sbroker_gen:call(Broker, ask, self(), infinity).
 
-%% @doc Send a match request, with value `ReqValue', to try to match with a
-%% process calling `ask_r/2' on the broker, `Broker'.
-%%
-%% Returns `{go, Ref, Value, RelativeTime, SojournTime}' on a successful
-%% match or `{drop, SojournTime}'.
-%% value of the matched request sent by the counterparty process. `RelativeTime'
-%% is the approximate time differnece (in the broker's time unit) between when
-%% the request was sent and the matching request was sent. `SojournTime' is the
-%% approximate time spent in both the broker's message queue and internal queue.
-%%
-%% `RelativeTime' represents the `SojournTime' without the overhead of the
-%% broker. The value measures the level of queue congestion without being
-%% effected by the load of the broker.
-%%
-%% If `RelativeTime' is positive, the request was enqueued in the internal
-%% queue awaiting a match with another request sent approximately `RelativeTime'
-%% after this request was sent. Therefore `SojournTime' minus `RelativeTime'
-%% is the latency, or overhead, of the broker.
-%%
-%% If `RelativeTime' is negative, the request dequeued a request in the internal
-%% queue that was sent approximately `RelativeTime' before this request was
-%% sent. Therefore `SojournTime' is the latency, or overhead, of the broker.
-%%
-%% If `RelativeTime' is `0', the request was matched with a request sent at
-%% approximately the same time. Therefore `SojournTime' is the latency, or
-%% overhead, of the broker.
-%%
-%% The sojourn time for matched process can be approximated by `SojournTime'
-%% minus `RelativeTime'.
-%%
-%% If the request is dropped when using `via' module `sprotector' returns
-%% `{drop, 0}' and does not send the request.
+?DOC("""
+Send a match request, with value `ReqValue`, to try to match with a
+process calling `ask_r/2` on the broker, `Broker`.
+
+Returns `{go, Ref, Value, RelativeTime, SojournTime}` on a successful
+match or `{drop, SojournTime}`.
+value of the matched request sent by the counterparty process. `RelativeTime`
+is the approximate time differnece (in the broker`s time unit) between when
+the request was sent and the matching request was sent. `SojournTime` is the
+approximate time spent in both the broker`s message queue and internal queue.
+
+`RelativeTime` represents the `SojournTime` without the overhead of the
+broker. The value measures the level of queue congestion without being
+effected by the load of the broker.
+
+If `RelativeTime` is positive, the request was enqueued in the internal
+queue awaiting a match with another request sent approximately `RelativeTime`
+after this request was sent. Therefore `SojournTime` minus `RelativeTime`
+is the latency, or overhead, of the broker.
+
+If `RelativeTime` is negative, the request dequeued a request in the internal
+queue that was sent approximately `RelativeTime` before this request was
+sent. Therefore `SojournTime` is the latency, or overhead, of the broker.
+
+If `RelativeTime` is `0`, the request was matched with a request sent at
+approximately the same time. Therefore `SojournTime` is the latency, or
+overhead, of the broker.
+
+The sojourn time for matched process can be approximated by `SojournTime`
+minus `RelativeTime`.
+
+If the request is dropped when using `via` module `sprotector` returns
+`{drop, 0}` and does not send the request.
+""").
 -spec ask(Broker, ReqValue) -> Go | Drop when
     Broker :: broker(),
     ReqValue :: term(),
@@ -248,7 +240,7 @@ ask(Broker) ->
 ask(Broker, ReqValue) ->
     sbroker_gen:call(Broker, ask, ReqValue, infinity).
 
-%% @equiv ask_r(Broker, self())
+?DOC(#{equiv => ask_r(Broker, self())}).
 -spec ask_r(Broker) -> Go | Drop when
     Broker :: broker(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
@@ -260,9 +252,11 @@ ask(Broker, ReqValue) ->
 ask_r(Broker) ->
     sbroker_gen:call(Broker, bid, self(), infinity).
 
-%% @doc Tries to match with a process calling `ask/2' on the same broker.
-%%
-%% @see ask/2
+?DOC("""
+Tries to match with a process calling `ask/2` on the same broker.
+
+See `ask/2`.
+""").
 -spec ask_r(Broker, ReqValue) -> Go | Drop when
     Broker :: broker(),
     ReqValue :: term(),
@@ -275,7 +269,7 @@ ask_r(Broker) ->
 ask_r(Broker, ReqValue) ->
     sbroker_gen:call(Broker, bid, ReqValue, infinity).
 
-%% @equiv nb_ask(Broker, self())
+?DOC(#{equiv => nb_ask(Broker, self())}).
 -spec nb_ask(Broker) -> Go | Drop when
     Broker :: broker(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
@@ -287,20 +281,22 @@ ask_r(Broker, ReqValue) ->
 nb_ask(Broker) ->
     sbroker_gen:call(Broker, nb_ask, self(), infinity).
 
-%% @doc Tries to match with a process calling `ask_r/2' on the same broker but
-%% does not enqueue the request if no immediate match. Returns
-%% `{go, Ref, Value, RelativeTime, SojournTime}' on a successful match or
-%% `{drop, SojournTime}'.
-%%
-%% `Ref' is the transaction reference, which is a `reference()'. `Value' is the
-%% value of the matched process. `RelativeTime' is the time spent waiting for a
-%% match after discounting time spent waiting for the broker to handle requests.
-%% `SojournTime' is the time spent in the broker's message queue.
-%%
-%% If the request is dropped when using `via' module `sprotector' returns
-%% `{drop, 0}' and does not send the request.
-%%
-%% @see ask/2
+?DOC("""
+Tries to match with a process calling `ask_r/2` on the same broker but
+does not enqueue the request if no immediate match. Returns
+`{go, Ref, Value, RelativeTime, SojournTime}` on a successful match or
+`{drop, SojournTime}`.
+
+`Ref` is the transaction reference, which is a `reference()`. `Value` is the
+value of the matched process. `RelativeTime` is the time spent waiting for a
+match after discounting time spent waiting for the broker to handle requests.
+`SojournTime` is the time spent in the broker`s message queue.
+
+If the request is dropped when using `via` module `sprotector` returns
+`{drop, 0}` and does not send the request.
+
+See `ask/2`.
+""").
 -spec nb_ask(Broker, ReqValue) -> Go | Drop when
     Broker :: broker(),
     ReqValue :: term(),
@@ -313,7 +309,7 @@ nb_ask(Broker) ->
 nb_ask(Broker, ReqValue) ->
     sbroker_gen:call(Broker, nb_ask, ReqValue, infinity).
 
-%% @equiv nb_ask_r(Broker, self())
+?DOC(#{equiv => nb_ask_r(Broker, self())}).
 -spec nb_ask_r(Broker) -> Go | Drop when
     Broker :: broker(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
@@ -325,10 +321,12 @@ nb_ask(Broker, ReqValue) ->
 nb_ask_r(Broker) ->
     sbroker_gen:call(Broker, nb_bid, self(), infinity).
 
-%% @doc Tries to match with a process calling `ask/2' on the same broker but
-%% does not enqueue the request if no immediate match.
-%%
-%% @see nb_ask/2
+?DOC("""
+Tries to match with a process calling `ask/2` on the same broker but
+does not enqueue the request if no immediate match.
+
+See `nb_ask/2`.
+""").
 -spec nb_ask_r(Broker, ReqValue) -> Go | Drop when
     Broker :: broker(),
     ReqValue :: term(),
@@ -341,7 +339,7 @@ nb_ask_r(Broker) ->
 nb_ask_r(Broker, ReqValue) ->
     sbroker_gen:call(Broker, nb_bid, ReqValue, infinity).
 
-%% @equiv async_ask(Broker, self())
+?DOC(#{equiv => async_ask(Broker, self())}).
 -spec async_ask(Broker) -> {await, Tag, Process} | {drop, 0} when
     Broker :: broker(),
     Tag :: reference(),
@@ -349,32 +347,33 @@ nb_ask_r(Broker, ReqValue) ->
 async_ask(Broker) ->
     sbroker_gen:async_call(Broker, ask, self()).
 
-%% @doc Monitors the broker and sends an asynchronous request to match with a
-%% process calling `ask_r/2'. Returns `{await, Tag, Pid}' or `{drop, 0}'.
-%%
-%% `Tag' is a monitor `reference()' that uniquely identifies the reply
-%% containing the result of the request. `Process', is the `pid()' of the
-%% monitored broker or `{atom(), node()}' if the broker is registered locally
-%% in another node. To cancel the request call `cancel(Process, Tag)'.
-%%
-%% The reply is of the form `{Tag, {go, Ref, Value, RelativeTime, SojournTime}'
-%% or `{Tag, {drop, SojournTime}}'.
-%%
-%% `Ref' is the transaction reference, which is a `reference()'. `Value' is the
-%% value of the matched process. `RelativeTime' is the time spent waiting for a
-%% match after discounting time spent waiting for the broker to handle requests.
-%% `SojournTime' is the time spent in the broker's message queue.
-%%
-%% Multiple asynchronous requests can be made from a single process to a
-%% broker and no guarantee is made of the order of replies. A process making
-%% multiple requests can reuse the monitor reference for subsequent requests to
-%% the same broker process (`Process') using `async_ask/3'.
-%%
-%% If the request is dropped when using `via' module `sprotector' returns
-%% `{drop, 0}' and does not send the request.
-%%
-%% @see cancel/2
-%% @see async_ask/3
+?DOC("""
+Monitors the broker and sends an asynchronous request to match with a
+process calling `ask_r/2`. Returns `{await, Tag, Pid}` or `{drop, 0}`.
+
+`Tag` is a monitor `reference()` that uniquely identifies the reply
+containing the result of the request. `Process`, is the `pid()` of the
+monitored broker or `{atom(), node()}` if the broker is registered locally
+in another node. To cancel the request call `cancel(Process, Tag)`.
+
+The reply is of the form `{Tag, {go, Ref, Value, RelativeTime, SojournTime}`
+or `{Tag, {drop, SojournTime}}`.
+
+`Ref` is the transaction reference, which is a `reference()`. `Value` is the
+value of the matched process. `RelativeTime` is the time spent waiting for a
+match after discounting time spent waiting for the broker to handle requests.
+`SojournTime` is the time spent in the broker`s message queue.
+
+Multiple asynchronous requests can be made from a single process to a
+broker and no guarantee is made of the order of replies. A process making
+multiple requests can reuse the monitor reference for subsequent requests to
+the same broker process (`Process`) using `async_ask/3`.
+
+If the request is dropped when using `via` module `sprotector` returns
+`{drop, 0}` and does not send the request.
+
+See `cancel/2` and `async_ask/3`.
+""").
 -spec async_ask(Broker, ReqValue) -> {await, Tag, Process} | {drop, 0} when
     Broker :: broker(),
     ReqValue :: term(),
@@ -383,32 +382,34 @@ async_ask(Broker) ->
 async_ask(Broker, ReqValue) ->
     sbroker_gen:async_call(Broker, ask, ReqValue).
 
-%% @doc Sends an asynchronous request to match with a process calling `ask_r/2'.
-%% Returns `{await, Tag, Pid}'.
-%%
-%% `To' is a tuple containing the process, `pid()', to send the reply to and
-%% `Tag', `term()', that identifies the reply containing the result of the
-%% request. `Process' is the `pid()' of the broker or `{atom(), node()}' if the
-%% broker is registered locally on a different node. To cancel all requests
-%% identified by `Tag' on broker `Process' call `cancel(Process, Tag)'.
-%%
-%% The reply is of the form `{Tag, {go, Ref, Value, RelativeTime, SojournTime}'
-%% or `{Tag, {drop, SojournTime}}'.
-%%
-%% `Ref' is the transaction reference, which is a `reference()'. `Value' is the
-%% value of the matched process. `RelativeTime' is the time spent waiting for a
-%% match after discounting time spent waiting for the broker to handle requests.
-%% `SojournTime' is the time spent in the broker's message queue.
-%%
-%% Multiple asynchronous requests can be made from a single process to a
-%% broker and no guarantee is made of the order of replies. If the broker
-%% exits or is on a disconnected node there is no guarantee of a reply and so
-%% the caller should take appropriate steps to handle this scenario.
-%%
-%% If the request is dropped when using `via' module `sprotector', returns
-%% `{drop, 0}' and does not send the request.
-%%
-%% @see cancel/2
+?DOC("""
+Sends an asynchronous request to match with a process calling `ask_r/2`.
+Returns `{await, Tag, Pid}`.
+
+`To` is a tuple containing the process, `pid()`, to send the reply to and
+`Tag`, `term()`, that identifies the reply containing the result of the
+request. `Process` is the `pid()` of the broker or `{atom(), node()}` if the
+broker is registered locally on a different node. To cancel all requests
+identified by `Tag` on broker `Process` call `cancel(Process, Tag)`.
+
+The reply is of the form `{Tag, {go, Ref, Value, RelativeTime, SojournTime}`
+or `{Tag, {drop, SojournTime}}`.
+
+`Ref` is the transaction reference, which is a `reference()`. `Value` is the
+value of the matched process. `RelativeTime` is the time spent waiting for a
+match after discounting time spent waiting for the broker to handle requests.
+`SojournTime` is the time spent in the broker`s message queue.
+
+Multiple asynchronous requests can be made from a single process to a
+broker and no guarantee is made of the order of replies. If the broker
+exits or is on a disconnected node there is no guarantee of a reply and so
+the caller should take appropriate steps to handle this scenario.
+
+If the request is dropped when using `via` module `sprotector`, returns
+`{drop, 0}` and does not send the request.
+
+See `cancel/2`.
+""").
 -spec async_ask(Broker, ReqValue, To) -> {await, Tag, Process} | {drop, 0} when
     Broker :: broker(),
     ReqValue :: term(),
@@ -419,7 +420,7 @@ async_ask(Broker, ReqValue) ->
 async_ask(Broker, ReqValue, To) ->
     sbroker_gen:async_call(Broker, ask, ReqValue, To).
 
-%% @equiv async_ask_r(Broker, self())
+?DOC(#{equiv => async_ask_r(Broker, self())}).
 -spec async_ask_r(Broker) -> {await, Tag, Process} | {drop, 0} when
     Broker :: broker(),
     Tag :: reference(),
@@ -427,11 +428,12 @@ async_ask(Broker, ReqValue, To) ->
 async_ask_r(Broker) ->
     sbroker_gen:async_call(Broker, bid, self()).
 
-%% @doc Monitors the broker and sends an asynchronous request to match with a
-%% process calling `ask/2'.
-%%
-%% @see async_ask/2
-%% @see cancel/2
+?DOC("""
+Monitors the broker and sends an asynchronous request to match with a
+process calling `ask/2`.
+
+See `async_ask/2` and `cancel/2`.
+""").
 -spec async_ask_r(Broker, ReqValue) -> {await, Tag, Process} | {drop, 0} when
     Broker :: broker(),
     ReqValue :: term(),
@@ -440,10 +442,11 @@ async_ask_r(Broker) ->
 async_ask_r(Broker, ReqValue) ->
     sbroker_gen:async_call(Broker, bid, ReqValue).
 
-%% @doc Sends an asynchronous request to match with a process calling `ask/2'.
-%%
-%% @see async_ask/3
-%% @see cancel/2
+?DOC("""
+Sends an asynchronous request to match with a process calling `ask/2`.
+
+See `async_ask/3` and `cancel/2`.
+""").
 -spec async_ask_r(Broker, ReqValue, To) ->
     {await, Tag, Process} | {drop, 0}
 when
@@ -456,7 +459,7 @@ when
 async_ask_r(Broker, ReqValue, To) ->
     sbroker_gen:async_call(Broker, bid, ReqValue, To).
 
-%% @equiv dynamic_ask(Broker, self())
+?DOC(#{equiv => dynamic_ask(Broker, self())}).
 -spec dynamic_ask(Broker) -> Go | Await | Drop when
     Broker :: broker(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
@@ -471,24 +474,25 @@ async_ask_r(Broker, ReqValue, To) ->
 dynamic_ask(Broker) ->
     sbroker_gen:dynamic_call(Broker, dynamic_ask, self(), infinity).
 
-%% @doc Tries to match with a process calling `ask_r/2' on the same broker. If
-%% no immediate match available the request is converted to an `async_ask/2'.
-%%
-%% Returns `{go, Ref, Value, RelativeTime, SojournTime}' on a successful match
-%% or `{await, Tag, BrokerPid}'.
-%%
-%% `Ref' is the transaction reference, which is a `reference()'. `Value' is the
-%% value of the matched process. `RelativeTime' is the time spent waiting for a
-%% match after discounting time spent waiting for the broker to handle requests.
-%% `SojournTime' is the time spent in the broker's message queue. `Tag' is a
-%% monitor reference and `BrokerPid' the `pid()' of the broker, as returned by
-%% `async_ask/2'.
-%%
-%% If the request is dropped when using `via' module `sprotector' returns
-%% `{drop, 0}' and does not send the request.
-%%
-%% @see nb_ask/2
-%% @see async_ask/2
+?DOC("""
+Tries to match with a process calling `ask_r/2` on the same broker. If
+no immediate match available the request is converted to an `async_ask/2`.
+
+Returns `{go, Ref, Value, RelativeTime, SojournTime}` on a successful match
+or `{await, Tag, BrokerPid}`.
+
+`Ref` is the transaction reference, which is a `reference()`. `Value` is the
+value of the matched process. `RelativeTime` is the time spent waiting for a
+match after discounting time spent waiting for the broker to handle requests.
+`SojournTime` is the time spent in the broker`s message queue. `Tag` is a
+monitor reference and `BrokerPid` the `pid()` of the broker, as returned by
+`async_ask/2`.
+
+If the request is dropped when using `via` module `sprotector` returns
+`{drop, 0}` and does not send the request.
+
+See `nb_ask/2` and `async_ask/2`.
+""").
 -spec dynamic_ask(Broker, ReqValue) -> Go | Await | Drop when
     Broker :: broker(),
     ReqValue :: term(),
@@ -504,7 +508,7 @@ dynamic_ask(Broker) ->
 dynamic_ask(Broker, ReqValue) ->
     sbroker_gen:dynamic_call(Broker, dynamic_ask, ReqValue, infinity).
 
-%% @equiv dynamic_ask_r(Broker, self())
+?DOC(#{equiv => dynamic_ask_r(Broker, self())}).
 -spec dynamic_ask_r(Broker) -> Go | Await | Drop when
     Broker :: broker(),
     Go :: {go, Ref, Value, RelativeTime, SojournTime},
@@ -519,10 +523,12 @@ dynamic_ask(Broker, ReqValue) ->
 dynamic_ask_r(Broker) ->
     sbroker_gen:dynamic_call(Broker, dynamic_bid, self(), infinity).
 
-%% @doc Tries to match with a process calling `ask/2' on the same broker. If
-%% no immediate match available the request is converted to an `async_ask_r/2'.
-%%
-%% @see dynamic_ask/2
+?DOC("""
+Tries to match with a process calling `ask/2` on the same broker. If
+no immediate match available the request is converted to an `async_ask_r/2`.
+
+See `dynamic_ask/2`.
+""").
 -spec dynamic_ask_r(Broker, ReqValue) -> Go | Await | Drop when
     Broker :: broker(),
     ReqValue :: term(),
@@ -538,14 +544,15 @@ dynamic_ask_r(Broker) ->
 dynamic_ask_r(Broker, ReqValue) ->
     sbroker_gen:dynamic_call(Broker, dynamic_bid, ReqValue, infinity).
 
-%% @doc Await the response to an asynchronous request identified by `Tag'.
-%%
-%% Exits if a response is not received after `Timeout' milliseconds.
-%%
-%% Exits if a `DOWN' message is received with the reference `Tag'.
-%%
-%% @see async_ask/2
-%% @see async_ask_r/2
+?DOC("""
+Await the response to an asynchronous request identified by `Tag`.
+
+Exits if a response is not received after `Timeout` milliseconds.
+
+Exits if a `DOWN` message is received with the reference `Tag`.
+
+See `async_ask/2` and `async_ask_r/2`.
+""").
 -spec await(Tag, Timeout) -> Go | Drop when
     Tag :: term(),
     Timeout :: timeout(),
@@ -567,7 +574,7 @@ await(Tag, Timeout) ->
         exit({timeout, {?MODULE, await, [Tag, Timeout]}})
     end.
 
-%% @equiv cancel(Broker, Tag, infinity)
+?DOC(#{equiv => cancel(Broker, Tag, infinity)}).
 -spec cancel(Broker, Tag) -> Count | false when
     Broker :: broker(),
     Tag :: term(),
@@ -575,12 +582,13 @@ await(Tag, Timeout) ->
 cancel(Broker, Tag) ->
     cancel(Broker, Tag, infinity).
 
-%% @doc Cancels an asynchronous request. Returns the number of cancelled
-%% requests or `false' if no requests exist. In the later case a caller may wish
-%% to check its message queue for an existing reply.
-%%
-%% @see async_ask/1
-%% @see async_ask_r/1
+?DOC("""
+Cancels an asynchronous request. Returns the number of cancelled
+requests or `false` if no requests exist. In the later case a caller may wish
+to check its message queue for an existing reply.
+
+See `async_ask/1` and `async_ask_r/1`.
+""").
 -spec cancel(Broker, Tag, Timeout) -> Count | false when
     Broker :: broker(),
     Tag :: term(),
@@ -589,29 +597,33 @@ cancel(Broker, Tag) ->
 cancel(Broker, Tag, Timeout) ->
     sbroker_gen:simple_call(Broker, cancel, Tag, Timeout).
 
-%% @doc Cancels an asynchronous request.
-%%
-%% Returns `ok' without waiting for the broker to cancel requests.
-%%
-%% @see cancel/3
+?DOC("""
+Cancels an asynchronous request.
+
+Returns `ok` without waiting for the broker to cancel requests.
+
+See `cancel/3`.
+""").
 -spec dirty_cancel(Broker, Tag) -> ok when
     Broker :: broker(),
     Tag :: term().
 dirty_cancel(Broker, Tag) ->
     sbroker_gen:send(Broker, {cancel, dirty, Tag}).
 
-%% @equiv change_config(Broker, infinity)
+?DOC(#{equiv => change_config(Broker, infinity)}).
 -spec change_config(Broker) -> ok | {error, Reason} when
     Broker :: broker(),
     Reason :: term().
 change_config(Broker) ->
     change_config(Broker, infinity).
 
-%% @doc Change the configuration of the broker. Returns `ok' on success and
-%% `{error, Reason}' on failure, where `Reason', is the reason for failure.
-%%
-%% Broker calls the `init/1' callback to get the new configuration. If `init/1'
-%% returns `ignore' the config does not change.
+?DOC("""
+Change the configuration of the broker. Returns `ok` on success and
+`{error, Reason}` on failure, where `Reason`, is the reason for failure.
+
+Broker calls the `init/1` callback to get the new configuration. If `init/1`
+returns `ignore` the config does not change.
+""").
 -spec change_config(Broker, Timeout) -> ok | {error, Reason} when
     Broker :: broker(),
     Timeout :: timeout(),
@@ -619,14 +631,16 @@ change_config(Broker) ->
 change_config(Broker, Timeout) ->
     sbroker_gen:simple_call(Broker, change_config, undefined, Timeout).
 
-%% @equiv len(Broker, infinity)
+?DOC(#{equiv => len(Broker, infinity)}).
 -spec len(Broker) -> Length when
     Broker :: broker(),
     Length :: non_neg_integer().
 len(Broker) ->
     len(Broker, infinity).
 
-%% @doc Get the length of the `ask' queue in the broker, `Broker'.
+?DOC("""
+Get the length of the `ask` queue in the broker, `Broker`.
+""").
 -spec len(Broker, Timeout) -> Length when
     Broker :: broker(),
     Timeout :: timeout(),
@@ -634,14 +648,16 @@ len(Broker) ->
 len(Broker, Timeout) ->
     sbroker_gen:simple_call(Broker, len_ask, undefined, Timeout).
 
-%% @equiv len_r(Broker, infinity)
+?DOC(#{equiv => len_r(Broker, infinity)}).
 -spec len_r(Broker) -> Length when
     Broker :: broker(),
     Length :: non_neg_integer().
 len_r(Broker) ->
     len_r(Broker, infinity).
 
-%% @doc Get the length of the `ask_r' queue in the broker, `Broker'.
+?DOC("""
+Get the length of the `ask_r` queue in the broker, `Broker`.
+""").
 -spec len_r(Broker, Timeout) -> Length when
     Broker :: broker(),
     Timeout :: timeout(),
@@ -649,15 +665,17 @@ len_r(Broker) ->
 len_r(Broker, Timeout) ->
     sbroker_gen:simple_call(Broker, len_bid, undefined, Timeout).
 
-%% @doc Starts a broker with callback module `Module' and argument `Args', and
-%% broker options `Opts'.
-%%
-%% `Opts' is a `proplist' and supports `debug', `timeout' and `spawn_opt' used
-%% by `gen_server' and `gen_fsm'. `read_time_after' sets the number of requests
-%% when a cached time is stale and the time is read again. Its value is
-%% `non_neg_integer()' or `infinity' and defaults to `16'.
-%%
-%% @see gen_server:start_link/3
+?DOC("""
+Starts a broker with callback module `Module` and argument `Args`, and
+broker options `Opts`.
+
+`Opts` is a `proplist` and supports `debug`, `timeout` and `spawn_opt` used
+by `gen_server` and `gen_fsm`. `read_time_after` sets the number of requests
+when a cached time is stale and the time is read again. Its value is
+`non_neg_integer()` or `infinity` and defaults to `16`.
+
+See `gen_server:start_link/3`.
+""").
 -spec start_link(Module, Args, Opts) -> StartReturn when
     Module :: module(),
     Args :: term(),
@@ -666,10 +684,12 @@ len_r(Broker, Timeout) ->
 start_link(Mod, Args, Opts) ->
     sbroker_gen:start_link(?MODULE, Mod, Args, Opts).
 
-%% @doc Starts a broker with name `Name', callback module `Module' and argument
-%% `Args', and broker options `Opts'.
-%%
-%% @see start_link/3
+?DOC("""
+Starts a broker with name `Name`, callback module `Module` and argument
+`Args`, and broker options `Opts`.
+
+See `start_link/3`.
+""").
 -spec start_link(Name, Module, Args, Opts) -> StartReturn when
     Name :: name(),
     Module :: module(),
@@ -681,7 +701,7 @@ start_link(Name, Mod, Args, Opts) ->
 
 %% test api
 
-%% @hidden
+?DOC(false).
 -spec timeout(Broker) -> ok when
     Broker :: broker().
 timeout(Broker) ->
@@ -692,7 +712,7 @@ timeout(Broker) ->
 %% Inside the broker an ask_r request is referred to as a bid to make the
 %% difference between ask and ask_r clearer.
 
-%% @private
+?DOC(false).
 init_it(Starter, Parent, Name, Mod, Args, Opts) ->
     DbgOpts = proplists:get_value(debug, Opts, []),
     Dbg = sys:debug_options(DbgOpts),
@@ -733,7 +753,7 @@ init_it(Starter, Parent, Name, Mod, Args, Opts) ->
 
 %% sys API
 
-%% @private
+?DOC(false).
 system_continue(Parent, Dbg, [State, Time, Asks, Bids, Config]) ->
     NConfig = Config#config{parent = Parent, dbg = Dbg},
     timeout(State, Time, Asks, Bids, NConfig);
@@ -745,7 +765,7 @@ system_continue(
     NConfig = Config#config{parent = Parent, dbg = Dbg},
     change(State, Change, Time, Asks, Bids, NConfig).
 
-%% @private
+?DOC(false).
 system_code_change([_, _, _, _, #config{mod = Mod} = Config] = Misc, Mod, _, _) ->
     case config_change(Config) of
         {ok, Change} ->
@@ -776,7 +796,7 @@ system_code_change(
 system_code_change({change, Change, Misc}, Mod, OldVsn, Extra) ->
     {ok, {change, Change, code_change(Misc, Mod, OldVsn, Extra)}}.
 
-%% @private
+?DOC(false).
 system_get_state([
     _,
     #time{meters = Meters},
@@ -790,7 +810,7 @@ system_get_state([
 system_get_state({change, _, Misc}) ->
     system_get_state(Misc).
 
-%% @private
+?DOC(false).
 system_replace_state(
     Replace,
     [
@@ -815,14 +835,14 @@ system_replace_state(Replace, {change, Change, Misc}) ->
     {ok, States, NMisc} = system_replace_state(Replace, Misc),
     {ok, States, {change, Change, NMisc}}.
 
-%% @private
+?DOC(false).
 system_terminate(Reason, Parent, Dbg, [_, Time, Asks, Bids, Config]) ->
     NConfig = Config#config{parent = Parent, dbg = Dbg},
     terminate({stop, Reason}, Time, Asks, Bids, NConfig);
 system_terminate(Reason, Parent, Dbg, {change, _, Misc}) ->
     system_terminate(Reason, Parent, Dbg, Misc).
 
-%% @private
+?DOC(false).
 format_status(
     Opt,
     [

@@ -17,33 +17,43 @@
 %% under the License.
 %%
 %%-------------------------------------------------------------------
-%% @doc Sets an alarm when the regulator's valve is slow to get a match for an
-%% interval.
-%%
-%% `sregulator_underload_meter' can be used in as a `sbroker_meter' in a
-%% `sregulator'. It will set a SASL `alarm_handler' alarm when the regulator's
-%% valve is slow to get a match for an interval and clear it once the valve
-%% gets matches fast for an interval. Its argument, `spec()', is of the form:
-%% ```
-%% #{alarm    => Alarm :: term(), % default: {underload, self()}
-%%   target   => Target :: integer(), % default: 100
-%%   interval => Interval :: pos_integer()}. % default: 1000
-%% '''
-%% `Alarm' is the `alarm_handler' alarm that will be set/cleared by the meter
-%% (defaults to `{underload, self()}'). `Target' is the target relative time for
-%% the valve to get a match (defaults to `100'). `Interval' is the interval in
-%% milliseconds (defaults to `1000') that the valve must be above the target for
-%% the alarm to be set and below the target for the alarm to be cleared. The
-%% description of the alarm is `{valve_slow, self()}'.
-%%
-%% This meter is only intended for a `sregulator' because a `sregulator_valve'
-%% will remain open when processes that should be available are not sending
-%% requests and can not do anything to correct this. Whereas a `sbroker' can
-%% not distinguish between one queue receiving too many requests or the other
-%% too few. In either situation the congested `sbroker_queue' would drop
-%% requests to correct the imbalance, causing a congestion alarm to be cleared
-%% very quickly.
 -module(sregulator_underload_meter).
+
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+?MODULEDOC("""
+Sets an alarm when the regulator`s valve is slow to get a match for an
+interval.
+
+`sregulator_underload_meter` can be used in as a `sbroker_meter` in a
+`sregulator`. It will set a SASL `alarm_handler` alarm when the regulator`s
+valve is slow to get a match for an interval and clear it once the valve
+gets matches fast for an interval. Its argument, `spec()`, is of the form:
+```
+#{alarm    => Alarm :: term(), % default: {underload, self()}
+  target   => Target :: integer(), % default: 100
+  interval => Interval :: pos_integer()}. % default: 1000
+```
+`Alarm` is the `alarm_handler` alarm that will be set/cleared by the meter
+(defaults to `{underload, self()}`). `Target` is the target relative time for
+the valve to get a match (defaults to `100`). `Interval` is the interval in
+milliseconds (defaults to `1000`) that the valve must be above the target for
+the alarm to be set and below the target for the alarm to be cleared. The
+description of the alarm is `{valve_slow, self()}`.
+
+This meter is only intended for a `sregulator` because a `sregulator_valve`
+will remain open when processes that should be available are not sending
+requests and can not do anything to correct this. Whereas a `sbroker` can
+not distinguish between one queue receiving too many requests or the other
+too few. In either situation the congested `sbroker_queue` would drop
+requests to correct the imbalance, causing a congestion alarm to be cleared
+very quickly.
+""").
 
 -behaviour(sbroker_meter).
 
@@ -73,7 +83,7 @@
 
 -type state() :: #state{}.
 
-%% @private
+?DOC(false).
 -spec init(Time, Spec) -> {State, infinity} when
     Time :: integer(),
     Spec :: spec(),
@@ -85,7 +95,7 @@ init(_, Spec) ->
     alarm_handler:clear_alarm(AlarmId),
     {#state{target = Target, interval = Interval, alarm_id = AlarmId}, infinity}.
 
-%% @private
+?DOC(false).
 -spec handle_update(QueueDelay, ProcessDelay, RelativeTime, Time, State) ->
     {NState, Next}
 when
@@ -151,7 +161,7 @@ handle_update(
             {State#state{toggle_next = infinity}, infinity}
     end.
 
-%% @private
+?DOC(false).
 -spec handle_info(Msg, Time, State) -> {State, Next} when
     Msg :: term(),
     Time :: integer(),
@@ -160,7 +170,7 @@ handle_update(
 handle_info(_, Time, #state{toggle_next = ToggleNext} = State) ->
     {State, max(Time, ToggleNext)}.
 
-%% @private
+?DOC(false).
 -spec code_change(OldVsn, Time, State, Extra) -> {NState, Next} when
     OldVsn :: term(),
     Time :: integer(),
@@ -171,7 +181,7 @@ handle_info(_, Time, #state{toggle_next = ToggleNext} = State) ->
 code_change(_, Time, #state{toggle_next = ToggleNext} = State, _) ->
     {State, max(Time, ToggleNext)}.
 
-%% @private
+?DOC(false).
 -spec config_change(Spec, Time, State) -> {NState, Next} when
     Spec :: spec(),
     Time :: integer(),
@@ -210,7 +220,7 @@ config_change(
             init(Time, Spec)
     end.
 
-%% @private
+?DOC(false).
 -spec terminate(Reason, State) -> ok when
     Reason :: term(),
     State :: state().

@@ -17,10 +17,20 @@
 %% under the License.
 %%
 %%-------------------------------------------------------------------
-%% @doc Server for storing the `ask' and `ask_r' queue min, max and drop
-%% probabilities for overload protection and short circuiting for a process
-%% with `sprotector'.
 -module(sprotector_server).
+
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+?MODULEDOC("""
+Server for storing the `ask` and `ask_r` queue min, max and drop
+probabilities for overload protection and short circuiting for a process
+with `sprotector`.
+""").
 
 -behaviour(gen_server).
 
@@ -55,17 +65,19 @@
 
 %% public API
 
-%% @doc Register the local process `Pid' with the server with minimum message
-%% queue length `Min' and maximum message queue length `Max'. Lookup requests
-%% with `sprotector' will drop requests when above `Max' or with probabilities
-%% set by `update/4' if above `Min'.
-%%
-%% Returns `true' if the process is successfully registered, or `false' if
-%% already registered.
-%%
-%% A process must be registered to use `update/4'. Initial length and drop
-%% probabilites are set to `0' and `0.0'. The server will synchronously link to
-%% the `Pid'.
+?DOC("""
+Register the local process `Pid` with the server with minimum message
+queue length `Min` and maximum message queue length `Max`. Lookup requests
+with `sprotector` will drop requests when above `Max` or with probabilities
+set by `update/4` if above `Min`.
+
+Returns `true` if the process is successfully registered, or `false` if
+already registered.
+
+A process must be registered to use `update/4`. Initial length and drop
+probabilites are set to `0` and `0.0`. The server will synchronously link to
+the `Pid`.
+""").
 -spec register(Pid, Min, Max) -> Result when
     Pid :: pid(),
     Min :: non_neg_integer(),
@@ -79,24 +91,28 @@ register(Pid, Min, Max) when
 ->
     gen_server:call(?MODULE, {register, Pid, Min, Max}, ?TIMEOUT).
 
-%% @doc Unregister the process `Pid' with the server.
-%%
-%% The server will synchronously unlink from `Pid'.
+?DOC("""
+Unregister the process `Pid` with the server.
+
+The server will synchronously unlink from `Pid`.
+""").
 -spec unregister(Pid) -> true when
     Pid :: pid().
 unregister(Pid) ->
     gen_server:call(?MODULE, {unregister, Pid}, ?TIMEOUT).
 
-%% @doc Update the queue length (`Len'), and `ask' and `ask_r' drop
-%% probabilities (`AskDrop' and `AskRDrop') for `Pid'.
-%%
-%% `Len' must be an integer greater than or equal to `0'.
-%%
-%% `AskDrop' and `AskRDrop' should be floats, values below `0.0' are rounded to
-%% `0.0' and above `1.0' to `1.0'.
-%%
-%% Returns `true' if the values were updated, or `false' if `Pid' is not
-%% registered with the server.
+?DOC("""
+Update the queue length (`Len`), and `ask` and `ask_r` drop
+probabilities (`AskDrop` and `AskRDrop`) for `Pid`.
+
+`Len` must be an integer greater than or equal to `0`.
+
+`AskDrop` and `AskRDrop` should be floats, values below `0.0` are rounded to
+`0.0` and above `1.0` to `1.0`.
+
+Returns `true` if the values were updated, or `false` if `Pid` is not
+registered with the server.
+""").
 -spec update(Pid, Len, AskDrop, AskRDrop) -> Result when
     Pid :: pid(),
     Len :: non_neg_integer(),
@@ -110,11 +126,13 @@ update(Pid, Len, AskDrop, AskRDrop) when
     AskRInt = drop_int(AskRDrop),
     ets:update_element(?MODULE, Pid, [{4, Len}, {5, AskInt}, {6, AskRInt}]).
 
-%% @doc Change the queue minimum to `Min' and maximum to `Max', and update the
-%% queue length to `Len' and the drop probabilities to `AskDrop' and `AskRDrop'.
-%%
-%% This function is an atomic. Returns `true' if the values were
-%% changed/updated, or `false' if `Pid' is not registered with the server.
+?DOC("""
+Change the queue minimum to `Min` and maximum to `Max`, and update the
+queue length to `Len` and the drop probabilities to `AskDrop` and `AskRDrop`.
+
+This function is an atomic. Returns `true` if the values were
+changed/updated, or `false` if `Pid` is not registered with the server.
+""").
 -spec change(Pid, Min, Max, Len, AskDrop, AskRDrop) -> Result when
     Pid :: pid(),
     Min :: non_neg_integer(),
@@ -139,13 +157,13 @@ change(Pid, Min, Max, Len, AskDrop, AskRDrop) when
 
 %% private API
 
-%% @private
+?DOC(false).
 -spec start_link() -> {ok, Pid} when
     Pid :: pid().
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, ?MODULE, []).
 
-%% @private
+?DOC(false).
 -spec ask(Pid, Key) -> Result when
     Pid :: pid(),
     Key :: ask | ask_r,
@@ -155,7 +173,7 @@ ask(Pid, ask) ->
 ask(Pid, ask_r) ->
     do_ask(Pid, [{2, 0}, {3, 0}, {4, 1}, {6, 0}]).
 
-%% @private
+?DOC(false).
 -spec lookup(Pid, Key) -> Drop when
     Pid :: pid(),
     Key :: ask | ask_r,
@@ -165,7 +183,7 @@ lookup(Pid, ask) ->
 lookup(Pid, ask_r) ->
     do_lookup(Pid, 6).
 
-%% @private
+?DOC(false).
 -spec len(Pid) -> Len when
     Pid :: pid(),
     Len :: non_neg_integer().
@@ -174,7 +192,7 @@ len(Pid) ->
 
 %% gen_server API
 
-%% @private
+?DOC(false).
 init(Table) ->
     _ = process_flag(trap_exit, true),
     Table = ets:new(
@@ -183,7 +201,7 @@ init(Table) ->
     ),
     {ok, Table}.
 
-%% @private
+?DOC(false).
 handle_call({register, Pid, Min, Max}, _, Table) ->
     link(Pid),
     NMax = max_int(Max),
@@ -195,11 +213,11 @@ handle_call({unregister, Pid}, _, Table) ->
 handle_call(Call, _, Table) ->
     {stop, {bad_call, Call}, Table}.
 
-%% @private
+?DOC(false).
 handle_cast(Cast, Table) ->
     {stop, {bad_cast, Cast}, Table}.
 
-%% @private
+?DOC(false).
 handle_info({'EXIT', Pid, _}, Table) ->
     ets:delete(Table, Pid),
     {noreply, Table};
@@ -210,11 +228,11 @@ handle_info(Msg, Table) ->
     ),
     {noreply, Table}.
 
-%% @private
+?DOC(false).
 code_change(_, State, _) ->
     {ok, State}.
 
-%% @private
+?DOC(false).
 terminate(_, _) ->
     ok.
 

@@ -17,8 +17,15 @@
 %% under the License.
 %%
 %%-------------------------------------------------------------------
-%% @private
 -module(sbroker_gen).
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+?MODULEDOC(false).
 
 -export([call/4]).
 -export([simple_call/4]).

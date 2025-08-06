@@ -17,27 +17,39 @@
 %% under the License.
 %%
 %%-------------------------------------------------------------------
-%% @doc Updates a list of regulators with the relative time of either queue.
-%%
-%% `sregulator_update_meter' can be used as a `sbroker_meter' in a `sbroker' or
-%% a `sregulator'. It will update a list of regulators with the relative time
-%% (in `native' time units) of a specified queue at random intervals, ignoring
-%% any regulators that are not alive. Its argument, `spec()', is of the form:
-%% ```
-%% [{Regulator :: sregulator:regulator(),
-%%   Queue :: ask | ask_r,
-%%   Config :: #{update => Update :: pos_integer()}}, ...].
-%% '''
-%% `Regulator' is a regulator process to update with the approximate relative
-%% time of queue `Queue' with updates uniformly distributed from `0.5 * Update'
-%% to `1.5 * Update' milliseconds (defaults to `100'). This random interval is
-%% used to prevent synchronisation of update messages and their side effects,
-%% see reference.
-%%
-%% @see sregulator
-%% @reference Sally Floyd and Van Jacobson, The Synchronization of Periodic
-%% Routing Messages, 1994.
 -module(sregulator_update_meter).
+
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+?MODULEDOC("""
+Updates a list of regulators with the relative time of either queue.
+
+`sregulator_update_meter` can be used as a `sbroker_meter` in a `sbroker` or
+a `sregulator`. It will update a list of regulators with the relative time
+(in `native` time units) of a specified queue at random intervals, ignoring
+any regulators that are not alive. Its argument, `spec()`, is of the form:
+```
+[{Regulator :: sregulator:regulator(),
+  Queue :: ask | ask_r,
+  Config :: #{update => Update :: pos_integer()}}, ...].
+```
+`Regulator` is a regulator process to update with the approximate relative
+time of queue `Queue` with updates uniformly distributed from `0.5 * Update`
+to `1.5 * Update` milliseconds (defaults to `100`). This random interval is
+used to prevent synchronisation of update messages and their side effects,
+see reference.
+
+See `m:sregulator`.
+
+References:
+Sally Floyd and Van Jacobson, The Synchronization of Periodic
+Routing Messages, 1994.
+""").
 
 -behaviour(sbroker_meter).
 
@@ -74,7 +86,7 @@
 }).
 -type state() :: #state{}.
 
-%% @private
+?DOC(false).
 -spec init(Time, Spec | {Spec, Seed}) -> {State, UpdateNext} when
     Time :: integer(),
     Spec :: spec(),
@@ -94,7 +106,7 @@ init(Time, Regulators) ->
     Seed = rand:export_seed_s(rand:seed_s(exsplus)),
     init(Time, {Regulators, Seed}).
 
-%% @private
+?DOC(false).
 -spec handle_update(QueueDelay, ProcessDelay, RelativeTime, Time, State) ->
     {NState, UpdateNext}
 when
@@ -133,7 +145,7 @@ handle_update(_, _, RelativeTime, Time, #state{wheel = Wheel, rand = Rand}) ->
     {_, Entries, NWheel} = gb_trees:take_smallest(Wheel),
     update(Entries, RelativeTime, Time, Rand, NWheel).
 
-%% @private
+?DOC(false).
 -spec handle_info(Msg, Time, State) -> {State, UpdateNext} when
     Msg :: term(),
     Time :: integer(),
@@ -142,7 +154,7 @@ handle_update(_, _, RelativeTime, Time, #state{wheel = Wheel, rand = Rand}) ->
 handle_info(_, Time, State) ->
     handle(Time, State).
 
-%% @private
+?DOC(false).
 -spec code_change(OldVsn, Time, State, Extra) -> {State, UpdateNext} when
     OldVsn :: term(),
     Time :: integer(),
@@ -152,7 +164,7 @@ handle_info(_, Time, State) ->
 code_change(_, Time, State, _) ->
     handle(Time, State).
 
-%% @private
+?DOC(false).
 -spec config_change(Spec | {Spec, Seed}, Time, State) ->
     {NState, UpdateNext}
 when
@@ -184,7 +196,7 @@ config_change(Regulators, Time, #state{rand = Rand} = State) ->
     Seed = rand:export_seed_s(Rand),
     config_change({Regulators, Seed}, Time, State).
 
-%% @private
+?DOC(false).
 -spec terminate(Reason, State) -> ok when
     Reason :: term(),
     State :: state().

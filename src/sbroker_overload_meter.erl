@@ -1,46 +1,36 @@
-%%-------------------------------------------------------------------
-%%
-%% Copyright (c) 2015, James Fish <james@fishcakez.com>
-%%
-%% This file is provided to you under the Apache License,
-%% Version 2.0 (the "License"); you may not use this file
-%% except in compliance with the License. You may obtain
-%% a copy of the License at
-%%
-%% http://www.apache.org/licenses/LICENSE-2.0
-%%
-%% Unless required by applicable law or agreed to in writing,
-%% software distributed under the License is distributed on an
-%% "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-%% KIND, either express or implied. See the License for the
-%% specific language governing permissions and limitations
-%% under the License.
-%%
-%%-------------------------------------------------------------------
-%% @doc Sets an alarm when the process's message queue is slow for an interval.
-%%
-%% `sbroker_overload_meter' can be used as a `sbroker_meter' in a `sbroker' or
-%% a `sregulator'. It will set a SASL `alarm_handler' alarm when the process's
-%% message queue is slow for an interval and clear it once the message queue
-%% becomes fast for an interval. Its argument, `spec()', is of the form:
-%% ```
-%% #{alarm    => Alarm :: term(), % default: {overload, self()}
-%%   target   => Target :: non_neg_integer(), % default: 100
-%%   interval => Interval :: pos_integer()}. % default: 1000
-%% '''
-%% `Alarm' is the `alarm_handler' alarm that will be set/cleared by the meter
-%% (defaults to `{overload, self()}'). `Target' is the target sojourn time of
-%% the message queue in milliseconds (defaults to `100'). `Interval' is the
-%% interval in milliseconds (defaults to `1000') that the message queue must be
-%% above the target for the alarm to be set and below the target for the alarm
-%% to be cleared. The description of the alarm is
-%% `{message_queue_slow, self()}'.
-%%
-%% This meter detects when the process is receiving more requests than it can
-%% handle and not whether a `sbroker_queue' is congested. If a `sbroker_queue'
-%% becomes congested it will drop requests to clear the congestion, causing a
-%% congestion alarm (if one existed) to be cleared very quickly.
 -module(sbroker_overload_meter).
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+?MODULEDOC("""
+Sets an alarm when the process`s message queue is slow for an interval.
+
+`sbroker_overload_meter` can be used as a `sbroker_meter` in a `sbroker` or
+a `sregulator`. It will set a SASL `alarm_handler` alarm when the process`s
+message queue is slow for an interval and clear it once the message queue
+becomes fast for an interval. Its argument, `spec()`, is of the form:
+```
+#{alarm    => Alarm :: term(), % default: {overload, self()}
+  target   => Target :: non_neg_integer(), % default: 100
+  interval => Interval :: pos_integer()}. % default: 1000
+```
+`Alarm` is the `alarm_handler` alarm that will be set/cleared by the meter
+(defaults to `{overload, self()}`). `Target` is the target sojourn time of
+the message queue in milliseconds (defaults to `100`). `Interval` is the
+interval in milliseconds (defaults to `1000`) that the message queue must be
+above the target for the alarm to be set and below the target for the alarm
+to be cleared. The description of the alarm is
+`{message_queue_slow, self()}`.
+
+This meter detects when the process is receiving more requests than it can
+handle and not whether a `sbroker_queue` is congested. If a `sbroker_queue`
+becomes congested it will drop requests to clear the congestion, causing a
+congestion alarm (if one existed) to be cleared very quickly.
+""").
 
 -behaviour(sbroker_meter).
 
@@ -72,7 +62,7 @@
 
 -type state() :: #state{}.
 
-%% @private
+?DOC(false).
 -spec init(Time, Spec) -> {State, infinity} when
     Time :: integer(),
     Spec :: spec(),
@@ -84,7 +74,7 @@ init(_, Spec) ->
     alarm_handler:clear_alarm(AlarmId),
     {#state{target = Target, interval = Interval, alarm_id = AlarmId}, infinity}.
 
-%% @private
+?DOC(false).
 -spec handle_update(QueueDelay, ProcessDelay, RelativeTime, Time, State) ->
     {NState, Next}
 when
@@ -148,7 +138,7 @@ handle_update(
             {State#state{status = clear, toggle_next = infinity}, infinity}
     end.
 
-%% @private
+?DOC(false).
 -spec handle_info(Msg, Time, State) -> {State, Next} when
     Msg :: term(),
     Time :: integer(),
@@ -157,7 +147,7 @@ handle_update(
 handle_info(_, Time, #state{toggle_next = ToggleNext} = State) ->
     {State, max(Time, ToggleNext)}.
 
-%% @private
+?DOC(false).
 -spec code_change(OldVsn, Time, State, Extra) -> {NState, Next} when
     OldVsn :: term(),
     Time :: integer(),
@@ -168,7 +158,7 @@ handle_info(_, Time, #state{toggle_next = ToggleNext} = State) ->
 code_change(_, Time, #state{toggle_next = ToggleNext} = State, _) ->
     {State, max(Time, ToggleNext)}.
 
-%% @private
+?DOC(false).
 -spec config_change(Spec, Time, State) -> {NState, Next} when
     Spec :: spec(),
     Time :: integer(),
@@ -207,7 +197,7 @@ config_change(
             init(Time, Spec)
     end.
 
-%% @private
+?DOC(false).
 -spec terminate(Reason, State) -> ok when
     Reason :: term(),
     State :: state().

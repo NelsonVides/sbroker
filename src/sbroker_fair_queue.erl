@@ -1,67 +1,60 @@
-%%-------------------------------------------------------------------
-%%
-%% Copyright (c) 2016, James Fish <james@fishcakez.com>
-%%
-%% This file is provided to you under the Apache License,
-%% Version 2.0 (the "License"); you may not use this file
-%% except in compliance with the License. You may obtain
-%% a copy of the License at
-%%
-%% http://www.apache.org/licenses/LICENSE-2.0
-%%
-%% Unless required by applicable law or agreed to in writing,
-%% software distributed under the License is distributed on an
-%% "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-%% KIND, either express or implied. See the License for the
-%% specific language governing permissions and limitations
-%% under the License.
-%%
-%%-------------------------------------------------------------------
-%% @doc Implements a fair queue containing multiple `sbroker_queue' queues.
-%%
-%% `sbroker_fair_queue' can be used as a `sbroker_queue' in a `sbroker' or
-%% `sregulator'. It will provide a queue that enqueues requests to internal
-%% queues based on an index and dequeues from the internal queues fairly. Its
-%% argument, `spec()', is of the form:
-%% ```
-%% {Module :: module(), Args :: term(), Index :: index()}
-%% '''
-%% `Module' and `Args' are the module and arguments of the underlying
-%% `sbroker_queue'. `Module' must implement the `sbroker_fair_queue' behaviour.
-%%
-%% `Index' is the method of choosing the queue to store a request in. To use the
-%% application of the sender: `application'. If the application can not be
-%% determined uses `undefined'. To use the node of the sender: `node'. To use
-%% the pid of the sender: `pid'. To use the value of the request: `value'. To
-%% use the Nth element of a tuple value: `{element, N}'. If the value is not a
-%% tuple of at least size `N' uses `undefined'.
-%%
-%% One queue is used per key and so the number of possible keys should be
-%% bounded. If the underlying queue limits the size of its queue this only
-%% applies to the queue for that key. Requests with a different key will be in a
-%% different queue and be part of a separate limit. To limit the number of
-%% queues by hashing the key: `{hash, Index2, Range}', where `Index2' is any
-%% `index()' except another hash and `Range' is the number of queues, from 1 to
-%% 2^32.
-%%
-%% Queues are chosen using a simple round robin strategy. Request are dequeued
-%% and empty queues removed using the `handle_fq_out/2' callback, instead of the
-%% usual `handle_out/2':
-%% ```
-%% -callback handle_fq_out(Time :: integer(), State :: term()) ->
-%%     {SendTime :: integer(), From :: {Sender :: pid(), Tag :: term()},
-%%      Value:: term(), Ref :: reference, NState :: term(),
-%%      TimeoutTime :: integer() | infinity} |
-%%     {empty, NState :: term(), RemoveTime :: integer() | infinity}.
-%% '''
-%% The variables are equivalent to those of the `sbroker_queue' callback
-%% `handle_out/2' with the addition of `RemoveTime', which is the time (or
-%% `infinity' for never) to remove the empty queue from the fair queue for that
-%% index.
-%%
-%% @reference John B. Nagle, On Packet Switches with Infinite Storage,
-%% IEEE Transactions on Communications, vol. com-35, no. 4, April 1987.
 -module(sbroker_fair_queue).
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+
+?MODULEDOC("""
+Implements a fair queue containing multiple `sbroker_queue` queues.
+
+`sbroker_fair_queue` can be used as a `sbroker_queue` in a `sbroker` or
+`sregulator`. It will provide a queue that enqueues requests to internal
+queues based on an index and dequeues from the internal queues fairly. Its
+argument, `spec()`, is of the form:
+```
+{Module :: module(), Args :: term(), Index :: index()}
+```
+`Module` and `Args` are the module and arguments of the underlying
+`sbroker_queue`. `Module` must implement the `sbroker_fair_queue` behaviour.
+
+`Index` is the method of choosing the queue to store a request in. To use the
+application of the sender: `application`. If the application can not be
+determined uses `undefined`. To use the node of the sender: `node`. To use
+the pid of the sender: `pid`. To use the value of the request: `value`. To
+use the Nth element of a tuple value: `{element, N}`. If the value is not a
+tuple of at least size `N` uses `undefined`.
+
+One queue is used per key and so the number of possible keys should be
+bounded. If the underlying queue limits the size of its queue this only
+applies to the queue for that key. Requests with a different key will be in a
+different queue and be part of a separate limit. To limit the number of
+queues by hashing the key: `{hash, Index2, Range}`, where `Index2` is any
+`index()` except another hash and `Range` is the number of queues, from 1 to
+2^32.
+
+Queues are chosen using a simple round robin strategy. Request are dequeued
+and empty queues removed using the `handle_fq_out/2` callback, instead of the
+usual `handle_out/2`:
+```
+-callback handle_fq_out(Time :: integer(), State :: term()) ->
+    {SendTime :: integer(), From :: {Sender :: pid(), Tag :: term()},
+     Value:: term(), Ref :: reference, NState :: term(),
+     TimeoutTime :: integer() | infinity} |
+    {empty, NState :: term(), RemoveTime :: integer() | infinity}.
+```
+The variables are equivalent to those of the `sbroker_queue` callback
+`handle_out/2` with the addition of `RemoveTime`, which is the time (or
+`infinity` for never) to remove the empty queue from the fair queue for that
+index.
+
+## References
+
+John B. Nagle, On Packet Switches with Infinite Storage,
+IEEE Transactions on Communications, vol. com-35, no. 4, April 1987.
+""").
 
 -behaviour(sbroker_queue).
 
@@ -117,7 +110,7 @@
 
 %% public API
 
-%% @private
+?DOC(false).
 -spec init(Q, Time, {Module, Args, Index}) -> {State, TimeoutTime} when
     Q :: sbroker_queue:internal_queue(),
     Time :: integer(),
@@ -142,7 +135,7 @@ init(Q, Time, {Module, Args, Index}) ->
     },
     {State, Next2}.
 
-%% @private
+?DOC(false).
 -spec handle_in(SendTime, From, Value, Time, State) ->
     {NState, TimeoutNext}
 when
@@ -166,7 +159,7 @@ handle_in(
     NState = State#state{queues = NQs, empties = NEs, robin = NRobin, next = NNext},
     {remove(Time, NState), NNext}.
 
-%% @private
+?DOC(false).
 -spec handle_out(Time, State) ->
     {SendTime, From, Value, Ref, NState, TimeoutNext} | {empty, NState}
 when
@@ -184,7 +177,7 @@ handle_out(
 ) ->
     out(queue:out(Robin), Time, Module, Es, Qs, State).
 
-%% @private
+?DOC(false).
 -spec handle_timeout(Time, State) -> {NState, TimeoutNext} when
     Time :: integer(),
     State :: state(),
@@ -196,7 +189,7 @@ handle_timeout(Time, #state{module = Module, queues = Qs} = State) ->
     {NQs, Next} = map(fun(_, Q) -> Module:handle_timeout(Time, Q) end, Qs),
     {remove(Time, State#state{queues = NQs, next = Next}), Next}.
 
-%% @private
+?DOC(false).
 -spec handle_cancel(Tag, Time, State) -> {Reply, NState, TimeoutNext} when
     Tag :: term(),
     Time :: integer(),
@@ -209,7 +202,7 @@ handle_cancel(Tag, Time, #state{module = Module, queues = Qs} = State) ->
     {Reply, NQs, Next} = cancel(QList, Module, Tag, Time, false, infinity, []),
     {Reply, remove(Time, State#state{queues = NQs, next = Next}), Next}.
 
-%% @private
+?DOC(false).
 -spec handle_info(Msg, Time, State) -> {NState, TimeoutNext} when
     Msg :: term(),
     Time :: integer(),
@@ -227,7 +220,7 @@ handle_info(Msg, Time, #state{module = Module, queues = Qs, empties = Es} = Stat
     },
     {NState, Next}.
 
-%% @private
+?DOC(false).
 -spec code_change(OldVsn, Time, State, Extra) -> {NState, NextTimeout} when
     OldVsn :: term(),
     Time :: integer(),
@@ -236,11 +229,11 @@ handle_info(Msg, Time, #state{module = Module, queues = Qs, empties = Es} = Stat
     NState :: state(),
     NextTimeout :: integer() | infinity.
 code_change(_, Time, #state{next = Next} = State, _) ->
-    % Can only handle code changes for this module, sbroker/sregulator won't
+    % Can only handle code changes for this module, sbroker/sregulator won`t
     % pass a change for other modules.
     {State, max(Time, Next)}.
 
-%% @private
+?DOC(false).
 -spec config_change({Module, Args, Index}, Time, State) ->
     {NState, TimeoutTime}
 when
@@ -273,14 +266,14 @@ config_change(
 config_change({_, _, _} = Arg, Time, State) ->
     init(terminate(change, State), Time, Arg).
 
-%% @private
+?DOC(false).
 -spec len(State) -> Len when
     State :: state(),
     Len :: non_neg_integer().
 len(#state{module = Module, queues = Qs}) ->
     maps:fold(fun(_, Q, Len) -> Module:len(Q) + Len end, 0, Qs).
 
-%% @private
+?DOC(false).
 -spec send_time(State) -> SendTime | empty when
     State :: state(),
     SendTime :: integer().
@@ -291,7 +284,7 @@ send_time(#state{module = Module, queues = Qs}) ->
         Qs
     ).
 
-%% @private
+?DOC(false).
 -spec terminate(Reason, State) -> InternalQ when
     Reason :: sbroker_handlers:reason(),
     State :: state(),

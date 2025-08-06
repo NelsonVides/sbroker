@@ -17,60 +17,72 @@
 %% under the License.
 %%
 %%-------------------------------------------------------------------
-%% @doc Implements a valve which increases its size based on CoDel (Controlling
-%% Queue Delay).
-%%
-%% `sregulator_codel_valve' can be used as the `sregulator_valve' in a
-%% `sregulator'. It will provide a valve that increases in size in decreasing
-%% intervals while updates remain below a target (based on CoDel) between the
-%% minimum and maximum capacity. Its argument, `spec()', is of the form:
-%% ```
-%% #{target   => Target :: integer(), % default: 100
-%%   interval => Interval :: pos_integer(), % default: 1000
-%%   min      => Min :: non_neg_integer(), % default: 0
-%%   max      => Max :: non_neg_integer() | infinity} % default: infinity
-%% '''
-%% `Target' is the target relative value in milliseconds. `Interval' is the
-%% initial interval in milliseconds. The valve will open when updates remain
-%% below the target (in `native' time units) for an interval. Each consecutive
-%% interval is smaller than the last until an update above the target is
-%% received. The valve is always open when below the minimum and always closed
-%% once it reaches the maximum.
-%%
-%% This valve tries to enforce a minimum level of concurrency and will grow
-%% while a relevant `sbroker_queue' is moving quickly - up to a maximum.
-%% Therefore this valves expects the updates to be from a
-%% `sregulator_update_meter'.
-%%
-%% The algorithm used in this valve is similar to `sbroker_codel_queue', except
-%% designed to keep the relevant queue slow (but not too slow) instead of fast.
-%% Therefore trying to ensure the counter party to the queue is always fast
-%% without using too many resources. This works by increasing the concurrency or
-%% number of requests when the queue is consistently fast and remaining static
-%% when the queue is slow. Therefore forcing the queue to be slightly slow.
-%%
-%% This valve is designed to be used a `sbroker_codel_queue' with the same
-%% `Interval' and `Target's that are between 10% and 20% of the `Interval'. The
-%% target range is suggested due to the observation in the CoDel paper that the
-%% queue goes from to fast to slow over this target range. Higher targets result
-%% in heavily congested queues and wasted resources. A suggested initial
-%% `Interval' is the 95% percentile of the time it takes to stop a task and
-%% restart, as this is equivalent to the round trip when a packet is dropped and
-%% resent to rejoin the queue in the paper.
-%%
-%% Decreasing the target of the valve makes it more resistant to bursts and
-%% reducing the target of the queue will increase the rate of shrinking when
-%% load decreases. This fulfils the general desire to increase resouce usage as
-%% late as possible and decrease resource usage as early as possible. If the
-%% queue's target is significantly lower than valve's this may lead to churn as
-%% the queue and valve may act against each other. Also if the minimum is too
-%% high the queue may drop the requests only for the valve to allow immediate
-%% enqueues.
-%%
-%% More investigation needs to be done on suitable parameters.
-%% @reference Kathleen Nichols and Van Jacobson, Controlling Queue Delay,
-%% ACM Queue, 6th May 2012.
 -module(sregulator_codel_valve).
+
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+?MODULEDOC("""
+Implements a valve which increases its size based on CoDel (Controlling
+Queue Delay).
+
+`sregulator_codel_valve` can be used as the `sregulator_valve` in a
+`sregulator`. It will provide a valve that increases in size in decreasing
+intervals while updates remain below a target (based on CoDel) between the
+minimum and maximum capacity. Its argument, `spec()`, is of the form:
+```
+#{target   => Target :: integer(), % default: 100
+  interval => Interval :: pos_integer(), % default: 1000
+  min      => Min :: non_neg_integer(), % default: 0
+  max      => Max :: non_neg_integer() | infinity} % default: infinity
+```
+`Target` is the target relative value in milliseconds. `Interval` is the
+initial interval in milliseconds. The valve will open when updates remain
+below the target (in `native` time units) for an interval. Each consecutive
+interval is smaller than the last until an update above the target is
+received. The valve is always open when below the minimum and always closed
+once it reaches the maximum.
+
+This valve tries to enforce a minimum level of concurrency and will grow
+while a relevant `sbroker_queue` is moving quickly - up to a maximum.
+Therefore this valves expects the updates to be from a
+`sregulator_update_meter`.
+
+The algorithm used in this valve is similar to `sbroker_codel_queue`, except
+designed to keep the relevant queue slow (but not too slow) instead of fast.
+Therefore trying to ensure the counter party to the queue is always fast
+without using too many resources. This works by increasing the concurrency or
+number of requests when the queue is consistently fast and remaining static
+when the queue is slow. Therefore forcing the queue to be slightly slow.
+
+This valve is designed to be used a `sbroker_codel_queue` with the same
+`Interval` and `Target`s that are between 10% and 20% of the `Interval`. The
+target range is suggested due to the observation in the CoDel paper that the
+queue goes from to fast to slow over this target range. Higher targets result
+in heavily congested queues and wasted resources. A suggested initial
+`Interval` is the 95% percentile of the time it takes to stop a task and
+restart, as this is equivalent to the round trip when a packet is dropped and
+resent to rejoin the queue in the paper.
+
+Decreasing the target of the valve makes it more resistant to bursts and
+reducing the target of the queue will increase the rate of shrinking when
+load decreases. This fulfils the general desire to increase resouce usage as
+late as possible and decrease resource usage as early as possible. If the
+queue`s target is significantly lower than valve`s this may lead to churn as
+the queue and valve may act against each other. Also if the minimum is too
+high the queue may drop the requests only for the valve to allow immediate
+enqueues.
+
+More investigation needs to be done on suitable parameters.
+
+References:
+Kathleen Nichols and Van Jacobson, Controlling Queue Delay,
+ACM Queue, 6th May 2012.
+""").
 
 -behaviour(sregulator_valve).
 
@@ -117,7 +129,7 @@
 
 %% sregulator_valve api
 
-%% @private
+?DOC(false).
 -spec init(Map, Time, Spec) -> {open | closed, State, infinity} when
     Map :: sregulator_valve:internal_map(),
     Time :: integer(),
@@ -136,7 +148,7 @@ init(Map, Time, Spec) ->
     },
     handle(Time, State).
 
-%% @private
+?DOC(false).
 -spec handle_ask(Pid, Ref, Time, State) ->
     {go, Open, open | closed, NState, infinity}
 when
@@ -175,7 +187,7 @@ handle_ask(
             go(First, Time, open_control(Time, NState))
     end.
 
-%% @private
+?DOC(false).
 -spec handle_done(Ref, Time, State) ->
     {done | error, open | closed, NState, infinity}
 when
@@ -187,7 +199,7 @@ handle_done(Ref, Time, #state{map = Map} = State) ->
     Before = map_size(Map),
     done(Ref, Map, Before, Time, State).
 
-%% @private
+?DOC(false).
 -spec handle_continue(Ref, Time, State) ->
     {go, Open, open | closed, NState, infinity}
     | {done | error, open | closed, NState, infinity}
@@ -228,7 +240,7 @@ handle_continue(
             done(Ref, Map, Size, Time, State)
     end.
 
-%% @private
+?DOC(false).
 -spec handle_update(Value, Time, State) ->
     {open | closed, NState, infinity}
 when
@@ -263,7 +275,7 @@ handle_update(_, Time, #state{open_first = infinity} = State) ->
 handle_update(_, Time, State) ->
     handle(Time, State#state{open_first = infinity}).
 
-%% @private
+?DOC(false).
 -spec handle_info(Msg, Time, State) -> {open | closed, NState, infinity} when
     Msg :: term(),
     Time :: integer(),
@@ -281,7 +293,7 @@ handle_info({'DOWN', Ref, _, _, _}, Time, #state{map = Map, min = Min} = State) 
 handle_info(_, Time, State) ->
     handle(Time, State).
 
-%% @private
+?DOC(false).
 -spec handle_timeout(Time, State) -> {open | closed, NState, infinity} when
     Time :: integer(),
     State :: state(),
@@ -289,7 +301,7 @@ handle_info(_, Time, State) ->
 handle_timeout(Time, State) ->
     handle(Time, State).
 
-%% @private
+?DOC(false).
 -spec code_change(OldVsn, Time, State, Extra) -> {Status, NState, infinity} when
     OldVsn :: term(),
     Time :: integer(),
@@ -300,7 +312,7 @@ handle_timeout(Time, State) ->
 code_change(_, Time, State, _) ->
     handle(Time, State).
 
-%% @private
+?DOC(false).
 -spec config_change(Spec, Time, State) -> {open | closed, NState, infinity} when
     Spec :: spec(),
     Time :: integer(),
@@ -316,14 +328,14 @@ config_change(Spec, Time, State) ->
     },
     change(Time, NState).
 
-%% @private
+?DOC(false).
 -spec size(State) -> Size when
     State :: state(),
     Size :: non_neg_integer().
 size(#state{map = Map}) ->
     map_size(Map).
 
-%% @private
+?DOC(false).
 -spec open_time(State) -> Open | closed when
     State :: state(),
     Open :: integer().
@@ -342,7 +354,7 @@ open_time(#state{open_first = opening, open_next = Next}) ->
 open_time(#state{open_first = First}) ->
     First.
 
-%% @private
+?DOC(false).
 -spec terminate(Reason, State) -> Map when
     Reason :: term(),
     State :: state(),

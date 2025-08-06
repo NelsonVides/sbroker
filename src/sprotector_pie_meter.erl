@@ -1,65 +1,53 @@
-%%-------------------------------------------------------------------
-%%
-%% Copyright (c) 2016, James Fish <james@fishcakez.com>
-%%
-%% This file is provided to you under the Apache License,
-%% Version 2.0 (the "License"); you may not use this file
-%% except in compliance with the License. You may obtain
-%% a copy of the License at
-%%
-%% http://www.apache.org/licenses/LICENSE-2.0
-%%
-%% Unless required by applicable law or agreed to in writing,
-%% software distributed under the License is distributed on an
-%% "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-%% KIND, either express or implied. See the License for the
-%% specific language governing permissions and limitations
-%% under the License.
-%%
-%%-------------------------------------------------------------------
-%% @doc Registers the process with and updates the `sprotector_server' using the
-%% "basic" PIE active queue management using approximate queue sojourn times.
-%%
-%% `sprotector_pie_meter' can be used as a `sbroker_meter' in a `sbroker' or
-%% a `sregulator'. It will provide a short circuiter that will drop requests
-%% without messaging the broker or regulator with a probability using PIE for
-%% the `ask' and `ask_r' queue when the message queue length is approximately
-%% above a minimum and all requests when it is approximately above a maximum.
-%% Its argument, `spec()', is of the form:
-%% ```
-%% #{ask    => #{target   => AskTarget :: non_neg_integer(), % default: 100
-%%               interval => AskInterval :: pos_integer()}, % default: 1000
-%%   ask_r  => #{target   => AskRTarget :: non_neg_integer(), % default: 100
-%%               interval => AskRInterval :: pos_integer()}, % default: 1000
-%%   update => Update :: pos_integer(), % default: 100
-%%   min    => Min :: non_neg_integer(), % default: 0
-%%   max    => Max :: non_neg_integer() | infinity}. % default: infinity
-%% '''
-%% `AskTarget' is the target delay in milliseconds (defaults to `100') for the
-%% `ask' queue and `AskInterval' is the initial interval in milliseconds
-%% (defaults to `1000') before the first drop when the process's message queue
-%% is above the minimum size `Min' (defaults to `0') and below the maximum size
-%% `Max' (defaults to `infinity). `AskRTarget' and `AskRInterval' are equivalent
-%% for the `ask_r' queue. `Update' is the interval between updating the drop
-%% probability (defaults to `100').
-%%
-%% A person perceives a response time of `100' milliseconds or less as
-%% instantaneous, and feels engaged with a system if response times are `1000'
-%% milliseconds or less. Therefore it is desirable for a system to respond
-%% within `1000' milliseconds as a worst case (upper percentile response time)
-%% and ideally to respond within `100' milliseconds (target response time). Thus
-%% the default target is `100' milliseconds and the default is interval `1000'
-%% milliseconds.
-%%
-%% @see sprotector
-%% @see sprotector_server
-%% @reference Rong Pan, Prem Natarajan, Chiara Piglione, Mythili Suryanarayana
-%% Prabhu, Venkatachalam Subramanian, Fred Baker, and Bill Ver Steeg, PIE: A
-%% lightweight control scheme to address the bufferbloat problem, 2013.
-%% @reference Stuart Card, George Robertson and Jock Mackinlay, The Information
-%% Visualizer: An Information Workspace, ACM Conference on Human Factors in
-%% Computing Systems, 1991.
 -module(sprotector_pie_meter).
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+?MODULEDOC("""
+Registers the process with and updates the `sprotector_server` using the
+\"basic\" PIE active queue management using approximate queue sojourn times.
+`sprotector_pie_meter` can be used as a `sbroker_meter` in a `sbroker` or
+a `sregulator`. It will provide a short circuiter that will drop requests
+without messaging the broker or regulator with a probability using PIE for
+the `ask` and `ask_r` queue when the message queue length is approximately
+above a minimum and all requests when it is approximately above a maximum.
+Its argument, `spec()`, is of the form:
+```
+#{ask    => #{target   => AskTarget :: non_neg_integer(), % default: 100
+              interval => AskInterval :: pos_integer()}, % default: 1000
+  ask_r  => #{target   => AskRTarget :: non_neg_integer(), % default: 100
+              interval => AskRInterval :: pos_integer()}, % default: 1000
+  update => Update :: pos_integer(), % default: 100
+  min    => Min :: non_neg_integer(), % default: 0
+  max    => Max :: non_neg_integer() | infinity}. % default: infinity
+```
+`AskTarget` is the target delay in milliseconds (defaults to `100`) for the
+`ask` queue and `AskInterval` is the initial interval in milliseconds
+(defaults to `1000`) before the first drop when the process`s message queue
+is above the minimum size `Min` (defaults to `0`) and below the maximum size
+`Max` (defaults to `infinity). `AskRTarget` and `AskRInterval` are equivalent
+for the `ask_r` queue. `Update` is the interval between updating the drop
+probability (defaults to `100`).
+
+A person perceives a response time of `100` milliseconds or less as
+instantaneous, and feels engaged with a system if response times are `1000`
+milliseconds or less. Therefore it is desirable for a system to respond
+within `1000` milliseconds as a worst case (upper percentile response time)
+and ideally to respond within `100` milliseconds (target response time). Thus
+the default target is `100` milliseconds and the default is interval `1000`
+milliseconds.
+
+See `m:sprotector` and `m:sprotector_server`.
+@reference Rong Pan, Prem Natarajan, Chiara Piglione, Mythili Suryanarayana
+Prabhu, Venkatachalam Subramanian, Fred Baker, and Bill Ver Steeg, PIE: A
+lightweight control scheme to address the bufferbloat problem, 2013.
+@reference Stuart Card, George Robertson and Jock Mackinlay, The Information
+Visualizer: An Information Workspace, ACM Conference on Human Factors in
+Computing Systems, 1991.
+""").
 
 -behaviour(sbroker_meter).
 
@@ -109,7 +97,7 @@
 
 -type state() :: #state{}.
 
-%% @private
+?DOC(false).
 -spec init(Time, Spec) -> {State, Time} when
     Time :: integer(),
     Spec :: spec(),
@@ -123,7 +111,7 @@ init(Time, Spec) ->
     State = #state{ask = AskPie, bid = BidPie, update = NUpdate, update_next = Time},
     {State, Time}.
 
-%% @private
+?DOC(false).
 -spec handle_update(QueueDelay, ProcessDelay, RelativeTime, Time, State) ->
     {NState, Next}
 when
@@ -139,7 +127,7 @@ handle_update(QueueDelay, _, RelativeTime, Time, State) ->
     BidSojourn = sojourn(QueueDelay, -RelativeTime),
     handle_update(AskSojourn, BidSojourn, Time, State).
 
-%% @private
+?DOC(false).
 -spec handle_info(Msg, Time, State) -> {State, Next} when
     Msg :: term(),
     Time :: integer(),
@@ -148,7 +136,7 @@ handle_update(QueueDelay, _, RelativeTime, Time, State) ->
 handle_info(_, Time, State) ->
     handle(Time, State).
 
-%% @private
+?DOC(false).
 -spec code_change(OldVsn, Time, State, Extra) -> {State, Next} when
     OldVsn :: term(),
     Time :: integer(),
@@ -158,7 +146,7 @@ handle_info(_, Time, State) ->
 code_change(_, Time, State, _) ->
     handle(Time, State).
 
-%% @private
+?DOC(false).
 -spec config_change(Spec, Time, State) -> {NState, Next} when
     Spec :: spec(),
     Time :: integer(),
@@ -184,7 +172,7 @@ config_change(
     },
     {NState, NUpdateNext}.
 
-%% @private
+?DOC(false).
 -spec terminate(Reason, State) -> true when
     Reason :: term(),
     State :: state().
@@ -329,7 +317,7 @@ change_allowance(Interval, #pie{allowance = Allowance, interval = PrevInterval})
 
 queue_len() ->
     {_, Len} = process_info(self(), message_queue_len),
-    % Ignore '$mark' if present
+    % Ignore `$mark` if present
     max(0, Len - 1).
 
 handle(Time, #state{update_next = UpdateNext} = State) ->

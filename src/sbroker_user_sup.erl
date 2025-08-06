@@ -17,8 +17,15 @@
 %% under the License.
 %%
 %%-------------------------------------------------------------------
-%% @private
 -module(sbroker_user_sup).
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+?MODULEDOC(false).
 
 -behaviour(supervisor).
 

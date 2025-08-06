@@ -1,91 +1,82 @@
-%%-------------------------------------------------------------------
-%%
-%% Copyright (c) 2015, James Fish <james@fishcakez.com>
-%%
-%% This file is provided to you under the Apache License,
-%% Version 2.0 (the "License"); you may not use this file
-%% except in compliance with the License. You may obtain
-%% a copy of the License at
-%%
-%% http://www.apache.org/licenses/LICENSE-2.0
-%%
-%% Unless required by applicable law or agreed to in writing,
-%% software distributed under the License is distributed on an
-%% "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-%% KIND, either express or implied. See the License for the
-%% specific language governing permissions and limitations
-%% under the License.
-%%
-%%-------------------------------------------------------------------
-%% @doc Implements a head or tail drop queue with queue management based on
-%% CoDel (Controlling Queue Delay).
-%%
-%% `sbroker_codel_queue' can be used as a `sbroker_queue' in a `sbroker' or
-%% `sregulator'. It will provide a FIFO or LIFO queue that drops request in the
-%% queue using CoDel when the minimum size is exceeded, and drops the head or
-%% tail request from the queue when a maximum size is exceeded. Its argument,
-%% `spec()', is of the form:
-%% ```
-%% #{out      => Out :: out | out_r, % default: out
-%%   target   => Target :: non_neg_integer(), % default: 100
-%%   interval => Interval :: pos_integer(), % default: 1000
-%%   drop     => Drop :: drop | drop_r, % default: drop_r
-%%   min      => Min :: non_neg_integer(), % default: 0
-%%   max      => Max :: non_neg_integer() | infinity} % default: infinity
-%% '''
-%% `Out' is either `out' for a FIFO queue (the default) or `out_r' for a LIFO
-%% queue. `Target' is the target queue sojourn time in milliseconds (defaults to
-%% `100'). `Interval' is in the initial interval in milliseconds (defaults to
-%% `1000') between drops when the queue is above the minimum size
-%% `Min' (defaults to `0'). `Drop' is either `drop_r' for tail drop (the
-%% default) where the last request is droppped, or `drop' for head drop, where
-%% the first request is dropped. Dropping occurs when queue is above the
-%% maximum size `Max' (defaults to `infinity').
-%%
-%% Initial parameters are recommended to be between the 95th and 99th percentile
-%% round trip time for the interval and the target between 5% and 10% of the
-%% interval. The round trip should be that between the actual initiator of the
-%% request (e.g. a remote client) and the queue. For example, the reference
-%% suggests an interval of 100ms and a target of 5ms when queuing TCP packets in
-%% a kernel's buffer. A request and response might be a few more round trips at
-%% the packet level even if using a single `:gen_tcp.send/2'.
-%%
-%% A person perceives a response time of `100' milliseconds or less as
-%% instantaneous, and feels engaged with a system if response times are `1000'
-%% milliseconds or less. Therefore it is desirable for a system to respond
-%% within `1000' milliseconds as a worst case (upper percentile response time)
-%% and ideally to respond within `100' milliseconds (target response time).
-%% These also match with the suggested ratios for CoDel and so the default
-%% target is `100' milliseconds and the default is interval `1000' milliseconds.
-%%
-%% This implementation differs from the reference as enqueue and other functions
-%% can detect a slow queue and drop items. However once a slow item has been
-%% detected only `handle_out/2' can detect the queue becoming fast again with
-%% the caveat that with `out_r' this can only be detected if the queue reaches
-%% the minimum size `Min' or less, and not a fast sojourn time. This means that
-%% it is possible to drop items without calling `handle_out/2' but it is not
-%% possible to stop dropping unless a `handle_out/2' dequeues an item to take
-%% the queue to or below the minimum size `Min' or `out' is used and a dequeued
-%% request is below target sojourn time. Therefore if `handle_out/2' is not
-%% called for an extended period the queue will converge to dropping all items
-%% above the target sojourn time if a single item has a sojourn time above
-%% target. Whereas with the reference implementation no items would be dropped.
-%%
-%% If it is possible for the counterparty in the broker to "disappear" for a
-%% period of time then setting a `Min' above `0' can leave `Min' items in the
-%% queue for an extended period of time as requests are only dropped when the
-%% queue size is above `Min'. This may be undesirable for client requests
-%% because the request could wait in the queue indefinitely if there are not
-%% enough requests to take the queue above `Min'. However it might be desired
-%% for database connections where it is ideal for a small number of connections
-%% to be waiting to handle a client request.
-%%
-%% @reference Kathleen Nichols and Van Jacobson, Controlling Queue Delay,
-%% ACM Queue, 6th May 2012.
-%% @reference Stuart Card, George Robertson and Jock Mackinlay, The Information
-%% Visualizer: An Information Workspace, ACM Conference on Human Factors in
-%% Computing Systems, 1991.
 -module(sbroker_codel_queue).
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+
+?MODULEDOC("""
+Implements a head or tail drop queue with queue management based on
+CoDel (Controlling Queue Delay).
+
+`sbroker_codel_queue` can be used as a `sbroker_queue` in a `sbroker` or
+`sregulator`. It will provide a FIFO or LIFO queue that drops request in the
+queue using CoDel when the minimum size is exceeded, and drops the head or
+tail request from the queue when a maximum size is exceeded. Its argument,
+`spec()`, is of the form:
+```
+#{out      => Out :: out | out_r, % default: out
+  target   => Target :: non_neg_integer(), % default: 100
+  interval => Interval :: pos_integer(), % default: 1000
+  drop     => Drop :: drop | drop_r, % default: drop_r
+  min      => Min :: non_neg_integer(), % default: 0
+  max      => Max :: non_neg_integer() | infinity} % default: infinity
+```
+`Out` is either `out` for a FIFO queue (the default) or `out_r` for a LIFO
+queue. `Target` is the target queue sojourn time in milliseconds (defaults to
+`100`). `Interval` is in the initial interval in milliseconds (defaults to
+`1000`) between drops when the queue is above the minimum size
+`Min` (defaults to `0`). `Drop` is either `drop_r` for tail drop (the
+default) where the last request is droppped, or `drop` for head drop, where
+the first request is dropped. Dropping occurs when queue is above the
+maximum size `Max` (defaults to `infinity`).
+
+Initial parameters are recommended to be between the 95th and 99th percentile
+round trip time for the interval and the target between 5% and 10% of the
+interval. The round trip should be that between the actual initiator of the
+request (e.g. a remote client) and the queue. For example, the reference
+suggests an interval of 100ms and a target of 5ms when queuing TCP packets in
+a kernel`s buffer. A request and response might be a few more round trips at
+the packet level even if using a single `:gen_tcp.send/2`.
+
+A person perceives a response time of `100` milliseconds or less as
+instantaneous, and feels engaged with a system if response times are `1000`
+milliseconds or less. Therefore it is desirable for a system to respond
+within `1000` milliseconds as a worst case (upper percentile response time)
+and ideally to respond within `100` milliseconds (target response time).
+These also match with the suggested ratios for CoDel and so the default
+target is `100` milliseconds and the default is interval `1000` milliseconds.
+
+This implementation differs from the reference as enqueue and other functions
+can detect a slow queue and drop items. However once a slow item has been
+detected only `handle_out/2` can detect the queue becoming fast again with
+the caveat that with `out_r` this can only be detected if the queue reaches
+the minimum size `Min` or less, and not a fast sojourn time. This means that
+it is possible to drop items without calling `handle_out/2` but it is not
+possible to stop dropping unless a `handle_out/2` dequeues an item to take
+the queue to or below the minimum size `Min` or `out` is used and a dequeued
+request is below target sojourn time. Therefore if `handle_out/2` is not
+called for an extended period the queue will converge to dropping all items
+above the target sojourn time if a single item has a sojourn time above
+target. Whereas with the reference implementation no items would be dropped.
+
+If it is possible for the counterparty in the broker to "disappear" for a
+period of time then setting a `Min` above `0` can leave `Min` items in the
+queue for an extended period of time as requests are only dropped when the
+queue size is above `Min`. This may be undesirable for client requests
+because the request could wait in the queue indefinitely if there are not
+enough requests to take the queue above `Min`. However it might be desired
+for database connections where it is ideal for a small number of connections
+to be waiting to handle a client request.
+
+@reference Kathleen Nichols and Van Jacobson, Controlling Queue Delay,
+ACM Queue, 6th May 2012.
+@reference Stuart Card, George Robertson and Jock Mackinlay, The Information
+Visualizer: An Information Workspace, ACM Conference on Human Factors in
+Computing Systems, 1991.
+""").
 
 -behaviour(sbroker_queue).
 -behaviour(sbroker_fair_queue).
@@ -138,7 +129,7 @@
 
 %% public API
 
-%% @private
+?DOC(false).
 -spec init(Q, Time, Spec) -> {State, NextTimeout} when
     Q :: sbroker_queue:internal_queue(),
     Time :: integer(),
@@ -148,7 +139,7 @@
 init(Q, Time, Spec) ->
     handle_timeout(Time, from_queue(Q, queue:len(Q), Time, Spec)).
 
-%% @private
+?DOC(false).
 -spec handle_in(SendTime, From, Value, Time, State) ->
     {NState, NextTimeout}
 when
@@ -191,7 +182,7 @@ handle_in(
     NQ = queue:in({SendTime, From, Value, Ref}, Q),
     in(Len + 1, NQ, Time, State).
 
-%% @private
+?DOC(false).
 -spec handle_out(Time, State) ->
     {SendTime, From, Value, Ref, NState, NextTimeout} | {empty, NState}
 when
@@ -212,7 +203,7 @@ handle_out(Time, #state{out = out, len = Len, queue = Q} = State) ->
 handle_out(Time, #state{out = out_r, len = Len, queue = Q} = State) ->
     out_r(queue:out_r(Q), Len - 1, Time, State).
 
-%% @private
+?DOC(false).
 -spec handle_fq_out(Time, State) ->
     {SendTime, From, Value, Ref, NState, NextTimeout}
     | {empty, NState, RemoveTime}
@@ -234,7 +225,7 @@ handle_fq_out(Time, State) ->
             {empty, NState, max(DropNext + 8 * Interval, Time)}
     end.
 
-%% @private
+?DOC(false).
 -spec handle_timeout(Time, State) -> {State, NextTimeout} when
     Time :: integer(),
     State :: state(),
@@ -258,7 +249,7 @@ handle_timeout(Time, #state{drop_first = DropFirst} = State) when
 handle_timeout(Time, #state{min = Min, len = Len, queue = Q} = State) ->
     timeout(Min, Len, Q, Time, State).
 
-%% @private
+?DOC(false).
 -spec handle_cancel(Tag, Time, State) -> {Cancelled, NState, NextTimeout} when
     Tag :: term(),
     Time :: integer(),
@@ -285,7 +276,7 @@ handle_cancel(Tag, Time, #state{len = Len, queue = Q} = State) ->
             {Len - NLen, NState2, TimeoutNext}
     end.
 
-%% @private
+?DOC(false).
 -spec handle_info(Msg, Time, State) -> {NState, NextTimeout} when
     Msg :: term(),
     Time :: integer(),
@@ -298,7 +289,7 @@ handle_info({'DOWN', Ref, _, _, _}, Time, #state{queue = Q} = State) ->
 handle_info(_, Time, State) ->
     handle_timeout(Time, State).
 
-%% @private
+?DOC(false).
 -spec code_change(OldVsn, Time, State, Extra) -> {NState, NextTimeout} when
     OldVsn :: term(),
     Time :: integer(),
@@ -309,7 +300,7 @@ handle_info(_, Time, State) ->
 code_change(_, Time, State, _) ->
     {State, max(Time, timeout_next(State))}.
 
-%% @private
+?DOC(false).
 -spec config_change(Spec, Time, State) -> {NState, NextTimeout} when
     Spec :: spec(),
     Time :: integer(),
@@ -337,14 +328,14 @@ config_change(
     },
     change(Time, NState).
 
-%% @private
+?DOC(false).
 -spec len(State) -> Len when
     State :: state(),
     Len :: non_neg_integer().
 len(#state{len = Len}) ->
     Len.
 
-%% @private
+?DOC(false).
 -spec send_time(State) -> SendTime | empty when
     State :: state(),
     SendTime :: integer().
@@ -354,7 +345,7 @@ send_time(#state{queue = Q}) ->
     {SendTime, _, _, _} = queue:get(Q),
     SendTime.
 
-%% @private
+?DOC(false).
 -spec terminate(Reason, State) -> Q when
     Reason :: term(),
     State :: state(),

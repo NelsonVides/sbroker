@@ -17,26 +17,37 @@
 %% under the License.
 %%
 %%-------------------------------------------------------------------
-%% @doc This modules provides utility functions for basic load balancing based
-%% on the scheduler id of the calling process. It is designed for use with OTP
-%% behaviour messaging using `via' names, e.g.
-%% `{via, sscheduler, {Process,...}}'. The third element, `{Process,...}', is a
-%% tuple containing pids (`pid()') and/or process names (`atom()',
-%% `{global, term()}', `{via, module(), term()}' or `{atom(), node()}'). An
-%% element is chosen based on the scheduler id, if the element is a `pid()' it
-%% is returned, otherwise the `pid()' of the process name is looked up.
-%%
-%% It is not possible to locally look up the pid of a process with name
-%% `{atom(), node()}' if the node is not the local node. Therefore a registered
-%% name on another node is not supported for use with this module.
 -module(sscheduler).
+
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+
+?MODULEDOC("""
+This modules provides utility functions for basic load balancing based
+on the scheduler id of the calling process. It is designed for use with OTP
+behaviour messaging using `via` names, e.g.
+`{via, sscheduler, {Process,...}}`. The third element, `{Process,...}`, is a
+tuple containing pids (`pid()`) and/or process names (`atom()`,
+`{global, term()}`, `{via, module(), term()}` or `{atom(), node()}`). An
+element is chosen based on the scheduler id, if the element is a `pid()` it
+is returned, otherwise the `pid()` of the process name is looked up.
+
+It is not possible to locally look up the pid of a process with name
+`{atom(), node()}` if the node is not the local node. Therefore a registered
+name on another node is not supported for use with this module.
+""").
 
 -export([whereis_name/1]).
 -export([send/2]).
 
-%% @doc Lookup the pid or process name of one element, selected based on the
-%% scheduler id, in a tuple of process names. If no process is associated with
-%% the name returns `undefined'.
+?DOC("""
+Lookup the pid or process name of one element, selected based on the scheduler id, in a tuple of process names. If no process is associated with the name returns `undefined`.
+""").
 -spec whereis_name(Processes) -> Process | undefined when
     Processes :: tuple(),
     Process :: pid().
@@ -65,10 +76,9 @@ whereis_name(Processes) when is_tuple(Processes) ->
             exit({badnode, Node})
     end.
 
-%% @doc Send a message to one element, selected based on the scheduler id, in a
-%% tuple of process names. Returns `ok' if the element chosen is a `pid()'.
-%% a locally registered name on another node, or a process is associated with
-%% the name. Otherwise exits.
+?DOC("""
+Send a message to one element, selected based on the scheduler id, in a tuple of process names. Returns `ok` if the element chosen is a `pid()`. a locally registered name on another node, or a process is associated with the name. Otherwise exits.
+""").
 -spec send(Processes, Msg) -> ok when
     Processes :: tuple(),
     Msg :: term().

@@ -1,65 +1,55 @@
-%%-------------------------------------------------------------------
-%%
-%% Copyright (c) 2016, James Fish <james@fishcakez.com>
-%%
-%% This file is provided to you under the Apache License,
-%% Version 2.0 (the "License"); you may not use this file
-%% except in compliance with the License. You may obtain
-%% a copy of the License at
-%%
-%% http://www.apache.org/licenses/LICENSE-2.0
-%%
-%% Unless required by applicable law or agreed to in writing,
-%% software distributed under the License is distributed on an
-%% "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-%% KIND, either express or implied. See the License for the
-%% specific language governing permissions and limitations
-%% under the License.
-%%
-%%-------------------------------------------------------------------
-%% @doc This modules provides utility functions for load balancing using the
-%% best of two random choices. It is designed for use with `sbroker' and
-%% `sregulator' processes using the `sbetter_meter' meter. However any OTP
-%% process can use this module to do load balancing using the `via' naming
-%% format if the process is registered with and updates the `sbetter_server'.
-%%
-%% To use `sbetter' with `via' use names of the form
-%% `{via, sbetter, {{Broker, ...}, ask | ask_r}}'. Where `{Broker, ...}' is
-%% a tuple containing
-%% `pid() | atom() | {global, term()} | {via, module(), term()} | {atom(), node()}'.
-%% The process with the small value/shortest sojourn time of two random
-%% processes for the `ask' (or `ask_r') queue will be called. The sojourn time
-%% includes the message queue delay and the time spent waiting in the internal
-%% queue.
-%%
-%% Comparing values/sojourn times requires `ets' lookups. However it is not
-%% required to carry out the lookups for every request to get well balanced
-%% queues. To only compare two random choices 20% of the time and use
-%% `sscheduler' the remaining 80% use `scheduler_ask' and `scheduler_ask_r', or
-%% to only compare two random choices 20% of the time and choose a random
-%% process the reamining 80% use `rand_ask' and `rand_ask_r'. This ratio is
-%% chosen as the majority of the gain in choosing two random choices can be
-%% captured by giving 20% of requests a choice. See section 4.5 of the reference
-%% for more information.
-%%
-%% It is not possible to locally look up the pid of a process with name
-%% `{atom(), node()}' if the node is not the local node. Therefore a registered
-%% name on another node is not supported for use with this module.
-%%
-%% If a chosen process is not local the call may exit with `{badnode, node()}'.
-%%
-%% If a chosen process is not registered with the `sbetter_server' the call
-%% may exit with `{nobetter, pid()}'. The `sbetter_meter' will register with the
-%% server. However other methods can be used to register and update the
-%% `sbetter_server'. Registering with the `sbetter_server' must be done with
-%% `sbetter_server:register/3' and not using
-%% `start_link({via, sbetter, ...}, ...)'.
-%%
-%% @reference Michael Miztenmacher, The Power of Two Choices in Randomized
-%% Load Balancing, 1996.
-%% @see sbetter_meter
-%% @see sbetter_server
 -module(sbetter).
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+
+?MODULEDOC("""
+This modules provides utility functions for load balancing using the
+best of two random choices. It is designed for use with `sbroker` and
+`sregulator` processes using the `sbetter_meter` meter. However any OTP
+process can use this module to do load balancing using the `via` naming
+format if the process is registered with and updates the `sbetter_server`.
+
+To use `sbetter` with `via` use names of the form
+`{via, sbetter, {{Broker, ...}, ask | ask_r}}`. Where `{Broker, ...}` is
+a tuple containing
+`pid() | atom() | {global, term()} | {via, module(), term()} | {atom(), node()}`.
+The process with the small value/shortest sojourn time of two random
+processes for the `ask` (or `ask_r`) queue will be called. The sojourn time
+includes the message queue delay and the time spent waiting in the internal
+queue.
+
+Comparing values/sojourn times requires `ets` lookups. However it is not
+required to carry out the lookups for every request to get well balanced
+queues. To only compare two random choices 20% of the time and use
+`sscheduler` the remaining 80% use `scheduler_ask` and `scheduler_ask_r`, or
+to only compare two random choices 20% of the time and choose a random
+process the reamining 80% use `rand_ask` and `rand_ask_r`. This ratio is
+chosen as the majority of the gain in choosing two random choices can be
+captured by giving 20% of requests a choice. See section 4.5 of the reference
+for more information.
+
+It is not possible to locally look up the pid of a process with name
+`{atom(), node()}` if the node is not the local node. Therefore a registered
+name on another node is not supported for use with this module.
+
+If a chosen process is not local the call may exit with `{badnode, node()}`.
+
+If a chosen process is not registered with the `sbetter_server` the call
+may exit with `{nobetter, pid()}`. The `sbetter_meter` will register with the
+server. However other methods can be used to register and update the
+`sbetter_server`. Registering with the `sbetter_server` must be done with
+`sbetter_server:register/3` and not using
+`start_link({via, sbetter, ...}, ...)`.
+
+@reference Michael Miztenmacher, The Power of Two Choices in Randomized
+Load Balancing, 1996.
+See `m:sbetter_meter` and `m:sbetter_server`.
+""").
 
 %% public API
 
@@ -73,9 +63,11 @@
 
 -export_type([method/0]).
 
-%% @doc Lookup a pid from a tuple of pids using the best of two random choices
-%% for the queue (or possibly using the current scheduler id). If no process is
-%% associated with the chosen process returns `undefined'.
+?DOC("""
+Lookup a pid from a tuple of pids using the best of two random choices
+for the queue (or possibly using the current scheduler id). If no process is
+associated with the chosen process returns `undefined`.
+""").
 -spec whereis_name({Processes, Method}) ->
     Process | undefined
 when
@@ -139,9 +131,11 @@ whereis_name({Processes, Key}) when is_tuple(Processes) ->
             exit(Error)
     end.
 
-%% @doc Sends a message to a process from a tuple of processes using the best of
-%% two random choices for the queue (or possibly using the current scheduler
-%% id). Returns `ok' if a process could be chosen otherwise exits.
+?DOC("""
+Sends a message to a process from a tuple of processes using the best of
+two random choices for the queue (or possibly using the current scheduler
+id). Returns `ok` if a process could be chosen otherwise exits.
+""").
 -spec send({Processes, Method}, Msg) ->
     ok
 when

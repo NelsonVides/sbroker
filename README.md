@@ -159,8 +159,4 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-Roadmap
--------
 
-* 1.1 - Add circuit breaker sregulator valves
-* 1.2+ - Add improved queue management algorithms when possible, if at all

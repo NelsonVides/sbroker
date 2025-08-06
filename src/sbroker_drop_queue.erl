@@ -1,39 +1,29 @@
-%%-------------------------------------------------------------------
-%%
-%% Copyright (c) 2015, James Fish <james@fishcakez.com>
-%%
-%% This file is provided to you under the Apache License,
-%% Version 2.0 (the "License"); you may not use this file
-%% except in compliance with the License. You may obtain
-%% a copy of the License at
-%%
-%% http://www.apache.org/licenses/LICENSE-2.0
-%%
-%% Unless required by applicable law or agreed to in writing,
-%% software distributed under the License is distributed on an
-%% "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-%% KIND, either express or implied. See the License for the
-%% specific language governing permissions and limitations
-%% under the License.
-%%
-%%-------------------------------------------------------------------
-%% @doc Implements a head or tail drop queue.
-%%
-%% `sbroker_drop_queue' can be used as a `sbroker_queue' module in a `sbroker'
-%% or `sregulator'. It will provide a FIFO or LIFO queue that drops the head or
-%% tail request from the queue when a maximum size is exceeded. Its argument,
-%% `spec()', is of the form:
-%% ```
-%% #{out  => Out :: out | out_r, % default: out
-%%   drop => Drop :: drop | drop_r, % default: drop_r
-%%   max  => Max :: non_neg_integer() | infinity} % default: infinity
-%% '''
-%% `Out' is either `out' for a FIFO queue (the default) or `out_r' for a LIFO
-%% queue. `Drop' is either `drop_r' for tail drop (the default) where the last
-%% request is droppped, or `drop' for head drop, where the first request is
-%% dropped. Dropping occurs when queue is above the maximum size `Max'
-%% (defaults to `infinity').
 -module(sbroker_drop_queue).
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+?MODULEDOC("""
+Implements a head or tail drop queue.
+
+`sbroker_drop_queue` can be used as a `sbroker_queue` module in a `sbroker`
+or `sregulator`. It will provide a FIFO or LIFO queue that drops the head or
+tail request from the queue when a maximum size is exceeded. Its argument,
+`spec()`, is of the form:
+```
+#{out  => Out :: out | out_r, % default: out
+  drop => Drop :: drop | drop_r, % default: drop_r
+  max  => Max :: non_neg_integer() | infinity} % default: infinity
+```
+`Out` is either `out` for a FIFO queue (the default) or `out_r` for a LIFO
+queue. `Drop` is either `drop_r` for tail drop (the default) where the last
+request is droppped, or `drop` for head drop, where the first request is
+dropped. Dropping occurs when queue is above the maximum size `Max`
+(defaults to `infinity`).
+""").
 
 -behaviour(sbroker_queue).
 -behaviour(sbroker_fair_queue).
@@ -70,7 +60,7 @@
 
 -type state() :: #state{}.
 
-%% @private
+?DOC(false).
 -spec init(Q, Time, Spec) -> {State, infinity} when
     Q :: sbroker_queue:internal_queue(),
     Time :: integer(),
@@ -79,7 +69,7 @@
 init(Q, Time, Arg) ->
     from_queue(Q, queue:len(Q), Time, Arg).
 
-%% @private
+?DOC(false).
 -spec handle_in(SendTime, From, Value, Time, State) -> {NState, infinity} when
     SendTime :: integer(),
     From :: {pid(), term()},
@@ -120,7 +110,7 @@ handle_in(
     NQ = queue:in({SendTime, From, Value, Ref}, Q),
     {State#state{len = Len + 1, queue = NQ}, infinity}.
 
-%% @private
+?DOC(false).
 -spec handle_out(Time, State) ->
     {SendTime, From, Value, Ref, NState, infinity} | {empty, NState}
 when
@@ -140,7 +130,7 @@ handle_out(_, #state{out = out_r, len = Len, queue = Q} = State) ->
     {{value, {SendTime, From, Value, Ref}}, NQ} = queue:out_r(Q),
     {SendTime, From, Value, Ref, State#state{len = Len - 1, queue = NQ}, infinity}.
 
-%% @private
+?DOC(false).
 -spec handle_fq_out(Time, State) ->
     {SendTime, From, Value, Ref, NState, NextTimeout}
     | {empty, NState, RemoveTime}
@@ -162,7 +152,7 @@ handle_fq_out(Time, State) ->
             {empty, NState, Time}
     end.
 
-%% @private
+?DOC(false).
 -spec handle_cancel(Tag, Time, State) -> {Cancelled, NState, infinity} when
     Tag :: term(),
     Time :: integer(),
@@ -185,14 +175,14 @@ handle_cancel(Tag, _, #state{len = Len, queue = Q} = State) ->
             {Len - NLen, State#state{len = NLen, queue = NQ}, infinity}
     end.
 
-%% @private
+?DOC(false).
 -spec handle_timeout(Time, State) -> {State, infinity} when
     Time :: integer(),
     State :: state().
 handle_timeout(_Time, State) ->
     {State, infinity}.
 
-%% @private
+?DOC(false).
 -spec handle_info(Msg, Time, State) -> {NState, infinity} when
     Msg :: term(),
     Time :: integer(),
@@ -204,7 +194,7 @@ handle_info({'DOWN', Ref, _, _, _}, _, #state{queue = Q} = State) ->
 handle_info(_, _, State) ->
     {State, infinity}.
 
-%% @private
+?DOC(false).
 -spec code_change(OldVsn, Time, State, Extra) -> {NState, infinity} when
     OldVsn :: term(),
     Time :: integer(),
@@ -214,7 +204,7 @@ handle_info(_, _, State) ->
 code_change(_, _, State, _) ->
     {State, infinity}.
 
-%% @private
+?DOC(false).
 -spec config_change(Spec, Time, State) -> {NState, infinity} when
     Spec :: spec(),
     Time :: integer(),
@@ -223,14 +213,14 @@ code_change(_, _, State, _) ->
 config_change(Spec, Time, #state{len = Len, queue = Q}) ->
     from_queue(Q, Len, Time, Spec).
 
-%% @private
+?DOC(false).
 -spec len(State) -> Len when
     State :: state(),
     Len :: non_neg_integer().
 len(#state{len = Len}) ->
     Len.
 
-%% @private
+?DOC(false).
 -spec send_time(State) -> SendTime | empty when
     State :: state(),
     SendTime :: integer().
@@ -240,7 +230,7 @@ send_time(#state{queue = Q}) ->
     {SendTime, _, _, _} = queue:get(Q),
     SendTime.
 
-%% @private
+?DOC(false).
 -spec terminate(Reason, State) -> Q when
     Reason :: term(),
     State :: state(),

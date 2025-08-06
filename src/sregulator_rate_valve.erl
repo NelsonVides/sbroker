@@ -17,31 +17,41 @@
 %% under the License.
 %%
 %%-------------------------------------------------------------------
-%% @doc Implements a valve with a rate limit between a minimum and maximum
-%% capacity.
-%%
-%% `sregulator_rate_value' can be used as the `sregulator_valve' in a
-%% `sregulator'. It will provide a valve that limits the rate of tasks when
-%% between a minimum and maximum capacity. Its argument, `spec()', is of the
-%% form:
-%% ```
-%% #{limit    => Limit :: non_neg_integer(), % default: 100
-%%   interval => Interval :: pos_integer(), % default: 1000
-%%   min      => Min :: non_neg_integer(), % default: 0
-%%   max      => Max :: non_neg_integer() | infinity}. % default: infinity
-%% '''
-%% `Limit' is the number of new tasks (defaults to `100') that can run when the
-%% number of concurrent tasks is at or above the minimum capacity, `Min'
-%% (defaults to `0'), and below the maximum capacity, `Max' (defaults to
-%% `infinity'). The limit is temporarily reduced by `1' for `Interval'
-%% milliseconds (defaults to `1000') after a task is done and the capacity is
-%% above `Min'. Also the limit is restricted to `0' for `Interval' milliseconds
-%% after the valve is started. This ensures that no more than `Limit' tasks can
-%% run above the minimum capacity for any time interval of `Interval'
-%% milliseconds, even if the `sregulator' is restarted.
-%%
-%% This valve ignores any updates.
 -module(sregulator_rate_valve).
+
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+?MODULEDOC("""
+Implements a valve with a rate limit between a minimum and maximum
+capacity.
+
+`sregulator_rate_value` can be used as the `sregulator_valve` in a
+`sregulator`. It will provide a valve that limits the rate of tasks when
+between a minimum and maximum capacity. Its argument, `spec()`, is of the
+form:
+```
+#{limit    => Limit :: non_neg_integer(), % default: 100
+  interval => Interval :: pos_integer(), % default: 1000
+  min      => Min :: non_neg_integer(), % default: 0
+  max      => Max :: non_neg_integer() | infinity}. % default: infinity
+```
+`Limit` is the number of new tasks (defaults to `100`) that can run when the
+number of concurrent tasks is at or above the minimum capacity, `Min`
+(defaults to `0`), and below the maximum capacity, `Max` (defaults to
+`infinity`). The limit is temporarily reduced by `1` for `Interval`
+milliseconds (defaults to `1000`) after a task is done and the capacity is
+above `Min`. Also the limit is restricted to `0` for `Interval` milliseconds
+after the valve is started. This ensures that no more than `Limit` tasks can
+run above the minimum capacity for any time interval of `Interval`
+milliseconds, even if the `sregulator` is restarted.
+
+This valve ignores any updates.
+""").
 
 -behaviour(sregulator_valve).
 
@@ -87,7 +97,7 @@
 
 %% sregulator_valve api
 
-%% @private
+?DOC(false).
 -spec init(Map, Time, Spec) ->
     {open, State, infinity}
     | {closed, State, NextTimeout}
@@ -115,7 +125,7 @@ init(Map, Time, Spec) ->
     },
     handle(Time, State).
 
-%% @private
+?DOC(false).
 -spec handle_ask(Pid, Ref, Time, State) ->
     {go, Open, open, NState, infinity}
     | {go, Open, closed, NState, NextTimeout}
@@ -152,7 +162,7 @@ handle_ask(
             {go, Next, Status, NState, NextTimeout}
     end.
 
-%% @private
+?DOC(false).
 -spec handle_done(Ref, Time, State) ->
     {done | error, open, NState, infinity}
     | {done | error, closed, NState, NextTimeout}
@@ -165,7 +175,7 @@ when
 handle_done(Ref, Time, #state{map = Map} = State) ->
     done(Ref, Map, map_size(Map), Time, State).
 
-%% @private
+?DOC(false).
 -spec handle_continue(Ref, Time, State) ->
     {go, Open, open, NState, infinity}
     | {go, Open, closed, NState, NextTimeout}
@@ -204,7 +214,7 @@ handle_continue(
             continue(Ref, Map, Size, Small, Time, State, NState)
     end.
 
-%% @private
+?DOC(false).
 -spec handle_update(Value, Time, State) ->
     {open, NState, infinity}
     | {closed, NState, NextTimeout}
@@ -217,7 +227,7 @@ when
 handle_update(_, Time, State) ->
     handle(Time, State).
 
-%% @private
+?DOC(false).
 -spec handle_info(Msg, Time, State) ->
     {open, NState, infinity}
     | {closed, NState, NextTimeout}
@@ -243,7 +253,7 @@ handle_info({'DOWN', Ref, _, _, _}, Time, #state{map = Map, min = Min} = State) 
 handle_info(_, Time, State) ->
     handle(Time, State).
 
-%% @private
+?DOC(false).
 -spec handle_timeout(Time, State) ->
     {open, NState, infinity}
     | {closed, NState, NextTimeout}
@@ -255,7 +265,7 @@ when
 handle_timeout(Time, State) ->
     handle(Time, State).
 
-%% @private
+?DOC(false).
 -spec code_change(OldVsn, Time, State, Extra) ->
     {open, NState, infinity}
     | {closed, NState, NextTimeout}
@@ -269,7 +279,7 @@ when
 code_change(_, Time, State, _) ->
     handle(Time, State).
 
-%% @private
+?DOC(false).
 -spec config_change(Spec, Time, State) ->
     {open, NState, infinity}
     | {closed, NState, NextTimeout}
@@ -300,14 +310,14 @@ config_change(
     },
     handle(Time, NState).
 
-%% @private
+?DOC(false).
 -spec size(State) -> Size when
     State :: state(),
     Size :: non_neg_integer().
 size(#state{map = Map}) ->
     map_size(Map).
 
-%% @private
+?DOC(false).
 -spec open_time(State) -> Open | closed when
     State :: state(),
     Open :: integer().
@@ -322,7 +332,7 @@ open_time(#state{map = Map, max = Max, open_next = Next}) when
 open_time(#state{}) ->
     closed.
 
-%% @private
+?DOC(false).
 -spec terminate(Reason, State) -> Map when
     Reason :: term(),
     State :: state(),

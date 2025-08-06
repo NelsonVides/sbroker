@@ -17,8 +17,15 @@
 %% under the License.
 %%
 %%-------------------------------------------------------------------
-%% @private
 -module(sbroker_util).
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+?MODULEDOC(false).
 
 -export([out/1]).
 -export([drop/1]).
@@ -74,9 +81,9 @@ sojourn_target(#{target := _} = Spec) ->
 sojourn_target(#{}) ->
     native(100).
 
--spec sojourn_target(Queue, #{Queue => #{target => Target}}) -> NTarget when
-    Target :: non_neg_integer(),
-    NTarget :: non_neg_integer().
+% -spec sojourn_target(Queue, #{Queue => #{target => Target}}) -> NTarget when
+%     Target :: non_neg_integer(),
+%     NTarget :: non_neg_integer().
 sojourn_target(Queue, Spec) ->
     case Spec of
         #{Queue := #{target := Target}} when is_integer(Target), Target >= 0 ->
@@ -111,9 +118,9 @@ interval(#{interval := _} = Spec) ->
 interval(#{}) ->
     native(1000).
 
--spec interval(Queue, #{Queue => #{interval => Interval}}) -> NInterval when
-    Interval :: pos_integer(),
-    NInterval :: pos_integer().
+% -spec interval(Queue, #{Queue => #{interval => Interval}}) -> NInterval when
+%     Interval :: pos_integer(),
+%     NInterval :: pos_integer().
 interval(Queue, Spec) ->
     case Spec of
         #{Queue := #{interval := Interval}} when
@@ -174,9 +181,9 @@ max(#{max := _} = Spec) ->
 max(#{}) ->
     infinity.
 
--spec upper(Queue, #{Queue => #{upper => Upper}}) -> NUpper when
-    Upper :: non_neg_integer(),
-    NUpper :: non_neg_integer().
+% -spec upper(Queue, #{Queue => #{upper => Upper}}) -> NUpper when
+%     Upper :: non_neg_integer(),
+%     NUpper :: non_neg_integer().
 upper(Queue, Spec) ->
     case Spec of
         #{Queue := #{upper := Upper}} when is_integer(Upper), Upper >= 0 ->

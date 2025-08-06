@@ -17,39 +17,49 @@
 %% under the License.
 %%
 %%-------------------------------------------------------------------
-%% @doc Implements a valve which increases its size when an update is below
-%% a target.
-%%
-%% `sregulator_relative_value' can be used as the `sregulator_valve' in a
-%% `sregulator'. It will provide a valve that increases in size when an update
-%% is below a target valve between the minimum and maximum capacity. Its
-%% argument, `spec()', is of the form:
-%% ```
-%% #{target   => Target :: integer(), % default: 100
-%%   min      => Min :: non_neg_integer(), % default: 0
-%%   max      => Max :: non_neg_integer() | infinity} % default: infinity
-%% '''
-%% `Target' is the target relative value in milliseconds (defaults to `100').
-%% The valve will open when an update below the target (in `native' time units)
-%% is received if between the the minimum, `Min' (defaults to `0'), and the
-%% maximum, `Max' (defaults to `infinity'). Once opened by an update the valve
-%% remains open until the concurrency level increases by 1 or an update greater
-%% than the target is received. The valve is always open when below the minimum
-%% and always closed once it reaches the maximum.
-%%
-%% This valve tries to enforce a minimum level of concurrency and will grow
-%% while a relevant `sbroker_queue' is moving quickly - up to a maximum.
-%% Therefore this valve expects the updates to be from a
-%% `sregulator_update_meter'.
-%%
-%% By using a positive target `RelativeTime' of an `sbroker' queue, a pool of
-%% workers can grow before the queue is empty. Therefore preventing or delaying
-%% the situation where the counter party client processes have to wait for a
-%% worker.
-%%
-%% By using a negative target `RelativeTime' of an `sbroker' queue, a pool of
-%% expensive resources can delay growth until required.
 -module(sregulator_relative_valve).
+
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+?MODULEDOC("""
+Implements a valve which increases its size when an update is below
+a target.
+
+`sregulator_relative_value` can be used as the `sregulator_valve` in a
+`sregulator`. It will provide a valve that increases in size when an update
+is below a target valve between the minimum and maximum capacity. Its
+argument, `spec()`, is of the form:
+```
+#{target   => Target :: integer(), % default: 100
+  min      => Min :: non_neg_integer(), % default: 0
+  max      => Max :: non_neg_integer() | infinity} % default: infinity
+```
+`Target` is the target relative value in milliseconds (defaults to `100`).
+The valve will open when an update below the target (in `native` time units)
+is received if between the the minimum, `Min` (defaults to `0`), and the
+maximum, `Max` (defaults to `infinity`). Once opened by an update the valve
+remains open until the concurrency level increases by 1 or an update greater
+than the target is received. The valve is always open when below the minimum
+and always closed once it reaches the maximum.
+
+This valve tries to enforce a minimum level of concurrency and will grow
+while a relevant `sbroker_queue` is moving quickly - up to a maximum.
+Therefore this valve expects the updates to be from a
+`sregulator_update_meter`.
+
+By using a positive target `RelativeTime` of an `sbroker` queue, a pool of
+workers can grow before the queue is empty. Therefore preventing or delaying
+the situation where the counter party client processes have to wait for a
+worker.
+
+By using a negative target `RelativeTime` of an `sbroker` queue, a pool of
+expensive resources can delay growth until required.
+""").
 
 -behaviour(sregulator_valve).
 
@@ -93,7 +103,7 @@
 
 %% sregulator_valve api
 
-%% @private
+?DOC(false).
 -spec init(Map, Time, Spec) -> {open | closed, State, infinity} when
     Map :: sregulator_valve:internal_map(),
     Time :: integer(),
@@ -111,7 +121,7 @@ init(Map, Time, Spec) ->
         map = Map
     }).
 
-%% @private
+?DOC(false).
 -spec handle_ask(Pid, Ref, Time, State) ->
     {go, OpenTime, open | closed, NState, infinity}
 when
@@ -148,7 +158,7 @@ handle_ask(
             {go, Updated, closed, State#state{map = NMap, last = ask}, infinity}
     end.
 
-%% @private
+?DOC(false).
 -spec handle_done(Ref, Time, State) ->
     {done | error, open | closed, NState, infinity}
 when
@@ -160,7 +170,7 @@ handle_done(Ref, Time, #state{map = Map} = State) ->
     Before = map_size(Map),
     done(Ref, Map, Before, Time, State).
 
-%% @private
+?DOC(false).
 -spec handle_continue(Ref, Time, State) ->
     {go, Open, open | closed, NState, infinity}
     | {done | error, open | closed, NState, infinity}
@@ -198,7 +208,7 @@ handle_continue(
             done(Ref, Map, Size, Time, State)
     end.
 
-%% @private
+?DOC(false).
 -spec handle_update(Value, Time, State) ->
     {open | closed, NState, infinity}
 when
@@ -221,7 +231,7 @@ handle_update(RelativeTime, Time, #state{min = Min, map = Map} = State) when
 handle_update(RelativeTime, Time, State) ->
     {closed, State#state{last = RelativeTime, updated = Time}, infinity}.
 
-%% @private
+?DOC(false).
 -spec handle_info(Msg, Time, State) -> {open | closed, NState, infinity} when
     Msg :: term(),
     Time :: integer(),
@@ -239,7 +249,7 @@ handle_info({'DOWN', Ref, _, _, _}, Time, #state{map = Map, min = Min} = State) 
 handle_info(_, _, State) ->
     handle(State).
 
-%% @private
+?DOC(false).
 -spec handle_timeout(Time, State) -> {open | closed, NState, infinity} when
     Time :: integer(),
     State :: state(),
@@ -247,7 +257,7 @@ handle_info(_, _, State) ->
 handle_timeout(_, State) ->
     handle(State).
 
-%% @private
+?DOC(false).
 -spec code_change(OldVsn, Time, State, Extra) -> {Status, NState, infinity} when
     OldVsn :: term(),
     Time :: integer(),
@@ -258,7 +268,7 @@ handle_timeout(_, State) ->
 code_change(_, _, State, _) ->
     handle(State).
 
-%% @private
+?DOC(false).
 -spec config_change(Spec, Time, State) -> {open | closed, NState, infinity} when
     Spec :: spec(),
     Time :: integer(),
@@ -269,14 +279,14 @@ config_change(Spec, _, State) ->
     Target = sbroker_util:relative_target(Spec),
     handle(State#state{min = Min, max = Max, target = Target}).
 
-%% @private
+?DOC(false).
 -spec size(State) -> Size when
     State :: state(),
     Size :: non_neg_integer().
 size(#state{map = Map}) ->
     map_size(Map).
 
-%% @private
+?DOC(false).
 -spec open_time(State) -> Open | closed when
     State :: state(),
     Open :: integer().
@@ -291,7 +301,7 @@ open_time(#state{map = Map, max = Max, target = Target, last = Last, updated = U
 open_time(#state{}) ->
     closed.
 
-%% @private
+?DOC(false).
 -spec terminate(Reason, State) -> Map when
     Reason :: term(),
     State :: state(),

@@ -17,18 +17,28 @@
 %% under the License.
 %%
 %%-------------------------------------------------------------------
-%% @doc Implements a simple valve with maximum capacity.
-%%
-%% `sregulator_open_value' can be used as the `sregulator_valve' in a
-%% `sregulator'. It will provide a value that is always open up to a maximum
-%% capacity. Its argument, `spec()' is of the form:
-%% ```
-%% #{max => Max :: non_neg_integer() | infinity} % default: infinity
-%% '''
-%% `Max' is the maximum number of concurrent tasks the valve will allow to run
-%% (defaults to `infinity'). The valve remains open up to the maximum and then
-%% closes. It ignores any updates.
 -module(sregulator_open_valve).
+
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+?MODULEDOC("""
+Implements a simple valve with maximum capacity.
+
+`sregulator_open_value` can be used as the `sregulator_valve` in a
+`sregulator`. It will provide a value that is always open up to a maximum
+capacity. Its argument, `spec()` is of the form:
+```
+#{max => Max :: non_neg_integer() | infinity} % default: infinity
+```
+`Max` is the maximum number of concurrent tasks the valve will allow to run
+(defaults to `infinity`). The valve remains open up to the maximum and then
+closes. It ignores any updates.
+""").
 
 -behaviour(sregulator_valve).
 
@@ -63,7 +73,7 @@
 
 %% sregulator_valve api
 
-%% @private
+?DOC(false).
 -spec init(Map, Time, Spec) -> {open | closed, State, infinity} when
     Map :: sregulator_valve:internal_map(),
     Time :: integer(),
@@ -73,7 +83,7 @@ init(Map, Time, Spec) ->
     Max = sbroker_util:max(Spec),
     handle(#state{max = Max, small_time = Time, map = Map}).
 
-%% @private
+?DOC(false).
 -spec handle_ask(Pid, Ref, Time, State) ->
     {go, Open, open | closed, NState, infinity}
 when
@@ -95,7 +105,7 @@ handle_ask(Pid, Ref, _, #state{max = Max, small_time = Small, map = Map} = State
             {go, Small, open, NState, infinity}
     end.
 
-%% @private
+?DOC(false).
 -spec handle_done(Ref, Time, State) ->
     {done | error, open | closed, NState, infinity}
 when
@@ -124,7 +134,7 @@ handle_done(Ref, Time, #state{max = Max, map = Map} = State) ->
             {error, closed, NState, infinity}
     end.
 
-%% @private
+?DOC(false).
 -spec handle_continue(Ref, Time, State) ->
     {go, Open, open | closed, NState, infinity}
     | {done | error, open | closed, NState, infinity}
@@ -163,7 +173,7 @@ handle_continue(Ref, _, #state{map = Map} = State) ->
             {done, closed, NState, infinity}
     end.
 
-%% @private
+?DOC(false).
 -spec handle_update(Value, Time, State) ->
     {open | closed, NState, infinity}
 when
@@ -174,7 +184,7 @@ when
 handle_update(_, _, State) ->
     handle(State).
 
-%% @private
+?DOC(false).
 -spec handle_info(Msg, Time, State) -> {open | closed, NState, infinity} when
     Msg :: term(),
     Time :: integer(),
@@ -192,7 +202,7 @@ handle_info({'DOWN', Ref, _, _, _}, Time, #state{map = Map, max = Max} = State) 
 handle_info(_, _, State) ->
     handle(State).
 
-%% @private
+?DOC(false).
 -spec handle_timeout(Time, State) -> {open | closed, NState, infinity} when
     Time :: integer(),
     State :: state(),
@@ -200,7 +210,7 @@ handle_info(_, _, State) ->
 handle_timeout(_, State) ->
     handle(State).
 
-%% @private
+?DOC(false).
 -spec code_change(OldVsn, Time, State, Extra) -> {Status, NState, infinity} when
     OldVsn :: term(),
     Time :: integer(),
@@ -211,7 +221,7 @@ handle_timeout(_, State) ->
 code_change(_, _, State, _) ->
     handle(State).
 
-%% @private
+?DOC(false).
 -spec config_change(Spec, Time, State) -> {open | closed, NState, infinity} when
     Spec :: spec(),
     Time :: integer(),
@@ -221,14 +231,14 @@ config_change(Spec, _, State) ->
     Max = sbroker_util:max(Spec),
     handle(State#state{max = Max}).
 
-%% @private
+?DOC(false).
 -spec size(State) -> Size when
     State :: state(),
     Size :: non_neg_integer().
 size(#state{map = Map}) ->
     map_size(Map).
 
-%% @private
+?DOC(false).
 -spec open_time(State) -> Open | closed when
     State :: state(),
     Open :: integer().
@@ -239,7 +249,7 @@ open_time(#state{map = Map, max = Max, small_time = Small}) when
 open_time(#state{}) ->
     closed.
 
-%% @private
+?DOC(false).
 -spec terminate(Reason, State) -> Map when
     Reason :: term(),
     State :: state(),

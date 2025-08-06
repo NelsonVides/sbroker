@@ -17,73 +17,82 @@
 %% under the License.
 %%
 %%-------------------------------------------------------------------
-%% @doc
-%% This module provides a job regulator for controlling the level of concurrency
-%% of processes carrying out a task. A process requests permission to run and is
-%% queued until it is allowed to begin. Once the task is complete the process
-%% informs the regulator that is is done. Alternatively the process can ask if
-%% it can continue running and gains priority over any queued processes. The
-%% queue is managed using an `sbroker_queue' callback module, and the level
-%% of concurrency by an `sregulator_valve' callback module. The message queue
-%% delay and processing delay are monitorred by an `sbroker_meter'.
-%%
-%% The main function to ask to begin is `ask/1', which blocks until the request
-%% is accepted or the queue drops the request. `done/3' is then called after the
-%% task has finished or `continue/2' to continue.
-%%
-%% A regulator requires a callback module to be configured, in a similar way to
-%% a supervisor's children are specified. The callback modules implements one
-%% callback, `init/1', with single argument `Args'. `init/1' should return
-%% `{ok, {QueueSpec, ValveSpec, [MeterSpec]}}' or `ignore'. `QueueSpec' is the
-%% `sbroker_queue' specification, `ValveSpec' is the `sregulator_valve'
-%% specification and `MeterSpec' is a `sbroker_meter' specification. There can
-%% be any number of meters but a meter module can only be included once. All
-%% three take the same format: `{Module, Args}', where `Module' is the callback
-%% module and `Args' the arguments term for the module. In the case of `ignore'
-%% the regulator is not started and `start_link' returns `ignore'. As the
-%% callback modules are defined in the `init/1' callback a regulator supports
-%% the `dynamic' modules supervisor child specification.
-%%
-%%
-%% For example:
-%%
-%% ```
-%% -module(sregulator_example).
-%%
-%% -behaviour(sregulator).
-%%
-%% -export([start_link/0]).
-%% -export([ask/0]).
-%% -export([continue/1]).
-%% -export([done/1]).
-%% -export([init/1]).
-%%
-%% start_link() ->
-%%     sregulator:start_link({local, ?MODULE}, ?MODULE, [], []).
-%%
-%% ask() ->
-%%     case sregulator:ask(?MODULE) of
-%%         {go, Ref, _, _, _} -> {ok, Ref};
-%%         {drop, _}          -> {error, dropped}
-%%     end.
-%%
-%% continue(Ref) ->
-%%     case sregulator:continue(?MODULE, Ref) of
-%%        {go, Ref, _, _, _} -> {ok, Ref};
-%%        {done, _}          -> {error, dropped};
-%%        {not_found, _}     -> {error, not_found}
-%%     end.
-%%
-%% done(Ref) ->
-%%     sregulator:done(?MODULE, Ref).
-%%
-%% init([]) ->
-%%     QueueSpec = {sbroker_codel_queue, #{}},
-%%     ValveSpec = {sregulator_open_valve, #{}},
-%%     MeterSpec = {sbroker_overload_meter, #{alarm => {overload, ?MODULE}}},
-%%     {ok, {QueueSpec, ValveSpec, [MeterSpec]}}.
-%% '''
 -module(sregulator).
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+
+?MODULEDOC("""
+This module provides a job regulator for controlling the level of concurrency
+of processes carrying out a task. A process requests permission to run and is
+queued until it is allowed to begin. Once the task is complete the process
+informs the regulator that is is done. Alternatively the process can ask if
+it can continue running and gains priority over any queued processes. The
+queue is managed using an `sbroker_queue` callback module, and the level
+of concurrency by an `sregulator_valve` callback module. The message queue
+delay and processing delay are monitorred by an `sbroker_meter`.
+
+The main function to ask to begin is `ask/1`, which blocks until the request
+is accepted or the queue drops the request. `done/3` is then called after the
+task has finished or `continue/2` to continue.
+
+A regulator requires a callback module to be configured, in a similar way to
+a supervisor`s children are specified. The callback modules implements one
+callback, `init/1`, with single argument `Args`. `init/1` should return
+`{ok, {QueueSpec, ValveSpec, [MeterSpec]}}` or `ignore`. `QueueSpec` is the
+`sbroker_queue` specification, `ValveSpec` is the `sregulator_valve`
+specification and `MeterSpec` is a `sbroker_meter` specification. There can
+be any number of meters but a meter module can only be included once. All
+three take the same format: `{Module, Args}`, where `Module` is the callback
+module and `Args` the arguments term for the module. In the case of `ignore`
+the regulator is not started and `start_link` returns `ignore`. As the
+callback modules are defined in the `init/1` callback a regulator supports
+the `dynamic` modules supervisor child specification.
+
+
+For example:
+
+```
+-module(sregulator_example).
+
+-behaviour(sregulator).
+
+-export([start_link/0]).
+-export([ask/0]).
+-export([continue/1]).
+-export([done/1]).
+-export([init/1]).
+
+start_link() ->
+    sregulator:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+ask() ->
+    case sregulator:ask(?MODULE) of
+        {go, Ref, _, _, _} -> {ok, Ref};
+        {drop, _}          -> {error, dropped}
+    end.
+
+continue(Ref) ->
+    case sregulator:continue(?MODULE, Ref) of
+       {go, Ref, _, _, _} -> {ok, Ref};
+       {done, _}          -> {error, dropped};
+       {not_found, _}     -> {error, not_found}
+    end.
+
+done(Ref) ->
+    sregulator:done(?MODULE, Ref).
+
+init([]) ->
+    QueueSpec = {sbroker_codel_queue, #{}},
+    ValveSpec = {sregulator_open_valve, #{}},
+    MeterSpec = {sbroker_overload_meter, #{alarm => {overload, ?MODULE}}},
+    {ok, {QueueSpec, ValveSpec, [MeterSpec]}}.
+```
+""").
 
 %% public api
 
@@ -185,32 +194,34 @@
 
 %% public api
 
-%% @doc Send a run request to the regulator, `Regulator'.
-%%
-%% Returns `{go, Ref, RegulatorPid, RelativeTIme, SojournTime}' on successfully
-%% being allowed to run or `{drop, SojournTime}'.
-%%
-%% `Ref' is the lock reference, which is a `reference()'. `RegulatorPid' is the
-%% `pid()' of the regulator process. `RelativeTime' is the time difference
-%% between when the request was sent and the message that opened the regulator's
-%% valve was sent. `SojournTime' is the approximate time spent in both the
-%% regulator's message queue and internal queue.
-%%
-%% `RelativeTime' represents the `SojournTime' without the overhead of the
-%% regulator. The value measures the queue congestion without being effected by
-%% the load of the regulator or node.
-%%
-%% If `RelativeTime' is positive, the request was enqueued in the internal queue
-%% awaiting a message to open the value that was sent approximately
-%% `RelativeTime' ater this request was sent. Therefore `SojournTime' minus
-%% `RelativeTime' is the latency, or overhead, of the regulator.
-%%
-%% If `RelativeTime' is negative, the regulator's valve was opened by a message
-%% sent `abs(RelativeTime)' before this request. Therefore `SojournTime' is the
-%% latency, or overhead, of the regulator.
-%%
-%% If `RelativeTime' is `0', the request was sent at approximately the same as
-%% the message that open the regulator's valve.
+?DOC("""
+Send a run request to the regulator, `Regulator`.
+
+Returns `{go, Ref, RegulatorPid, RelativeTIme, SojournTime}` on successfully
+being allowed to run or `{drop, SojournTime}`.
+
+`Ref` is the lock reference, which is a `reference()`. `RegulatorPid` is the
+`pid()` of the regulator process. `RelativeTime` is the time difference
+between when the request was sent and the message that opened the regulator`s
+valve was sent. `SojournTime` is the approximate time spent in both the
+regulator`s message queue and internal queue.
+
+`RelativeTime` represents the `SojournTime` without the overhead of the
+regulator. The value measures the queue congestion without being effected by
+the load of the regulator or node.
+
+If `RelativeTime` is positive, the request was enqueued in the internal queue
+awaiting a message to open the value that was sent approximately
+`RelativeTime` ater this request was sent. Therefore `SojournTime` minus
+`RelativeTime` is the latency, or overhead, of the regulator.
+
+If `RelativeTime` is negative, the regulator`s valve was opened by a message
+sent `abs(RelativeTime)` before this request. Therefore `SojournTime` is the
+latency, or overhead, of the regulator.
+
+If `RelativeTime` is `0`, the request was sent at approximately the same as
+the message that open the regulator`s valve.
+""").
 -spec ask(Regulator) -> Go | Drop when
     Regulator :: regulator(),
     Go :: {go, Ref, Pid, RelativeTime, SojournTime},
@@ -222,22 +233,24 @@
 ask(Regulator) ->
     sbroker_gen:call(Regulator, ask, self(), infinity).
 
-%% @doc Send a run request to the regulator, `Regulator', but do not enqueue the
-%% request if not immediately allowed to run.
-%%
-%% Returns `{go, Ref, RegulatorPid, RelativeTime, SojournTime}' on successfully
-%% being allowed to run or `{drop, SojournTime}'.
-%%
-%% `Ref' is the lock reference, which is a `reference()'. `RegulatorPid' is the
-%% `pid()' of the regulator process. `RelativeTime' is the time difference
-%% between when the request was sent and the message that opened the regulator's
-%% valve was sent. `SojournTime' is the approximate time spent in the
-%% regulator's message queue.
-%%
-%% If the request is dropped when using `via' module `sprotector' returns
-%% `{drop, 0}' and does not send the request.
-%%
-%% @see ask/1
+?DOC("""
+Send a run request to the regulator, `Regulator`, but do not enqueue the
+request if not immediately allowed to run.
+
+Returns `{go, Ref, RegulatorPid, RelativeTime, SojournTime}` on successfully
+being allowed to run or `{drop, SojournTime}`.
+
+`Ref` is the lock reference, which is a `reference()`. `RegulatorPid` is the
+`pid()` of the regulator process. `RelativeTime` is the time difference
+between when the request was sent and the message that opened the regulator`s
+valve was sent. `SojournTime` is the approximate time spent in the
+regulator`s message queue.
+
+If the request is dropped when using `via` module `sprotector` returns
+`{drop, 0}` and does not send the request.
+
+See `ask/1`.
+""").
 -spec nb_ask(Regulator) -> Go | Drop when
     Regulator :: regulator(),
     Go :: {go, Ref, Pid, RelativeTime, SojournTime},
@@ -249,34 +262,35 @@ ask(Regulator) ->
 nb_ask(Regulator) ->
     sbroker_gen:call(Regulator, nb_ask, self(), infinity).
 
-%% @doc Monitor the regulator and send an asynchronous run request. Returns
-%% `{await, Tag, Process}'.
-%%
-%% `Tag' is a monitor `reference()' that uniquely identifies the reply
-%% containing the result of the request. `Process' is the `pid()' of the
-%% regulator or `{atom(), node()}' if the regulator is registered locally on a
-%% different node.
-%%
-%% The reply is of the form `{Tag, Msg}' where `Msg' is either
-%% `{go, Ref, RegulatorPid, RelativeTime, SojournTime}' or
-%% `{drop, SojournTime}'.
-%%
-%% `Ref' is the lock reference, which is a `reference()'. `RegulatorPid' is the
-%% `pid()' of the regulator process. `RelativeTime' is the time difference
-%% between when the request was sent and the message that opened the regulator's
-%% valve was sent. `SojournTime' is the approximate time spent in both the
-%% regulator's message queue and internal queue.
-%%
-%% Multiple asynchronous requests can be made from a single process to a
-%% regulator and no guarantee is made of the order of replies. A process making
-%% multiple requests can reuse the monitor reference for subsequent requests to
-%% the same regulator process (`Process') using `async_ask/2'.
-%%
-%% If the request is dropped when using `via' module `sprotector' returns
-%% `{drop, 0}' and does not send the request.
-%%
-%% @see cancel/2
-%% @see async_ask/2
+?DOC("""
+Monitor the regulator and send an asynchronous run request. Returns
+`{await, Tag, Process}`.
+
+`Tag` is a monitor `reference()` that uniquely identifies the reply
+containing the result of the request. `Process` is the `pid()` of the
+regulator or `{atom(), node()}` if the regulator is registered locally on a
+different node.
+
+The reply is of the form `{Tag, Msg}` where `Msg` is either
+`{go, Ref, RegulatorPid, RelativeTime, SojournTime}` or
+`{drop, SojournTime}`.
+
+`Ref` is the lock reference, which is a `reference()`. `RegulatorPid` is the
+`pid()` of the regulator process. `RelativeTime` is the time difference
+between when the request was sent and the message that opened the regulator`s
+valve was sent. `SojournTime` is the approximate time spent in both the
+regulator`s message queue and internal queue.
+
+Multiple asynchronous requests can be made from a single process to a
+regulator and no guarantee is made of the order of replies. A process making
+multiple requests can reuse the monitor reference for subsequent requests to
+the same regulator process (`Process`) using `async_ask/2`.
+
+If the request is dropped when using `via` module `sprotector` returns
+`{drop, 0}` and does not send the request.
+
+See `cancel/2` and `async_ask/2`.
+""").
 -spec async_ask(Regulator) -> {await, Tag, Process} | {drop, 0} when
     Regulator :: regulator(),
     Tag :: reference(),
@@ -284,18 +298,19 @@ nb_ask(Regulator) ->
 async_ask(Regulator) ->
     sbroker_gen:async_call(Regulator, ask, self()).
 
-%% @doc Send an asynchronous run request using tag, `Tag'. Returns
-%% `{await, Tag, Process}'.
-%%
-%% `To' is a tuple containing the process, `pid()', to send the reply to and
-%% `Tag', `term()', that idenitifes the reply containing the result of the
-%% request. `Process' is the `pid()' of the regulator or `{atom(), node()}' if
-%% the regulator is registered locally on a different node.
-%%
-%% Otherwise this function is equivalent to `async_ask/1'.
-%%
-%% @see async_ask/1
-%% @see cancel/2
+?DOC("""
+Send an asynchronous run request using tag, `Tag`. Returns
+`{await, Tag, Process}`.
+
+`To` is a tuple containing the process, `pid()`, to send the reply to and
+`Tag`, `term()`, that idenitifes the reply containing the result of the
+request. `Process` is the `pid()` of the regulator or `{atom(), node()}` if
+the regulator is registered locally on a different node.
+
+Otherwise this function is equivalent to `async_ask/1`.
+
+See `async_ask/1` and `cancel/2`.
+""").
 -spec async_ask(Regulator, To) -> {await, Tag, Process} | {drop, 0} when
     Regulator :: regulator(),
     To :: {Pid, Tag},
@@ -305,24 +320,25 @@ async_ask(Regulator) ->
 async_ask(Regulator, {Pid, _} = To) when is_pid(Pid) ->
     sbroker_gen:async_call(Regulator, ask, Pid, To).
 
-%% @doc Send a run request to the regulator, `Regulator'. If not immediately
-%% allowed to run the request is converted to an `async_ask/1'.
-%%
-%% Returns `{go, Ref, RegulatorPid, RelativeTime, SojournTime}' on successfully
-%% being allowed to run or `{await, Tag, RegulatorPid}'.
-%%
-%% `Ref' is the lock reference, which is a `reference()'. `RegulatorPid' is the
-%% `pid()' of the regulator process. `RelativeTime' is the time difference
-%% between when the request was sent and the message that opened the regulator's
-%% valve was sent. `SojournTime' is the approximate time spent in the
-%% regulator's message queue. `Tag' is a monitor reference, as returned by
-%% `async_ask/1'.
-%%
-%% If the request is dropped when using `via' module `sprotector' returns
-%% `{drop, 0}' and does not send the request.
-%%
-%% @see nb_ask/1
-%% @see async_ask/1
+?DOC("""
+Send a run request to the regulator, `Regulator`. If not immediately
+allowed to run the request is converted to an `async_ask/1`.
+
+Returns `{go, Ref, RegulatorPid, RelativeTime, SojournTime}` on successfully
+being allowed to run or `{await, Tag, RegulatorPid}`.
+
+`Ref` is the lock reference, which is a `reference()`. `RegulatorPid` is the
+`pid()` of the regulator process. `RelativeTime` is the time difference
+between when the request was sent and the message that opened the regulator`s
+valve was sent. `SojournTime` is the approximate time spent in the
+regulator`s message queue. `Tag` is a monitor reference, as returned by
+`async_ask/1`.
+
+If the request is dropped when using `via` module `sprotector` returns
+`{drop, 0}` and does not send the request.
+
+See `nb_ask/1` and `async_ask/1`.
+""").
 -spec dynamic_ask(Regulator) -> Go | Await | Drop when
     Regulator :: regulator(),
     Go :: {go, Ref, Pid, RelativeTime, SojournTime},
@@ -336,14 +352,15 @@ async_ask(Regulator, {Pid, _} = To) when is_pid(Pid) ->
 dynamic_ask(Regulator) ->
     sbroker_gen:dynamic_call(Regulator, dynamic_ask, self(), infinity).
 
-%% @doc Await the response to an asynchronous request idenitifed by `Tag'.
-%%
-%% Exits if a response is not received after `Timeout' milliseconds.
-%%
-%% Exits if a `DOWN' message is received with reference `Tag'.
-%%
-%% @see async_ask/1
-%% @see async_ask/2
+?DOC("""
+Await the response to an asynchronous request idenitifed by `Tag`.
+
+Exits if a response is not received after `Timeout` milliseconds.
+
+Exits if a `DOWN` message is received with reference `Tag`.
+
+See `async_ask/1` and `async_ask/2`.
+""").
 -spec await(Tag, Timeout) -> Go | Drop when
     Tag :: term(),
     Timeout :: timeout(),
@@ -365,7 +382,7 @@ await(Tag, Timeout) ->
         exit({timeout, {?MODULE, await, [Tag, Timeout]}})
     end.
 
-%% @equiv cancel(Regulator, Tag, infinity)
+?DOC(#{equiv => cancel(Regulator, Tag, infinity)}).
 -spec cancel(Regulator, Tag) -> Count | false when
     Regulator :: regulator(),
     Tag :: term(),
@@ -373,14 +390,15 @@ await(Tag, Timeout) ->
 cancel(Regulator, Tag) ->
     cancel(Regulator, Tag, infinity).
 
-%% @doc Cancel an asynchronous request.
-%%
-%% Returns the number of cancelled requests or `false' if no requests exist with
-%% tag `Tag'. In the later case a caller may wish to check is message queue for
-%% an existing reply.
-%%
-%% @see async_ask/1
-%% @see async_ask/2
+?DOC("""
+Cancel an asynchronous request.
+
+Returns the number of cancelled requests or `false` if no requests exist with
+tag `Tag`. In the later case a caller may wish to check is message queue for
+an existing reply.
+
+See `async_ask/1` and `async_ask/2`.
+""").
 -spec cancel(Regulator, Tag, Timeout) -> Count | false when
     Regulator :: regulator(),
     Tag :: term(),
@@ -389,39 +407,42 @@ cancel(Regulator, Tag) ->
 cancel(Regulator, Tag, Timeout) ->
     sbroker_gen:simple_call(Regulator, cancel, Tag, Timeout).
 
-%% @doc Cancels an asynchronous request.
-%%
-%% Returns `ok' without waiting for the regulator to cancel requests.
-%%
-%% @see cancel/3
+?DOC("""
+Cancels an asynchronous request.
+
+Returns `ok` without waiting for the regulator to cancel requests.
+
+See `cancel/3`.
+""").
 -spec dirty_cancel(Regulator, Tag) -> ok when
     Regulator :: regulator(),
     Tag :: term().
 dirty_cancel(Regulator, Tag) ->
     sbroker_gen:send(Regulator, {cancel, dirty, Tag}).
 
-%% @doc Send a request to continue running using an existing lock reference,
-%% `Ref'. The request is not queued.
-%%
-%% Returns `{go, Ref, RegulatorPid, RelativeTime, SojournTime}' on successfully
-%% being allowed to run, `{stop, SojournTime}' when the process should stop
-%% running or `{not_found, SojournTime}' when the lock reference does not exist
-%% on the regulator.
-%%
-%% `Ref' is the lock reference, which is a `reference()'. `RegulatorPid' is the
-%% `pid()' of the regulator process. `RelativeTime' is the time difference
-%% between when the request was sent and the message that opened the regulator's
-%% valve was sent. `SojournTime' is the approximate time spent in the
-%% regulator's message queue.
-%%
-%% If the request is dropped when using `via' module `sprotector' returns
-%% `{drop, 0}' and does not send the request. In this situation the `Ref' is
-%% still a valid lock on the regulator.
-%%
-%% @see ask/1
+?DOC("""
+Send a request to continue running using an existing lock reference,
+`Ref`. The request is not queued.
+
+Returns `{go, Ref, RegulatorPid, RelativeTime, SojournTime}` on successfully
+being allowed to run, `{stop, SojournTime}` when the process should stop
+running or `{not_found, SojournTime}` when the lock reference does not exist
+on the regulator.
+
+`Ref` is the lock reference, which is a `reference()`. `RegulatorPid` is the
+`pid()` of the regulator process. `RelativeTime` is the time difference
+between when the request was sent and the message that opened the regulator`s
+valve was sent. `SojournTime` is the approximate time spent in the
+regulator`s message queue.
+
+If the request is dropped when using `via` module `sprotector` returns
+`{drop, 0}` and does not send the request. In this situation the `Ref` is
+still a valid lock on the regulator.
+
+See `ask/1`.
+""").
 -spec continue(Regulator, Ref) -> Go | Stop | NotFound | Drop when
     Regulator :: regulator(),
-    Ref :: reference(),
     Go :: {go, Ref, Pid, RelativeTime, SojournTime},
     Ref :: reference(),
     Pid :: pid(),
@@ -433,7 +454,7 @@ dirty_cancel(Regulator, Tag) ->
 continue(Regulator, Ref) ->
     sbroker_gen:call(Regulator, continue, Ref, infinity).
 
-%% @equiv done(Regulator, Ref, infinity)
+?DOC(#{equiv => done(Regulator, Ref, infinity)}).
 -spec done(Regulator, Ref) -> Stop | NotFound when
     Regulator :: regulator(),
     Ref :: reference(),
@@ -443,16 +464,18 @@ continue(Regulator, Ref) ->
 done(Regulator, Ref) ->
     done(Regulator, Ref, infinity).
 
-%% @doc Inform the regulator the process has finished running and release the
-%% lock, `Ref'.
-%%
-%% Returns `{stop, SojournTime}' if the regulator acknowledged the process has
-%% stopped running or `{not_found, SojournTime}' if the lock reference, `Ref',
-%% does not exist on the regulator.
-%%
-%% `SojournTime' is the time the request spent in the regulator's message queue.
-%%
-%% @see ask/1
+?DOC("""
+Inform the regulator the process has finished running and release the
+lock, `Ref`.
+
+Returns `{stop, SojournTime}` if the regulator acknowledged the process has
+stopped running or `{not_found, SojournTime}` if the lock reference, `Ref`,
+does not exist on the regulator.
+
+`SojournTime` is the time the request spent in the regulator`s message queue.
+
+See `ask/1`.
+""").
 -spec done(Regulator, Ref, Timeout) -> Stop | NotFound when
     Regulator :: regulator(),
     Ref :: reference(),
@@ -463,31 +486,35 @@ done(Regulator, Ref) ->
 done(Regulator, Ref, Timeout) ->
     sbroker_gen:simple_call(Regulator, done, Ref, Timeout).
 
-%% @doc Asynchronously inform the regulator the process has finished running and
-%% should release the lock, `Ref'.
-%%
-%% Returns `ok' without waiting for the regulator to release the lock.
-%%
-%% @see done/3
+?DOC("""
+Asynchronously inform the regulator the process has finished running and
+should release the lock, `Ref`.
+
+Returns `ok` without waiting for the regulator to release the lock.
+
+See `done/3`.
+""").
 -spec dirty_done(Regulator, Ref) -> ok when
     Regulator :: regulator(),
     Ref :: reference().
 dirty_done(Regulator, Ref) ->
     sbroker_gen:send(Regulator, {done, dirty, Ref}).
 
-%% @equiv update(Regulator, Value, infinity)
+?DOC(#{equiv => update(Regulator, Value, infinity)}).
 -spec update(Regulator, Value) -> ok when
     Regulator :: regulator(),
     Value :: integer().
 update(Regulator, Value) ->
     update(Regulator, Value, infinity).
 
-%% @doc Synchronously update the valve in the regulator.
-%%
-%% `Value' is an `integer()' and `Timeout' is the timout, `timeout()', to wait
-%% in milliseconds for the regulator to reply to the update.
-%%
-%% Returns `ok'.
+?DOC("""
+Synchronously update the valve in the regulator.
+
+`Value` is an `integer()` and `Timeout` is the timout, `timeout()`, to wait
+in milliseconds for the regulator to reply to the update.
+
+Returns `ok`.
+""").
 -spec update(Regulator, Value, Timeout) -> ok when
     Regulator :: regulator(),
     Value :: integer(),
@@ -500,30 +527,34 @@ update(Regulator, Value, Timeout) when is_integer(Value) ->
             ok
     end.
 
-%% @doc Update the valve in the regulator without waiting for the regulator to
-%% handle the update.
-%%
-%% `Value' is an `integer()'.
-%%
-%% Returns `ok'.
+?DOC("""
+Update the valve in the regulator without waiting for the regulator to
+handle the update.
+
+`Value` is an `integer()`.
+
+Returns `ok`.
+""").
 -spec cast(Regulator, Value) -> ok when
     Regulator :: regulator(),
     Value :: integer().
 cast(Regulator, Value) when is_integer(Value) ->
     sbroker_gen:send(Regulator, {update, cast, Value}).
 
-%% @equiv change_config(Regulator, infinity)
+?DOC(#{equiv => change_config(Regulator, infinity)}).
 -spec change_config(Regulator) -> ok | {error, Reason} when
     Regulator :: regulator(),
     Reason :: term().
 change_config(Regulator) ->
     change_config(Regulator, infinity).
 
-%% @doc Change the configuration of the regulator. Returns `ok' on success and
-%% `{error, Reason}' on failure, where `Reason' is the reason for failure.
-%%
-%% The regulators calls the `init/1' callback to get the new configuration. If
-%% `init/1' returns `ignore' the config does not change.
+?DOC("""
+Change the configuration of the regulator. Returns `ok` on success and
+`{error, Reason}` on failure, where `Reason` is the reason for failure.
+
+The regulators calls the `init/1` callback to get the new configuration. If
+`init/1` returns `ignore` the config does not change.
+""").
 -spec change_config(Regulator, Timeout) -> ok | {error, Reason} when
     Regulator :: regulator(),
     Timeout :: timeout(),
@@ -531,14 +562,16 @@ change_config(Regulator) ->
 change_config(Regulator, Timeout) ->
     sbroker_gen:simple_call(Regulator, change_config, undefined, Timeout).
 
-%% @equiv len(Regulator, infinity)
+?DOC(#{equiv => len(Regulator, infinity)}).
 -spec len(Regulator) -> Length when
     Regulator :: regulator(),
     Length :: non_neg_integer().
 len(Regulator) ->
     len(Regulator, infinity).
 
-%% @doc Get the length of the internal queue in the regulator, `Regulator'.
+?DOC("""
+Get the length of the internal queue in the regulator, `Regulator`.
+""").
 -spec len(Regulator, Timeout) -> Length when
     Regulator :: regulator(),
     Timeout :: timeout(),
@@ -546,15 +579,17 @@ len(Regulator) ->
 len(Regulator, Timeout) ->
     sbroker_gen:simple_call(Regulator, len, undefined, Timeout).
 
-%% @equiv size(Regulator, infinity)
+?DOC(#{equiv => size(Regulator, infinity)}).
 -spec size(Regulator) -> Size when
     Regulator :: regulator(),
     Size :: non_neg_integer().
 size(Regulator) ->
     size(Regulator, infinity).
 
-%% @doc Get the number of processes holding a lock with the regulator,
-%% `Regulator'.
+?DOC("""
+Get the number of processes holding a lock with the regulator,
+`Regulator`.
+""").
 -spec size(Regulator, Timeout) -> Size when
     Regulator :: regulator(),
     Timeout :: timeout(),
@@ -562,15 +597,17 @@ size(Regulator) ->
 size(Regulator, Timeout) ->
     sbroker_gen:simple_call(Regulator, size, undefined, Timeout).
 
-%% @doc Starts a regulator with callback module `Module' and argument `Args',
-%% and regulator options `Opts'.
-%%
-%% `Opts' is a `proplist' and supports `debug', `timeout' and `spawn_opt' used
-%% by `gen_server' and `gen_fsm'. `read_time_after' sets the number of requests
-%% when a cached time is stale and the time is read again. Its value is
-%% `non_neg_integer()' or `infinity' and defaults to `16'.
-%%
-%% @see gen_server:start_link/3
+?DOC("""
+Starts a regulator with callback module `Module` and argument `Args`,
+and regulator options `Opts`.
+
+`Opts` is a `proplist` and supports `debug`, `timeout` and `spawn_opt` used
+by `gen_server` and `gen_fsm`. `read_time_after` sets the number of requests
+when a cached time is stale and the time is read again. Its value is
+`non_neg_integer()` or `infinity` and defaults to `16`.
+
+See `gen_server:start_link/3`.
+""").
 -spec start_link(Module, Args, Opts) -> StartReturn when
     Module :: module(),
     Args :: term(),
@@ -579,10 +616,12 @@ size(Regulator, Timeout) ->
 start_link(Mod, Args, Opts) ->
     sbroker_gen:start_link(?MODULE, Mod, Args, Opts).
 
-%% @doc Starts a regulator with name `Name', callback module `Module' and
-%% argument `Args', and regulator options `Opts'.
-%%
-%% @see start_link/3
+?DOC("""
+Starts a regulator with name `Name`, callback module `Module` and
+argument `Args`, and regulator options `Opts`.
+
+See `start_link/3`.
+""").
 -spec start_link(Name, Module, Args, Opts) -> StartReturn when
     Name :: name(),
     Module :: module(),
@@ -594,7 +633,7 @@ start_link(Name, Mod, Args, Opts) ->
 
 %% test api
 
-%% @hidden
+?DOC(false).
 -spec timeout(Regulator) -> ok when
     Regulator :: regulator().
 timeout(Regulator) ->
@@ -602,7 +641,7 @@ timeout(Regulator) ->
 
 %% gen api
 
-%% @private
+?DOC(false).
 init_it(Starter, Parent, Name, Mod, Args, Opts) ->
     DbgOpts = proplists:get_value(debug, Opts, []),
     Dbg = sys:debug_options(DbgOpts),
@@ -641,7 +680,7 @@ init_it(Starter, Parent, Name, Mod, Args, Opts) ->
 
 %% sys API
 
-%% @private
+?DOC(false).
 system_continue(Parent, Dbg, [State, NState, Time, Q, V, Config]) ->
     NConfig = Config#config{parent = Parent, dbg = Dbg},
     timeout(State, NState, Time, Q, V, NConfig);
@@ -653,7 +692,7 @@ system_continue(
     NConfig = Config#config{parent = Parent, dbg = Dbg},
     change(State, Change, Time, Q, V, NConfig).
 
-%% @private
+?DOC(false).
 system_code_change(
     [_, _, _, _, _, #config{mod = Mod} = Config] = Misc,
     Mod,
@@ -689,7 +728,7 @@ system_code_change(
 system_code_change({change, Change, Misc}, Mod, OldVsn, Extra) ->
     {ok, {change, Change, code_change(Misc, Mod, OldVsn, Extra)}}.
 
-%% @private
+?DOC(false).
 system_get_state([
     _,
     NState,
@@ -704,7 +743,7 @@ system_get_state([
 system_get_state({change, _, Misc}) ->
     system_get_state(Misc).
 
-%% @private
+?DOC(false).
 system_replace_state(
     Replace,
     [
@@ -730,14 +769,14 @@ system_replace_state(Replace, {change, Change, Misc}) ->
     {ok, States, NMisc} = system_replace_state(Replace, Misc),
     {ok, States, {change, Change, NMisc}}.
 
-%% @private
+?DOC(false).
 system_terminate(Reason, Parent, Dbg, [NState, _, Time, Q, V, Config]) ->
     NConfig = Config#config{parent = Parent, dbg = Dbg},
     terminate({stop, Reason}, NState, Time, Q, V, NConfig);
 system_terminate(Reason, Parent, Dbg, {change, _, Misc}) ->
     system_terminate(Reason, Parent, Dbg, Misc).
 
-%% @private
+?DOC(false).
 format_status(
     Opt,
     [
