@@ -27,7 +27,9 @@ name on another node is not supported for use with this module.
 -export([send/2]).
 
 ?DOC("""
-Lookup the pid or process name of one element, selected randomly, in a tuple of process names. If no process is associated with the name returns `undefined`.
+Lookup the pid or process name of one element, selected randomly, in a tuple of process names.
+
+If no process is associated with the name returns `undefined`.
 """).
 -spec whereis_name(Processes) -> Process | undefined when
     Processes :: tuple(),
@@ -57,7 +59,10 @@ whereis_name(Processes) when is_tuple(Processes) ->
     end.
 
 ?DOC("""
-Send a message to one element, selected randomly, in a tuple of process names. Returns `ok` if the element chosen is a `pid()`. a locally registered name on another node, or a process is associated with the name. Otherwise exits.
+Send a message to one element, selected randomly, in a tuple of process names.
+
+Returns `ok` if the element chosen is a `pid()`, a locally registered name on another node,
+or a process is associated with the name. Otherwise exits.
 """).
 -spec send(Processes, Msg) -> ok when
     Processes :: tuple(),

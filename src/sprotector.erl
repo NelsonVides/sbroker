@@ -60,7 +60,10 @@ See `m:sprotector_pie_meter` and `m:sprotector_server`.
     | {via, module(), term()}.
 
 ?DOC("""
-Lookup a pid and possibly drop the request depending on the min, max and drop probability of the chosen queue. If no process is associated with the process returns `undefined`.
+Lookup a pid and possibly drop the request depending on the min,
+max and drop probability of the chosen queue.
+
+If no process is associated with the process returns `undefined`.
 """).
 -spec whereis_name({Process, ask | ask_r}) -> Pid | undefined when
     Process :: process(),
@@ -78,7 +81,9 @@ whereis_name({Process, Key}) ->
     end.
 
 ?DOC("""
-Sends a message to a pid if not dropped by the min, max and drop probability of the chosen queue. Returns `ok` if the message is sent otherwise exits.
+Sends a message to a pid if not dropped by the min, max and drop probability of the chosen queue.
+
+Returns `ok` if the message is sent otherwise exits.
 """).
 -spec send({Process, ask | ask_r}, Msg) -> ok when
     Process :: process(),

@@ -775,8 +775,9 @@ system_continue(
     change(State, Change, Time, Asks, Bids, NConfig).
 
 ?DOC(false).
--spec system_code_change(Misc, Module, OldVsn, Extra) -> 
-    {ok, Misc} | {ok, {change, Change, Misc}} | term() when
+-spec system_code_change(Misc, Module, OldVsn, Extra) ->
+    {ok, Misc} | {ok, {change, Change, Misc}} | term()
+when
     Misc :: term(),
     Module :: module(),
     OldVsn :: term(),

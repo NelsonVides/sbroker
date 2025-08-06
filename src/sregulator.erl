@@ -34,7 +34,6 @@ the regulator is not started and `start_link` returns `ignore`. As the
 callback modules are defined in the `init/1` callback a regulator supports
 the `dynamic` modules supervisor child specification.
 
-
 For example:
 
 ```
@@ -684,7 +683,8 @@ system_continue(
 
 ?DOC(false).
 -spec system_code_change(Misc, Module, OldVsn, Extra) ->
-    {ok, Misc} | {ok, {change, Change, Misc}} | term() when
+    {ok, Misc} | {ok, {change, Change, Misc}} | term()
+when
     Misc :: term(),
     Module :: module(),
     OldVsn :: term(),

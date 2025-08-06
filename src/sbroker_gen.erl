@@ -211,7 +211,8 @@ start_link(Name, Behaviour, Mod, Args, Opts) ->
 
 %% gen api
 
--spec init_it(pid(), pid(), name(), module(), {module(), term(), [term()]}, [term()]) -> no_return().
+-spec init_it(pid(), pid(), name(), module(), {module(), term(), [term()]}, [term()]) ->
+    no_return().
 init_it(Starter, Parent, Name, Behaviour, {Mod, Args, TimeOpts}, GenOpts) ->
     _ = put('$initial_call', {Mod, init, 1}),
     Behaviour:init_it(Starter, Parent, Name, Mod, Args, TimeOpts ++ GenOpts).
