@@ -171,8 +171,6 @@ init([]) ->
     meters :: [{module(), term()}]
 }).
 
--dialyzer(no_return).
-
 %% public api
 
 ?DOC("""
