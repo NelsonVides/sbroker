@@ -67,15 +67,14 @@ which_children(Module) ->
         Mod == Module
     ].
 
--spec start_link() -> {ok, Pid} when
-    Pid :: pid().
+-spec start_link() -> supervisor:startlink_ret().
 start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    supervisor:start_link({local, ?MODULE}, ?MODULE, noargs).
 
 %% supervisor API
 
--spec init([]) -> {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}}.
-init([]) ->
+-spec init(noargs) -> {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}}.
+init(noargs) ->
     {ok, {{one_for_one, 3, 30}, children()}}.
 
 %% internal
