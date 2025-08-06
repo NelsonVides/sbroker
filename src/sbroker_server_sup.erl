@@ -28,12 +28,21 @@ start_link() ->
 
 -spec init(noargs) -> {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}}.
 init(noargs) ->
-    BetterServer =
-        {sbetter_server, {sbetter_server, start_link, []}, permanent, 5000, worker, [
-            sbetter_server
-        ]},
-    ProtectorServer =
-        {sprotector_server, {sprotector_server, start_link, []}, permanent, 5000, worker, [
-            sprotector_server
-        ]},
-    {ok, {{one_for_one, 3, 30}, [BetterServer, ProtectorServer]}}.
+    SupFlags = #{strategy => one_for_one, intensity => 3, period => 30},
+    BetterServer = #{
+        id => sbetter_server,
+        start => {sbetter_server, start_link, []},
+        restart => permanent,
+        shutdown => 5000,
+        type => worker,
+        modules => [sbetter_server]
+    },
+    ProtectorServer = #{
+        id => sprotector_server,
+        start => {sprotector_server, start_link, []},
+        restart => permanent,
+        shutdown => 5000,
+        type => worker,
+        modules => [sprotector_server]
+    },
+    {ok, {SupFlags, [BetterServer, ProtectorServer]}}.

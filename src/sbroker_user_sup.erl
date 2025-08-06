@@ -75,7 +75,8 @@ start_link() ->
 
 -spec init(noargs) -> {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}}.
 init(noargs) ->
-    {ok, {{one_for_one, 3, 30}, children()}}.
+    SupFlags = #{strategy => one_for_one, intensity => 3, period => 30},
+    {ok, {SupFlags, children()}}.
 
 %% internal
 
@@ -95,4 +96,11 @@ children(Module, List) ->
     [child(Module, Name) || {Name, _} <- List].
 
 child(Module, Name) ->
-    {{Module, Name}, {Module, start_link, [Name]}, permanent, 5000, worker, dynamic}.
+    #{
+        id => {Module, Name},
+        start => {Module, start_link, [Name]},
+        restart => permanent,
+        shutdown => 5000,
+        type => worker,
+        modules => dynamic
+    }.

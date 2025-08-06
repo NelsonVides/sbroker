@@ -28,11 +28,21 @@ start_link() ->
 
 -spec init(noargs) -> {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}}.
 init(noargs) ->
-    ServerSup =
-        {sbroker_server_sup, {sbroker_server_sup, start_link, []}, permanent, infinity, supervisor,
-            [sbroker_server_sup]},
-    UserSup =
-        {sbroker_user_sup, {sbroker_user_sup, start_link, []}, permanent, infinity, supervisor, [
-            sbroker_user_sup
-        ]},
-    {ok, {{rest_for_one, 3, 300}, [ServerSup, UserSup]}}.
+    SupFlags = #{strategy => rest_for_one, intensity => 3, period => 300},
+    ServerSup = #{
+        id => sbroker_server_sup,
+        start => {sbroker_server_sup, start_link, []},
+        restart => permanent,
+        shutdown => infinity,
+        type => supervisor,
+        modules => [sbroker_server_sup]
+    },
+    UserSup = #{
+        id => sbroker_user_sup,
+        start => {sbroker_user_sup, start_link, []},
+        restart => permanent,
+        shutdown => infinity,
+        type => supervisor,
+        modules => [sbroker_user_sup]
+    },
+    {ok, {SupFlags, [ServerSup, UserSup]}}.
