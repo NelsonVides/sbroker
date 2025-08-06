@@ -38,7 +38,7 @@ round trip time for the interval and the target between 5% and 10% of the
 interval. The round trip should be that between the actual initiator of the
 request (e.g. a remote client) and the queue. For example, the reference
 suggests an interval of 100ms and a target of 5ms when queuing TCP packets in
-a kernel`s buffer. A request and response might be a few more round trips at
+a kernel's buffer. A request and response might be a few more round trips at
 the packet level even if using a single `:gen_tcp.send/2`.
 
 A person perceives a response time of `100` milliseconds or less as

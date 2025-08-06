@@ -7,17 +7,19 @@
 -define(DOC(Str), -compile([])).
 -endif.
 ?MODULEDOC("""
-Sets an alarm when the process`s message queue is slow for an interval.
+Sets an alarm when the process's message queue is slow for an interval.
 
 `sbroker_overload_meter` can be used as a `sbroker_meter` in a `sbroker` or
-a `sregulator`. It will set a SASL `alarm_handler` alarm when the process`s
+a `sregulator`. It will set a SASL `alarm_handler` alarm when the process's
 message queue is slow for an interval and clear it once the message queue
 becomes fast for an interval. Its argument, `spec()`, is of the form:
+
 ```
 #{alarm    => Alarm :: term(), % default: {overload, self()}
   target   => Target :: non_neg_integer(), % default: 100
   interval => Interval :: pos_integer()}. % default: 1000
 ```
+
 `Alarm` is the `alarm_handler` alarm that will be set/cleared by the meter
 (defaults to `{overload, self()}`). `Target` is the target sojourn time of
 the message queue in milliseconds (defaults to `100`). `Interval` is the

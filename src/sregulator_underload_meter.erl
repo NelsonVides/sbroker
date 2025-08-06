@@ -8,11 +8,11 @@
 -define(DOC(Str), -compile([])).
 -endif.
 ?MODULEDOC("""
-Sets an alarm when the regulator`s valve is slow to get a match for an
+Sets an alarm when the regulator's valve is slow to get a match for an
 interval.
 
 `sregulator_underload_meter` can be used in as a `sbroker_meter` in a
-`sregulator`. It will set a SASL `alarm_handler` alarm when the regulator`s
+`sregulator`. It will set a SASL `alarm_handler` alarm when the regulator's
 valve is slow to get a match for an interval and clear it once the valve
 gets matches fast for an interval. Its argument, `spec()`, is of the form:
 ```

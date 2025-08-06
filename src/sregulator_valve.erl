@@ -69,6 +69,7 @@ When a request has finished, `handle_done/3`:
 The other variables are equivalent to those in `handle_ask/4`.
 
 When a request is asking to continue, `handle_continue/3`:
+```
 -callback handle_continue(Ref :: reference(), Time :: integer(),
                       State :: term()) ->
      {Result :: go, Open :: integer(), , Status :: open | closed,
@@ -145,10 +146,12 @@ no side effects before then, `open_time/1`:
 the valve, if closed and will not open without a side effect then `closed`.
 
 When cleaning up the valve, `terminate/2`:
+
 ```
 -callback terminate(Reason :: sbroker_handlers:reason(), State :: term()) ->
      InternalMap :: internal_map().
 ```
+
 `Reason` is `stop` if the valve is being shutdown, `change` if the valve is
 being replaced by another valve, `{bad_return_value, Return}` if a previous
 callback returned an invalid term or `{Class, Reason, Stack}` if a previous

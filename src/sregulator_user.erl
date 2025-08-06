@@ -51,7 +51,7 @@ errors in an application.
 ?DOC("""
 Starts a regulator with name, `Name`.
 
-The regulator is started in the `sbroker` application`s supervision tree
+The regulator is started in the `sbroker` application's supervision tree
 using configuration from the `sbroker` application env `regulators`.
 Regulators are automatically started when the `sbroker` application is
 started so this function should only be required if a regulator is added to
@@ -72,7 +72,7 @@ start(Name) ->
 ?DOC("""
 Restart a regulator with name, `Name`.
 
-The regulator is restarted in the `sbroker` application`s supervision tree
+The regulator is restarted in the `sbroker` application's supervision tree
 using configuration from the `sbroker` application env `regulators`.
 Regulators are automatically started when the `sbroker` is started so this
 function should only be required if a regulator is terminated.
@@ -92,7 +92,7 @@ restart(Name) ->
 ?DOC("""
 Terminate a regulator with name, `Name`.
 
-The regulator is terminated in the `sbroker` application`s supervision tree.
+The regulator is terminated in the `sbroker` application's supervision tree.
 Regulators are automatically started when the `sbroker` is started, and might
 be restarted if the entry remains in the `sbroker` application env
 `regulators`, so this function should only be required to terminate a
@@ -109,7 +109,7 @@ terminate(Name) ->
 ?DOC("""
 Delete a regulator with name, `Name`.
 
-The regulator is deleted in the `sbroker` application`s supervision tree.
+The regulator is deleted in the `sbroker` application's supervision tree.
 Regulators are automatically started when the `sbroker` is started, and might
 be restarted if the entry remains in the `sbroker` application env
 `regulators`, so this function should only be required to delete a

@@ -206,9 +206,9 @@ process calling `ask_r/2` on the broker, `Broker`.
 Returns `{go, Ref, Value, RelativeTime, SojournTime}` on a successful
 match or `{drop, SojournTime}`.
 value of the matched request sent by the counterparty process. `RelativeTime`
-is the approximate time differnece (in the broker`s time unit) between when
+is the approximate time differnece (in the broker's time unit) between when
 the request was sent and the matching request was sent. `SojournTime` is the
-approximate time spent in both the broker`s message queue and internal queue.
+approximate time spent in both the broker's message queue and internal queue.
 
 `RelativeTime` represents the `SojournTime` without the overhead of the
 broker. The value measures the level of queue congestion without being
@@ -295,7 +295,7 @@ does not enqueue the request if no immediate match. Returns
 `Ref` is the transaction reference, which is a `reference()`. `Value` is the
 value of the matched process. `RelativeTime` is the time spent waiting for a
 match after discounting time spent waiting for the broker to handle requests.
-`SojournTime` is the time spent in the broker`s message queue.
+`SojournTime` is the time spent in the broker's message queue.
 
 If the request is dropped when using `via` module `sprotector` returns
 `{drop, 0}` and does not send the request.
@@ -367,7 +367,7 @@ or `{Tag, {drop, SojournTime}}`.
 `Ref` is the transaction reference, which is a `reference()`. `Value` is the
 value of the matched process. `RelativeTime` is the time spent waiting for a
 match after discounting time spent waiting for the broker to handle requests.
-`SojournTime` is the time spent in the broker`s message queue.
+`SojournTime` is the time spent in the broker's message queue.
 
 Multiple asynchronous requests can be made from a single process to a
 broker and no guarantee is made of the order of replies. A process making
@@ -403,7 +403,7 @@ or `{Tag, {drop, SojournTime}}`.
 `Ref` is the transaction reference, which is a `reference()`. `Value` is the
 value of the matched process. `RelativeTime` is the time spent waiting for a
 match after discounting time spent waiting for the broker to handle requests.
-`SojournTime` is the time spent in the broker`s message queue.
+`SojournTime` is the time spent in the broker's message queue.
 
 Multiple asynchronous requests can be made from a single process to a
 broker and no guarantee is made of the order of replies. If the broker
@@ -489,7 +489,7 @@ or `{await, Tag, BrokerPid}`.
 `Ref` is the transaction reference, which is a `reference()`. `Value` is the
 value of the matched process. `RelativeTime` is the time spent waiting for a
 match after discounting time spent waiting for the broker to handle requests.
-`SojournTime` is the time spent in the broker`s message queue. `Tag` is a
+`SojournTime` is the time spent in the broker's message queue. `Tag` is a
 monitor reference and `BrokerPid` the `pid()` of the broker, as returned by
 `async_ask/2`.
 

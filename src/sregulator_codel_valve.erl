@@ -53,7 +53,7 @@ Decreasing the target of the valve makes it more resistant to bursts and
 reducing the target of the queue will increase the rate of shrinking when
 load decreases. This fulfils the general desire to increase resouce usage as
 late as possible and decrease resource usage as early as possible. If the
-queue`s target is significantly lower than valve`s this may lead to churn as
+queue's target is significantly lower than valve's this may lead to churn as
 the queue and valve may act against each other. Also if the minimum is too
 high the queue may drop the requests only for the valve to allow immediate
 enqueues.

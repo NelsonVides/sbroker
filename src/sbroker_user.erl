@@ -52,7 +52,7 @@ await the other using the `sbroker` queues.
 ?DOC("""
 Starts a broker with name, `Name`.
 
-The broker is started in the `sbroker` application`s supervision tree using
+The broker is started in the `sbroker` application's supervision tree using
 configuration from the `sbroker` application env `brokers`. Brokers are
 automatically started when the `sbroker` application is started so this
 function should only be required if a broker is added to the configuration.
@@ -72,7 +72,7 @@ start(Name) ->
 ?DOC("""
 Restart a broker with name, `Name`.
 
-The broker is restarted in the `sbroker` application`s supervision tree using
+The broker is restarted in the `sbroker` application's supervision tree using
 configuration from the `sbroker` application env `brokers`. Brokers are
 automatically started when the `sbroker` is started so this function should
 only be required if a broker is terminated.
@@ -92,7 +92,7 @@ restart(Name) ->
 ?DOC("""
 Terminate a broker with name, `Name`.
 
-The broker is terminated in the `sbroker` application`s supervision tree.
+The broker is terminated in the `sbroker` application's supervision tree.
 Brokers are automatically started when the `sbroker` is started, and might be
 restarted if the entry remains in the `sbroker` application env `brokers`, so
 this function should only be required to terminate a broker after it has been
@@ -108,7 +108,7 @@ terminate(Name) ->
 ?DOC("""
 Delete a broker with name, `Name`.
 
-The broker is deleted in the `sbroker` application`s supervision tree using
+The broker is deleted in the `sbroker` application's supervision tree using
 Brokers are automatically started when the `sbroker` is started, and might be
 restarted if the entry remains in the `sbroker` application env `brokers`, so
 this function should only be required to delete a broker after it has removed

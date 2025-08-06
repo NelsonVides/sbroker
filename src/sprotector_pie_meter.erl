@@ -15,6 +15,7 @@ without messaging the broker or regulator with a probability using PIE for
 the `ask` and `ask_r` queue when the message queue length is approximately
 above a minimum and all requests when it is approximately above a maximum.
 Its argument, `spec()`, is of the form:
+
 ```
 #{ask    => #{target   => AskTarget :: non_neg_integer(), % default: 100
               interval => AskInterval :: pos_integer()}, % default: 1000
@@ -24,11 +25,12 @@ Its argument, `spec()`, is of the form:
   min    => Min :: non_neg_integer(), % default: 0
   max    => Max :: non_neg_integer() | infinity}. % default: infinity
 ```
+
 `AskTarget` is the target delay in milliseconds (defaults to `100`) for the
 `ask` queue and `AskInterval` is the initial interval in milliseconds
-(defaults to `1000`) before the first drop when the process`s message queue
+(defaults to `1000`) before the first drop when the process's message queue
 is above the minimum size `Min` (defaults to `0`) and below the maximum size
-`Max` (defaults to `infinity). `AskRTarget` and `AskRInterval` are equivalent
+`Max` (defaults to `infinity`). `AskRTarget` and `AskRInterval` are equivalent
 for the `ask_r` queue. `Update` is the interval between updating the drop
 probability (defaults to `100`).
 

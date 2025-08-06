@@ -16,19 +16,21 @@ a `sregulator`. It will provide the capability to do best of 2 random
 choices load balancing, using `sbetter`, between `sbroker` or `sregulator`
 processes using the sojourn time of their queues. Its argument, `spec()`, is
 of the form:
+
 ```
 #{ask    => #{upper => AskUpper :: non_neg_integer()}, % default: 5000
   ask_r  => #{upper => AskRUpper :: non_neg_integer()}, % default: 5000
   update => Update :: pos_integer()} % default: 100
 ```
+
 `AskUpper` is the maximum `ask` sojourn time in milliseconds (defaults to
 `5000`) and `AskRUpper` is the maximum `ask_r` sojourn time in milliseconds
 (defaults to `5000`) that will be updated to the `sbetter_server` for use
-with `sbetter`. If a match doesn`t occur on the `sbroker` or `sregulator` the
+with `sbetter`. If a match doesn't occur on the `sbroker` or `sregulator` the
 approximate sojourn time will increase unbounded for one of the two queues.
 Limiting this value prevents the situation where one process becomes stuck as
-the "worst" option because it hasn`t matched for the longest when the
-processes` queues would be equivalently "bad".
+the "worst" option because it hasn't matched for the longest when the
+processes' queues would be equivalently "bad".
 
 For example if using the `sbroker_timeout_queue` with (the default) timeout
 of `5000`, then all requests are dropped after `5000` and so become

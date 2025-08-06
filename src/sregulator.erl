@@ -22,7 +22,7 @@ is accepted or the queue drops the request. `done/3` is then called after the
 task has finished or `continue/2` to continue.
 
 A regulator requires a callback module to be configured, in a similar way to
-a supervisor`s children are specified. The callback modules implements one
+a supervisor's children are specified. The callback modules implements one
 callback, `init/1`, with single argument `Args`. `init/1` should return
 `{ok, {QueueSpec, ValveSpec, [MeterSpec]}}` or `ignore`. `QueueSpec` is the
 `sbroker_queue` specification, `ValveSpec` is the `sregulator_valve`
@@ -187,9 +187,9 @@ being allowed to run or `{drop, SojournTime}`.
 
 `Ref` is the lock reference, which is a `reference()`. `RegulatorPid` is the
 `pid()` of the regulator process. `RelativeTime` is the time difference
-between when the request was sent and the message that opened the regulator`s
+between when the request was sent and the message that opened the regulator's
 valve was sent. `SojournTime` is the approximate time spent in both the
-regulator`s message queue and internal queue.
+regulator's message queue and internal queue.
 
 `RelativeTime` represents the `SojournTime` without the overhead of the
 regulator. The value measures the queue congestion without being effected by
@@ -200,12 +200,12 @@ awaiting a message to open the value that was sent approximately
 `RelativeTime` ater this request was sent. Therefore `SojournTime` minus
 `RelativeTime` is the latency, or overhead, of the regulator.
 
-If `RelativeTime` is negative, the regulator`s valve was opened by a message
+If `RelativeTime` is negative, the regulator's valve was opened by a message
 sent `abs(RelativeTime)` before this request. Therefore `SojournTime` is the
 latency, or overhead, of the regulator.
 
 If `RelativeTime` is `0`, the request was sent at approximately the same as
-the message that open the regulator`s valve.
+the message that open the regulator's valve.
 """).
 -spec ask(Regulator) -> Go | Drop when
     Regulator :: regulator(),
@@ -227,9 +227,9 @@ being allowed to run or `{drop, SojournTime}`.
 
 `Ref` is the lock reference, which is a `reference()`. `RegulatorPid` is the
 `pid()` of the regulator process. `RelativeTime` is the time difference
-between when the request was sent and the message that opened the regulator`s
+between when the request was sent and the message that opened the regulator's
 valve was sent. `SojournTime` is the approximate time spent in the
-regulator`s message queue.
+regulator's message queue.
 
 If the request is dropped when using `via` module `sprotector` returns
 `{drop, 0}` and does not send the request.
@@ -262,9 +262,9 @@ The reply is of the form `{Tag, Msg}` where `Msg` is either
 
 `Ref` is the lock reference, which is a `reference()`. `RegulatorPid` is the
 `pid()` of the regulator process. `RelativeTime` is the time difference
-between when the request was sent and the message that opened the regulator`s
+between when the request was sent and the message that opened the regulator's
 valve was sent. `SojournTime` is the approximate time spent in both the
-regulator`s message queue and internal queue.
+regulator's message queue and internal queue.
 
 Multiple asynchronous requests can be made from a single process to a
 regulator and no guarantee is made of the order of replies. A process making
@@ -314,9 +314,9 @@ being allowed to run or `{await, Tag, RegulatorPid}`.
 
 `Ref` is the lock reference, which is a `reference()`. `RegulatorPid` is the
 `pid()` of the regulator process. `RelativeTime` is the time difference
-between when the request was sent and the message that opened the regulator`s
+between when the request was sent and the message that opened the regulator's
 valve was sent. `SojournTime` is the approximate time spent in the
-regulator`s message queue. `Tag` is a monitor reference, as returned by
+regulator's message queue. `Tag` is a monitor reference, as returned by
 `async_ask/1`.
 
 If the request is dropped when using `via` module `sprotector` returns
@@ -416,9 +416,9 @@ on the regulator.
 
 `Ref` is the lock reference, which is a `reference()`. `RegulatorPid` is the
 `pid()` of the regulator process. `RelativeTime` is the time difference
-between when the request was sent and the message that opened the regulator`s
+between when the request was sent and the message that opened the regulator's
 valve was sent. `SojournTime` is the approximate time spent in the
-regulator`s message queue.
+regulator's message queue.
 
 If the request is dropped when using `via` module `sprotector` returns
 `{drop, 0}` and does not send the request. In this situation the `Ref` is
@@ -457,7 +457,7 @@ Returns `{stop, SojournTime}` if the regulator acknowledged the process has
 stopped running or `{not_found, SojournTime}` if the lock reference, `Ref`,
 does not exist on the regulator.
 
-`SojournTime` is the time the request spent in the regulator`s message queue.
+`SojournTime` is the time the request spent in the regulator's message queue.
 
 See `ask/1`.
 """).
