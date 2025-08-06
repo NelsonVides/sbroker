@@ -125,13 +125,16 @@ init([]) ->
 
 %% types
 
+?DOC("A reference to a broker process.").
 -type broker() ::
     pid()
     | atom()
     | {atom(), node()}
     | {global, term()}
     | {via, module(), term()}.
+?DOC("Registration name for a broker process.").
 -type name() :: {local, atom()} | {global, term()} | {via, module(), term()}.
+?DOC("Debug options for controlling broker debugging behavior.").
 -type debug_option() ::
     trace
     | log
@@ -139,18 +142,22 @@ init([]) ->
     | statistics
     | {log_to_file, file:filename()}
     | {install, {fun(), term()}}.
+?DOC("Options for starting a broker process.").
 -type start_option() ::
     {debug, debug_option()}
     | {timeout, timeout()}
     | {spawn_opt, [proc_lib:spawn_option()]}
     | {read_time_after, non_neg_integer() | infinity}.
+?DOC("Return value from broker start functions.").
 -type start_return() :: {ok, pid()} | ignore | {error, term()}.
+?DOC("A handler specification consisting of a callback module and its arguments.").
 -type handler_spec() :: {module(), term()}.
 
 -export_type([broker/0]).
 -export_type([name/0]).
 -export_type([handler_spec/0]).
 
+?DOC("Initialize broker with queue and meter specifications.").
 -callback init(Args :: term()) ->
     {ok,
         {AskQueueSpec :: handler_spec(), AskRQueueSpec :: handler_spec(), [

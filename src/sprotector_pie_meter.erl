@@ -60,6 +60,9 @@ Computing Systems, 1991.
 
 %% types
 
+?DOC("""
+Meter specification for PIE (Proportional Integral controller Enhanced) algorithm parameters.
+""").
 -type spec() ::
     #{
         ask => #{

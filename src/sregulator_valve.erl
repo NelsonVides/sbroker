@@ -175,13 +175,16 @@ so `terminate/2` should do any clean up required.
 
 %% types
 
+?DOC("Internal map structure tracking task references to processes.").
 -type internal_map() :: #{reference() => pid()}.
 
 -export_type([internal_map/0]).
 
+?DOC("Initialize valve with given arguments and internal map.").
 -callback init(Map :: internal_map(), Time :: integer(), Args :: term()) ->
     {Status :: open | closed, State :: term(), TimeoutTime :: integer() | infinity}.
 
+?DOC("Handle ask request from client and return valve status.").
 -callback handle_ask(
     Pid :: pid(),
     Ref :: reference(),
@@ -196,6 +199,7 @@ so `terminate/2` should do any clean up required.
         TimeoutTime :: integer() | infinity
     }.
 
+?DOC("Handle completion of a task identified by reference.").
 -callback handle_done(Ref :: reference(), Time :: integer(), State :: term()) ->
     {
         Result :: done | error,
@@ -204,6 +208,7 @@ so `terminate/2` should do any clean up required.
         TimeoutTime :: integer() | infinity
     }.
 
+?DOC("Handle continuation of valve operation for existing task.").
 -callback handle_continue(
     Ref :: reference(),
     Time :: integer(),
@@ -223,6 +228,7 @@ so `terminate/2` should do any clean up required.
         TimeoutTime :: integer() | infinity
     }.
 
+?DOC("Handle update request to valve with relative time information.").
 -callback handle_update(
     RelativeTime :: integer(),
     Time :: integer(),
@@ -230,12 +236,15 @@ so `terminate/2` should do any clean up required.
 ) ->
     {Status :: open | closed, NState :: term(), TimeoutTime :: integer() | infinity}.
 
+?DOC("Handle info message sent to valve.").
 -callback handle_info(Msg :: term(), Time :: integer(), State :: term()) ->
     {Status :: open | closed, NState :: term(), TimeoutTime :: integer() | infinity}.
 
+?DOC("Handle timeout event and update valve status.").
 -callback handle_timeout(Time :: integer(), State :: term()) ->
     {Status :: open | closed, NState :: term(), TimeoutTime :: integer() | infinity}.
 
+?DOC("Handle code change and migrate valve state.").
 -callback code_change(
     OldVsn :: term(),
     Time :: integer(),
@@ -244,13 +253,17 @@ so `terminate/2` should do any clean up required.
 ) ->
     {Status :: open | closed, NState :: term(), TimeoutTime :: integer() | infinity}.
 
+?DOC("Handle configuration change with new arguments.").
 -callback config_change(Args :: term(), Time :: integer(), State :: term()) ->
     {Status :: open | closed, NState :: term(), TimeoutTime :: integer() | infinity}.
 
+?DOC("Return current size or capacity of valve.").
 -callback size(State :: term()) -> Size :: non_neg_integer().
 
+?DOC("Return when valve opened or will open.").
 -callback open_time(State :: term()) -> Open :: integer() | closed.
 
+?DOC("Clean up valve resources and return internal map.").
 -callback terminate(Reason :: sbroker_handlers:reason(), State :: term()) ->
     Map :: internal_map().
 

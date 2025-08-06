@@ -40,6 +40,7 @@ closes. It ignores any updates.
 
 %% types
 
+?DOC("Valve specification with maximum capacity setting for open valve behavior.").
 -type spec() :: #{max => Max :: non_neg_integer() | infinity}.
 
 -export_type([spec/0]).

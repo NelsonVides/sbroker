@@ -174,14 +174,17 @@ so `terminate/2` should do any clean up required.
 
 %% types
 
+?DOC("Internal queue structure containing timestamped entries with process references.").
 -type internal_queue() ::
     queue:queue({integer(), {pid(), term()}, term(), reference()}).
 
 -export_type([internal_queue/0]).
 
+?DOC("Initialize queue with given arguments and return initial state.").
 -callback init(Q :: internal_queue(), Time :: integer(), Args :: term()) ->
     {State :: term(), TimeoutTime :: integer() | infinity}.
 
+?DOC("Handle incoming request and update queue state.").
 -callback handle_in(
     SendTime :: integer(),
     From :: {Sender :: pid(), Tag :: term()},
@@ -191,6 +194,7 @@ so `terminate/2` should do any clean up required.
 ) ->
     {NState :: term(), TimeoutTime :: integer() | infinity}.
 
+?DOC("Handle outgoing request from queue and return next item or empty.").
 -callback handle_out(Time :: integer(), State :: term()) ->
     {
         SendTime :: integer(),
@@ -202,15 +206,19 @@ so `terminate/2` should do any clean up required.
     }
     | {empty, NState :: term()}.
 
+?DOC("Handle timeout event and update queue state.").
 -callback handle_timeout(Time :: integer(), State :: term()) ->
     {NState :: term(), TimeoutTime :: integer() | infinity}.
 
+?DOC("Handle request cancellation and return success status.").
 -callback handle_cancel(Tag :: term(), Time :: integer(), State :: term()) ->
     {Reply :: false | pos_integer(), NState :: term(), TimeoutTime :: integer() | infinity}.
 
+?DOC("Handle info message and update queue state.").
 -callback handle_info(Msg :: term(), Time :: integer(), State :: term()) ->
     {NState :: term(), TimeoutTime :: integer() | infinity}.
 
+?DOC("Handle code change and migrate state to new version.").
 -callback code_change(
     OldVsn :: term(),
     Time :: integer(),
@@ -219,13 +227,17 @@ so `terminate/2` should do any clean up required.
 ) ->
     {NState :: term(), TimeoutTime :: integer() | infinity}.
 
+?DOC("Handle configuration change and update queue state.").
 -callback config_change(Args :: term(), Time :: integer(), State :: term()) ->
     {NState :: term(), TimeoutTime :: integer() | infinity}.
 
+?DOC("Return current length of the queue.").
 -callback len(State :: term()) -> Len :: non_neg_integer().
 
+?DOC("Return send time of next item or empty if queue is empty.").
 -callback send_time(State :: term()) -> SendTime :: integer() | empty.
 
+?DOC("Clean up queue resources and return final queue state.").
 -callback terminate(Reason :: sbroker_handlers:reason(), State :: term()) ->
     Q :: internal_queue().
 

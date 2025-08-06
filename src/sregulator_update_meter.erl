@@ -41,6 +41,7 @@ Routing Messages, 1994.
 -export([config_change/3]).
 -export([terminate/2]).
 
+?DOC("Meter specification for updating multiple regulators with queue metrics.").
 -type spec() ::
     [
         {

@@ -84,6 +84,7 @@ ACM Queue, 6th May 2012.
 
 %% types
 
+?DOC("Valve specification with CoDel algorithm parameters for delay control.").
 -type spec() ::
     #{
         target => Target :: integer(),

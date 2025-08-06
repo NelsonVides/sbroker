@@ -52,6 +52,7 @@
 -export([report/6]).
 -export([exit_reason/1]).
 
+?DOC("Reason for handler termination including stop, change, or error conditions.").
 -type reason() ::
     stop
     | change

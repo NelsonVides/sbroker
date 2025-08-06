@@ -52,6 +52,7 @@ See `m:sprotector_pie_meter` and `m:sprotector_server`.
 
 %% types
 
+?DOC("A reference to a process for protection purposes.").
 -type process() ::
     pid()
     | atom()

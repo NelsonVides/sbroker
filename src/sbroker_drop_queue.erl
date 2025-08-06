@@ -41,6 +41,7 @@ dropped. Dropping occurs when queue is above the maximum size `Max`
 -export([send_time/1]).
 -export([terminate/2]).
 
+?DOC("Queue specification with drop behavior parameters for queue size control.").
 -type spec() ::
     #{
         out => Out :: out | out_r,

@@ -108,9 +108,11 @@ The return value is ignored.
 
 %% types
 
+?DOC("Initialize meter with time and arguments.").
 -callback init(Time :: integer(), Args :: term()) ->
     {State :: term(), UpdateTime :: integer() | infinity}.
 
+?DOC("Handle meter update with delay and timing information.").
 -callback handle_update(
     QueueDelay :: non_neg_integer(),
     ProcessDelay :: non_neg_integer(),
@@ -120,9 +122,11 @@ The return value is ignored.
 ) ->
     {NState :: term(), UpdateTime :: integer() | infinity}.
 
+?DOC("Handle info message sent to meter.").
 -callback handle_info(Msg :: term(), Time :: integer(), State :: term()) ->
     {NState :: term(), UpdateTime :: integer() | infinity}.
 
+?DOC("Handle code change and migrate meter state.").
 -callback code_change(
     OldVsn :: term(),
     Time :: integer(),
@@ -131,9 +135,11 @@ The return value is ignored.
 ) ->
     {NState :: term(), TimeoutTime :: integer() | infinity}.
 
+?DOC("Handle configuration change with new arguments.").
 -callback config_change(Args :: term(), Time :: integer(), State :: term()) ->
     {NState :: term(), UpdateTime :: integer() | infinity}.
 
+?DOC("Clean up meter resources on termination.").
 -callback terminate(Reason :: sbroker_handlers:reason(), State :: term()) ->
     term().
 

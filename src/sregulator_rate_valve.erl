@@ -1,5 +1,4 @@
 -module(sregulator_rate_valve).
-
 -if(?OTP_RELEASE >= 27).
 -define(MODULEDOC(Str), -moduledoc(Str)).
 -define(DOC(Str), -doc(Str)).
@@ -53,6 +52,7 @@ This valve ignores any updates.
 
 %% types
 
+?DOC("Valve specification with rate limiting parameters for throughput control.").
 -type spec() ::
     #{
         limit => non_neg_integer(),

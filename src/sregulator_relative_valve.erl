@@ -61,6 +61,7 @@ expensive resources can delay growth until required.
 
 %% types
 
+?DOC("Valve specification with relative target and capacity parameters.").
 -type spec() ::
     #{
         target => Target :: integer(),

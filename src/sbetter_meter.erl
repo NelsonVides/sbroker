@@ -51,6 +51,7 @@ See `m:sbetter` and `m:sbetter_server`.
 
 %% types
 
+?DOC("Meter specification for sbetter algorithm with sojourn time upper bounds.").
 -type spec() ::
     #{
         ask => #{upper => AskUpper :: non_neg_integer()},

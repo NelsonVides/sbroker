@@ -120,13 +120,16 @@ init([]) ->
 
 %% types
 
+?DOC("A reference to a regulator process.").
 -type regulator() ::
     pid()
     | atom()
     | {atom(), node()}
     | {global, term()}
     | {via, module(), term()}.
+?DOC("Registration name for a regulator process.").
 -type name() :: {local, atom()} | {global, term()} | {via, module(), term()}.
+?DOC("Debug options for controlling regulator debugging behavior.").
 -type debug_option() ::
     trace
     | log
@@ -134,18 +137,22 @@ init([]) ->
     | statistics
     | {log_to_file, file:filename()}
     | {install, {fun(), term()}}.
+?DOC("Options for starting a regulator process.").
 -type start_option() ::
     {debug, debug_option()}
     | {timeout, timeout()}
     | {spawn_opt, [proc_lib:spawn_option()]}
     | {read_time_after, non_neg_integer() | infinity}.
+?DOC("Return value from regulator start functions.").
 -type start_return() :: {ok, pid()} | ignore | {error, term()}.
+?DOC("A handler specification consisting of a callback module and its arguments.").
 -type handler_spec() :: {module(), term()}.
 
 -export_type([regulator/0]).
 -export_type([name/0]).
 -export_type([handler_spec/0]).
 
+?DOC("Initialize regulator with queue, valve and meter specifications.").
 -callback init(Args :: term()) ->
     {ok, {QueueSpec :: handler_spec(), ValveSpec :: handler_spec(), [MeterSpec :: handler_spec()]}}
     | ignore.

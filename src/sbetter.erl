@@ -58,6 +58,7 @@ See `m:sbetter_meter` and `m:sbetter_server`.
 
 %% types
 
+?DOC("Method for selecting the best process from available options.").
 -type method() ::
     ask | ask_r | scheduler_ask | scheduler_ask_r | rand_ask | rand_ask_r.
 

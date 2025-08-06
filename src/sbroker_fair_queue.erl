@@ -74,16 +74,21 @@ IEEE Transactions on Communications, vol. com-35, no. 4, April 1987.
 
 %% types
 
+?DOC("Round robin queue for fair scheduling of indexed items.").
 -type robin_queue(Index) :: queue:queue(Index).
 
+?DOC("Key used for fairness partitioning of requests.").
 -type key() :: application | node | pid | value | {element, pos_integer()}.
+?DOC("Index specifying how to partition requests for fair queuing.").
 -type index() :: key() | {hash, key(), 1..32#4000000}.
+?DOC("Fair queue specification with underlying queue module and index.").
 -type spec() :: {Module :: module(), Args :: term(), Index :: index()}.
 
 -export_type([key/0]).
 -export_type([index/0]).
 -export_type([spec/0]).
 
+?DOC("Handle fair queue out operation and return next item from round robin.").
 -callback handle_fq_out(Time :: integer(), State :: term()) ->
     {
         SendTime :: integer(),

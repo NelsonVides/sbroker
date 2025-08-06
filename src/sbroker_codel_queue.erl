@@ -98,6 +98,7 @@ Computing Systems, 1991.
 
 %% types
 
+?DOC("Queue specification with CoDel algorithm parameters for controlling queue latency.").
 -type spec() ::
     #{
         out => Out :: out | out_r,

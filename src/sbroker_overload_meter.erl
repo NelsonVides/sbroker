@@ -43,6 +43,7 @@ congestion alarm (if one existed) to be cleared very quickly.
 
 %% types
 
+?DOC("Meter specification for overload detection with alarm and target parameters.").
 -type spec() ::
     #{
         alarm => Alarm :: term(),

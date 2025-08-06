@@ -60,6 +60,7 @@ to be waiting to handle a client request.
 
 %% types
 
+?DOC("Queue specification with timeout parameters for request expiration control.").
 -type spec() ::
     #{
         out => Out :: out | out_r,
