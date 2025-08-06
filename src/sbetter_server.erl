@@ -92,8 +92,7 @@ update(Pid, AskValue, BidValue) when
 %% private API
 
 ?DOC(false).
--spec start_link() -> {ok, Pid} when
-    Pid :: pid().
+-spec start_link() -> gen_server:start_ret().
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, ?MODULE, []).
 
