@@ -323,9 +323,20 @@ out(
     Time,
     #state{timeout = Timeout} = State
 ) when SendTime + Timeout > Time ->
-    TimeoutNext = SendTime + Timeout,
-    NState = State#state{queue = Q, len = Len, timeout_next = TimeoutNext},
-    {SendTime, From, Value, Ref, NState, timeout_next(NState)};
+    case check_process_alive(From) of
+        true ->
+            TimeoutNext = SendTime + Timeout,
+            NState = State#state{queue = Q, len = Len, timeout_next = TimeoutNext},
+            {SendTime, From, Value, Ref, NState, timeout_next(NState)};
+        false ->
+            drop_item(Time, {SendTime, From, Value, Ref}),
+            case queue:out(Q) of
+                {empty, _} ->
+                    {empty, State#state{len = 0, queue = queue:new()}};
+                Result ->
+                    out(Result, Len - 1, Time, State)
+            end
+    end;
 out(
     {{value, {SendTime, From, Value, Ref}}, Q},
     Len,
@@ -349,11 +360,22 @@ out({{value, Item}, Q}, Len, Time, State) ->
 out_r(
     {{value, {SendTime, From, Value, Ref}}, Q},
     Len,
-    _,
+    Time,
     #state{min = Min} = State
 ) when Len < Min ->
-    NState = State#state{queue = Q, len = Len},
-    {SendTime, From, Value, Ref, NState, infinity};
+    case check_process_alive(From) of
+        true ->
+            NState = State#state{queue = Q, len = Len},
+            {SendTime, From, Value, Ref, NState, infinity};
+        false ->
+            drop_item(Time, {SendTime, From, Value, Ref}),
+            case queue:out_r(Q) of
+                {empty, _} ->
+                    {empty, State#state{len = 0, queue = queue:new()}};
+                Result ->
+                    out_r(Result, Len - 1, undefined, State)
+            end
+    end;
 out_r(
     {{value, {SendTime, From, Value, Ref}}, Q},
     Len,
@@ -500,3 +522,11 @@ drop_queue(Time, Q) ->
 drop_item(Time, {SendTime, From, _, Ref}) ->
     demonitor(Ref, [flush]),
     sbroker_queue:drop(From, SendTime, Time).
+
+%% Helper function to check if a process is alive
+check_process_alive({Pid, _Tag}) when is_pid(Pid) ->
+    erlang:is_process_alive(Pid);
+check_process_alive(Pid) when is_pid(Pid) ->
+    erlang:is_process_alive(Pid);
+check_process_alive(_) ->
+    false.
