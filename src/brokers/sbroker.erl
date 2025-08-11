@@ -149,7 +149,7 @@ init([]) ->
     | {spawn_opt, [proc_lib:spawn_option()]}
     | {read_time_after, non_neg_integer() | infinity}.
 ?DOC("Return value from broker start functions.").
--type start_return() :: {ok, pid()} | ignore | {error, term()}.
+-type start_return() :: {ok, pid()} | {ok, {pid(), reference()}} | ignore | {error, term()}.
 ?DOC("A handler specification consisting of a callback module and its arguments.").
 -type handler_spec() :: {module(), term()}.
 
@@ -420,7 +420,7 @@ See `cancel/2`.
     ReqValue :: term(),
     To :: {Pid, Tag},
     Pid :: pid(),
-    Tag :: term(),
+    Tag :: reference(),
     Process :: pid() | {atom(), node()}.
 async_ask(Broker, ReqValue, To) ->
     sbroker_gen:async_call(Broker, ask, ReqValue, To).
@@ -459,7 +459,7 @@ when
     ReqValue :: term(),
     To :: {Pid, Tag},
     Pid :: pid(),
-    Tag :: term(),
+    Tag :: reference(),
     Process :: pid() | {atom(), node()}.
 async_ask_r(Broker, ReqValue, To) ->
     sbroker_gen:async_call(Broker, bid, ReqValue, To).
@@ -683,7 +683,7 @@ See `gen_server:start_link/3`.
 """).
 -spec start_link(Module, Args, Opts) -> StartReturn when
     Module :: module(),
-    Args :: term(),
+    Args :: [term()],
     Opts :: [start_option()],
     StartReturn :: start_return().
 start_link(Mod, Args, Opts) ->
