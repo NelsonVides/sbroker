@@ -87,12 +87,12 @@ init_per_suite(Config) ->
 
 end_per_suite(Config) ->
     try
-        Alarms = ?config(alarms, Config),
+        Alarms = proplists:get_value(alarms, Config),
         {sbroker_test_handler, _} = sbroker_test_handler:delete_handler(),
         _ = [alarm_handler:set_alarm(Alarm) || Alarm <- Alarms],
         ok
     after
-        Started = ?config(started, Config),
+        Started = proplists:get_value(started, Config),
         _ = [application:stop(App) || App <- Started]
     end.
 
@@ -128,7 +128,7 @@ init_per_testcase(_TestCase, Config) ->
 
 end_per_testcase(user, Config) ->
     _ = application:stop(sbroker),
-    ok = application:set_env(sbroker, regulators, ?config(regulators, Config)),
+    ok = application:set_env(sbroker, regulators, proplists:get_value(regulators, Config)),
     ok = application:start(sbroker),
     end_per_testcase(all, Config);
 end_per_testcase(_TestCase, _Config) ->
@@ -261,7 +261,7 @@ user(_) ->
     ok.
 
 statem(Config) ->
-    QcOpts = ?config(quickcheck_options, Config),
+    QcOpts = proplists:get_value(quickcheck_options, Config),
     case sregulator_statem:quickcheck(QcOpts) of
         true ->
             ok;
@@ -273,7 +273,7 @@ statem(Config) ->
     end.
 
 rate_statem(Config) ->
-    QcOpts = ?config(quickcheck_options, Config),
+    QcOpts = proplists:get_value(quickcheck_options, Config),
     case sregulator_rate_statem:quickcheck([{numtests, 100} | QcOpts]) of
         true ->
             ok;

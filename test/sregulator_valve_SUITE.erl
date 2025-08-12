@@ -55,7 +55,7 @@ init_per_suite(Config) ->
     [{quickcheck_options, QcOpts}, {started, Started} | Config].
 
 end_per_suite(Config) ->
-    Started = ?config(started, Config),
+    Started = proplists:get_value(started, Config),
     _ = [application:stop(App) || App <- Started],
     ok.
 
@@ -90,7 +90,7 @@ end_per_testcase(_TestCase, _Config) ->
 %% test cases
 
 statem(Config) ->
-    QcOpts = ?config(quickcheck_options, Config),
+    QcOpts = proplists:get_value(quickcheck_options, Config),
     case sregulator_valve_statem:quickcheck(QcOpts) of
         true ->
             ok;

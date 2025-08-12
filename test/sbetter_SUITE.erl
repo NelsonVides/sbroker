@@ -82,7 +82,7 @@ init_per_suite(Config) ->
     [{started, Started} | Config].
 
 end_per_suite(Config) ->
-    Started = ?config(started, Config),
+    Started = proplists:get_value(started, Config),
     _ = [application:stop(App) || App <- Started],
     ok.
 

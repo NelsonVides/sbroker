@@ -105,7 +105,7 @@ end_per_testcase(_TestCase, _Config) ->
 %% test cases
 
 whereis_pid(Config) ->
-    Via = ?config(via, Config),
+    Via = proplists:get_value(via, Config),
     Self = self(),
 
     Self = Via:whereis_name({Self}),
@@ -114,7 +114,7 @@ whereis_pid(Config) ->
     ok.
 
 whereis_local(Config) ->
-    Via = ?config(via, Config),
+    Via = proplists:get_value(via, Config),
     Self = self(),
     erlang:register(?MODULE, Self),
 
@@ -137,7 +137,7 @@ whereis_local(Config) ->
     ok.
 
 whereis_global(Config) ->
-    Via = ?config(via, Config),
+    Via = proplists:get_value(via, Config),
     Self = self(),
     yes = global:register_name({?MODULE, global}, Self),
     Name = {global, {?MODULE, global}},
@@ -153,7 +153,7 @@ whereis_global(Config) ->
     ok.
 
 whereis_via(Config) ->
-    Via = ?config(via, Config),
+    Via = proplists:get_value(via, Config),
     Self = self(),
     yes = global:register_name({?MODULE, via}, Self),
     Name = {via, global, {?MODULE, via}},
@@ -169,13 +169,13 @@ whereis_via(Config) ->
     ok.
 
 whereis_empty(Config) ->
-    Via = ?config(via, Config),
+    Via = proplists:get_value(via, Config),
     undefined = Via:whereis_name({}),
 
     ok.
 
 send_pid(Config) ->
-    Via = ?config(via, Config),
+    Via = proplists:get_value(via, Config),
     Self = self(),
     Ref = make_ref(),
 
@@ -194,7 +194,7 @@ send_pid(Config) ->
     ok.
 
 send_local(Config) ->
-    Via = ?config(via, Config),
+    Via = proplists:get_value(via, Config),
     erlang:register(?MODULE, self()),
     Ref = make_ref(),
 
@@ -263,7 +263,7 @@ send_local(Config) ->
     ok.
 
 send_global(Config) ->
-    Via = ?config(via, Config),
+    Via = proplists:get_value(via, Config),
     yes = global:register_name({?MODULE, global}, self()),
     Name = {global, {?MODULE, global}},
     Ref = make_ref(),
@@ -301,7 +301,7 @@ send_global(Config) ->
     ok.
 
 send_via(Config) ->
-    Via = ?config(via, Config),
+    Via = proplists:get_value(via, Config),
     yes = global:register_name({?MODULE, via}, self()),
     Name = {via, global, {?MODULE, via}},
     Ref = make_ref(),
@@ -339,7 +339,7 @@ send_via(Config) ->
     ok.
 
 send_empty(Config) ->
-    Via = ?config(via, Config),
+    Via = proplists:get_value(via, Config),
     Ref = make_ref(),
 
     try Via:send({}, Ref) of

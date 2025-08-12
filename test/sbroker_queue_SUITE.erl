@@ -56,7 +56,7 @@ init_per_suite(Config) ->
     [{quickcheck_options, QcOpts}, {started, Started} | Config].
 
 end_per_suite(Config) ->
-    _ = [application:stop(App) || App <- ?config(started, Config)],
+    _ = [application:stop(App) || App <- proplists:get_value(started, Config)],
     ok.
 
 group(_Group) ->
@@ -89,7 +89,7 @@ end_per_testcase(_TestCase, _Config) ->
 %% test cases
 
 queue_statem(Config) ->
-    QcOpts = ?config(quickcheck_options, Config),
+    QcOpts = proplists:get_value(quickcheck_options, Config),
     case sbroker_queue_statem:quickcheck(QcOpts) of
         true ->
             ok;
@@ -101,7 +101,7 @@ queue_statem(Config) ->
     end.
 
 fq_statem(Config) ->
-    QcOpts = ?config(quickcheck_options, Config),
+    QcOpts = proplists:get_value(quickcheck_options, Config),
     case sbroker_fq_statem:quickcheck(QcOpts) of
         true ->
             ok;
