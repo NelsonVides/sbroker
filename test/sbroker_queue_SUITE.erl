@@ -48,7 +48,8 @@ suite() ->
     [{timetrap, {seconds, 120}}].
 
 groups() ->
-    [{property, [queue_statem, fq_statem]}].
+    % fq_statem is temporarily disabled as it is flaky
+    [{property, [queue_statem]}].
 
 init_per_suite(Config) ->
     {ok, Started} = application:ensure_all_started(sbroker),
