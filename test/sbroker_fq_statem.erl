@@ -74,7 +74,6 @@ prop_sbroker_fq() ->
         commands(?MODULE),
         ?TRAPEXIT(begin
             {History, State, Result} = run_commands(?MODULE, Cmds),
-            ok,
             ?WHENFAIL(
                 begin
                     io:format("History~n~p", [History]),
