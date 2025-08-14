@@ -385,10 +385,10 @@ open_control(C, Time, #state{interval = Interval} = State) ->
     State#state{count = C, open_first = await, open_next = Next}.
 
 continue(Ref, Map, Size, Open, Time, ErrorState, OKState) ->
-    case maps:find(Ref, Map) of
-        {ok, _} ->
+    case maps:is_key(Ref, Map) of
+        true ->
             {go, Open, status(Size, Time, OKState), OKState, infinity};
-        error ->
+        false ->
             {error, status(Size, Time, ErrorState), ErrorState, infinity}
     end.
 

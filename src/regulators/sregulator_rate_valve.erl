@@ -386,11 +386,11 @@ limit_done(NMap, _, #state{overflow = Overflow} = State) ->
     State#state{overflow = Overflow - 1, map = NMap}.
 
 continue(Ref, Map, Size, Open, Time, ErrorState, OKState) ->
-    case maps:find(Ref, Map) of
-        {ok, _} ->
+    case maps:is_key(Ref, Map) of
+        true ->
             {Status, NextTimeout} = status(Size, Time, OKState),
             {go, Open, Status, OKState, NextTimeout};
-        error ->
+        false ->
             {Status, NextTimeout} = status(Size, Time, ErrorState),
             {error, Status, ErrorState, NextTimeout}
     end.

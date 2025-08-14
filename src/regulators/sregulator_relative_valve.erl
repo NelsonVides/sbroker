@@ -309,10 +309,10 @@ status(_, _) ->
     closed.
 
 continue(Ref, Map, Size, Open, ErrorState, OKState) ->
-    case maps:find(Ref, Map) of
-        {ok, _} ->
+    case maps:is_key(Ref, Map) of
+        true ->
             {go, Open, status(Size, OKState), OKState, infinity};
-        error ->
+        false ->
             {error, status(Size, ErrorState), ErrorState, infinity}
     end.
 

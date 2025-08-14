@@ -129,19 +129,19 @@ when
 handle_continue(Ref, _, #state{max = Max, small_time = Small, map = Map} = State) when
     map_size(Map) < Max
 ->
-    case maps:find(Ref, Map) of
-        {ok, _} ->
+    case maps:is_key(Ref, Map) of
+        true ->
             {go, Small, open, State, infinity};
-        error ->
+        false ->
             {error, open, State, infinity}
     end;
 handle_continue(Ref, Time, #state{max = Max, map = Map} = State) when
     map_size(Map) =:= Max
 ->
-    case maps:find(Ref, Map) of
-        {ok, _} ->
+    case maps:is_key(Ref, Map) of
+        true ->
             {go, Time, closed, State, infinity};
-        error ->
+        false ->
             {error, closed, State, infinity}
     end;
 handle_continue(Ref, _, #state{map = Map} = State) ->

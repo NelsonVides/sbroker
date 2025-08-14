@@ -191,7 +191,7 @@ handle_out(
 handle_timeout(Time, #state{next = Next} = State) when Time < Next ->
     {remove(Time, State), Next};
 handle_timeout(Time, #state{module = Module, queues = Qs} = State) ->
-    {NQs, Next} = map(fun(_, Q) -> Module:handle_timeout(Time, Q) end, Qs),
+    {NQs, Next} = map_2(Qs, fun(_, Q) -> Module:handle_timeout(Time, Q) end),
     {remove(Time, State#state{queues = NQs, next = Next}), Next}.
 
 ?DOC(false).
@@ -203,8 +203,8 @@ handle_timeout(Time, #state{module = Module, queues = Qs} = State) ->
     NState :: state(),
     TimeoutNext :: integer() | infinity.
 handle_cancel(Tag, Time, #state{module = Module, queues = Qs} = State) ->
-    QList = maps:to_list(Qs),
-    {Reply, NQs, Next} = cancel(QList, Module, Tag, Time, false, infinity, []),
+    QIterator = maps:next(maps:iterator(Qs)),
+    {Reply, NQs, Next} = cancel(QIterator, Module, Tag, Time, false, infinity, #{}),
     {Reply, remove(Time, State#state{queues = NQs, next = Next}), Next}.
 
 ?DOC(false).
@@ -215,8 +215,8 @@ handle_cancel(Tag, Time, #state{module = Module, queues = Qs} = State) ->
     NState :: state(),
     TimeoutNext :: integer() | infinity.
 handle_info(Msg, Time, #state{module = Module, queues = Qs, empties = Es} = State) ->
-    {NQs, Next} = map(fun(_, Q) -> Module:handle_info(Msg, Time, Q) end, Qs),
-    {NEs, RemoveTime} = empty_info(Module, Msg, Time, Es),
+    {NQs, Next} = map_2(Qs, fun(_, Q) -> Module:handle_info(Msg, Time, Q) end),
+    {NEs, RemoveTime} = empty_info(Es, Module, Msg, Time),
     NState = State#state{
         queues = NQs,
         empties = NEs,
@@ -313,13 +313,14 @@ terminate(Reason, _) ->
 
 %% Internal
 
-index(Index) when is_atom(Index) ->
-    case lists:member(Index, [application, node, pid, value]) of
-        true ->
-            Index;
-        false ->
-            error(badarg, [Index])
-    end;
+index(application) ->
+    application;
+index(node) ->
+    node;
+index(pid) ->
+    pid;
+index(value) ->
+    value;
 index({element, N} = Index) when is_integer(N), N > 0 ->
     Index;
 index({hash, Index, Range}) when
@@ -355,12 +356,12 @@ to_lists(Index, InternalQ) ->
 
 split_list([{_, {Pid, _}, Value, _} = Item | Rest], Index, InternalQs) ->
     QKey = index(Index, Pid, Value),
-    case maps:find(QKey, InternalQs) of
-        {ok, QList} ->
-            NInternalQs = maps:put(QKey, [Item | QList], InternalQs),
-            split_list(Rest, Index, NInternalQs);
-        error ->
+    case maps:get(QKey, InternalQs, '$not_found') of
+        '$not_found' ->
             NInternalQs = maps:put(QKey, [Item], InternalQs),
+            split_list(Rest, Index, NInternalQs);
+        QList ->
+            NInternalQs = maps:put(QKey, [Item | QList], InternalQs),
             split_list(Rest, Index, NInternalQs)
     end;
 split_list([], _, InternalQs) ->
@@ -386,33 +387,33 @@ in(
     #state{robin = Robin, queues = Qs, empties = Es, module = Module, args = Args}
 ) ->
     case find_queue(QKey, Qs, Es) of
-        {ok, Q} ->
-            {NQ, QNext} = Module:handle_in(SendTime, From, Value, Time, Q),
-            {Robin, Es, NQ, QNext};
-        {ok, Q, NEs} ->
-            {NQ, QNext} = Module:handle_in(SendTime, From, Value, Time, Q),
-            {queue:in(QKey, Robin), NEs, NQ, QNext};
         error ->
             Item = {SendTime, From, Value, monitor(process, Pid)},
             InternalQ = queue:from_list([Item]),
             {Q, QNext} = Module:init(InternalQ, Time, Args),
-            {queue:in(QKey, Robin), Es, Q, QNext}
+            {queue:in(QKey, Robin), Es, Q, QNext};
+        {Q, NEs} ->
+            {NQ, QNext} = Module:handle_in(SendTime, From, Value, Time, Q),
+            {queue:in(QKey, Robin), NEs, NQ, QNext};
+        Q ->
+            {NQ, QNext} = Module:handle_in(SendTime, From, Value, Time, Q),
+            {Robin, Es, NQ, QNext}
     end.
 
 find_queue(QKey, Qs, Es) ->
-    case maps:find(QKey, Qs) of
-        {ok, _} = OK ->
-            OK;
-        error ->
-            find_queue(QKey, Es)
+    case maps:get(QKey, Qs, '$not_found') of
+        '$not_found' ->
+            find_queue(QKey, Es);
+        OK ->
+            OK
     end.
 
 find_queue(QKey, Es) ->
-    case maps:find(QKey, Es) of
-        {ok, {Q, _}} ->
-            {ok, Q, maps:remove(QKey, Es)};
-        error ->
-            error
+    case maps:get(QKey, Es, '$not_found') of
+        '$not_found' ->
+            error;
+        {Q, _} ->
+            {Q, maps:remove(QKey, Es)}
     end.
 
 timeout(QKey, Q, QNext, Qs, Time, #state{next = Next}) when Time < Next ->
@@ -426,13 +427,13 @@ timeout(QKey, Q, QNext, Qs, Time, #state{module = Module}) ->
     end,
     case maps:is_key(QKey, Qs) of
         true ->
-            map(Timeout, Qs);
+            map_2(Qs, Timeout);
         false ->
-            map(maps:to_list(Qs), Timeout, QNext, [{QKey, Q}])
+            map_4(Qs, Timeout, QNext, #{QKey => Q})
     end.
 
 out({{value, QKey}, Robin}, Time, Module, Es, Qs, State) ->
-    {ok, Q} = maps:find(QKey, Qs),
+    Q = maps:get(QKey, Qs),
     case Module:handle_fq_out(Time, Q) of
         {_, _, _, _, NQ, QNext} = Result ->
             NRobin = queue:in(QKey, Robin),
@@ -463,30 +464,33 @@ out({empty, Robin}, Time, _, Es, Qs, State) when map_size(Qs) == 0 ->
     NState = State#state{robin = Robin, empties = Es, queues = Qs, next = infinity},
     {empty, remove(Time, NState)}.
 
-map(Fun, Qs) ->
-    map(maps:to_list(Qs), Fun, infinity, []).
+map_2(Qs, Fun) ->
+    map_4(Qs, Fun, infinity, #{}).
 
-map([{QKey, Q} | Rest], Fun, Next, Qs) ->
+map_4(Qs, Fun, Next, Acc) ->
+    do_map_4(maps:next(maps:iterator(Qs)), Fun, Next, Acc).
+
+do_map_4({QKey, Q, Rest}, Fun, Next, Acc) ->
     {NQ, QNext} = Fun(QKey, Q),
-    map(Rest, Fun, min(QNext, Next), [{QKey, NQ} | Qs]);
-map([], _, Next, Qs) ->
-    {maps:from_list(Qs), Next}.
+    do_map_4(maps:next(Rest), Fun, min(QNext, Next), Acc#{QKey => NQ});
+do_map_4(none, _, Next, Acc) ->
+    {Acc, Next}.
 
-empty_info(Mod, Msg, Time, Es) ->
-    empty_info(maps:to_list(Es), Mod, Msg, Time, infinity, []).
+empty_info(Es, Mod, Msg, Time) ->
+    empty_info(maps:next(maps:iterator(Es)), Mod, Msg, Time, infinity, #{}).
 
-empty_info([{QKey, {Q, QRemoveTime}} | Rest], Mod, Msg, Time, RemoveTime, Es) when
+empty_info({QKey, {Q, QRemoveTime}, Rest}, Mod, Msg, Time, RemoveTime, Es) when
     QRemoveTime > Time
 ->
     {NQ, _} = Mod:handle_info(Msg, Time, Q),
     NRemoveTime = min(QRemoveTime, RemoveTime),
-    NEs = [{QKey, {NQ, QRemoveTime}} | Es],
-    empty_info(Rest, Mod, Msg, Time, NRemoveTime, NEs);
-empty_info([{_, {Q, _}} | Rest], Mod, Msg, Time, RemoveTime, Es) ->
+    NEs = Es#{QKey => {NQ, QRemoveTime}},
+    empty_info(maps:next(Rest), Mod, Msg, Time, NRemoveTime, NEs);
+empty_info({_, {Q, _}, Rest}, Mod, Msg, Time, RemoveTime, Es) ->
     _ = Mod:terminate(change, Q),
-    empty_info(Rest, Mod, Msg, Time, RemoveTime, Es);
-empty_info([], _, _, _, RemoveTime, Es) ->
-    {maps:from_list(Es), RemoveTime}.
+    empty_info(maps:next(Rest), Mod, Msg, Time, RemoveTime, Es);
+empty_info(none, _, _, _, RemoveTime, Es) ->
+    {Es, RemoveTime}.
 
 remove(Time, #state{remove_time = RemoveTime} = State) when RemoveTime > Time ->
     State;
@@ -495,25 +499,26 @@ remove(Time, #state{module = Mod, empties = Es} = State) ->
     State#state{empties = NEs, remove_time = RemoveTime}.
 
 do_remove(Mod, Time, Es) ->
-    do_remove(maps:to_list(Es), Mod, Time, infinity, []).
+    do_remove(maps:next(maps:iterator(Es)), Mod, Time, infinity, #{}).
 
-do_remove([{_, {_, QRemoveTime}} = Item | Rest], Mod, Time, RemoveTime, Es) when
+do_remove({Key, {_, QRemoveTime} = Value, Rest}, Mod, Time, RemoveTime, Es) when
     QRemoveTime > Time
 ->
-    do_remove(Rest, Mod, Time, min(QRemoveTime, RemoveTime), [Item | Es]);
-do_remove([{_, {Q, _}} | Rest], Mod, Time, RemoveTime, Es) ->
+    Acc = Es#{Key => Value},
+    do_remove(maps:next(Rest), Mod, Time, min(QRemoveTime, RemoveTime), Acc);
+do_remove({_, {Q, _}, Rest}, Mod, Time, RemoveTime, Es) ->
     _ = Mod:terminate(chance, Q),
-    do_remove(Rest, Mod, Time, RemoveTime, Es);
-do_remove([], _, _, RemoveTime, Es) ->
-    {maps:from_list(Es), RemoveTime}.
+    do_remove(maps:next(Rest), Mod, Time, RemoveTime, Es);
+do_remove(none, _, _, RemoveTime, Es) ->
+    {Es, RemoveTime}.
 
-cancel([{QKey, Q} | Rest], Module, Tag, Time, Reply, Next, Qs) ->
+cancel({QKey, Q, Rest}, Module, Tag, Time, Reply, Next, Qs) ->
     {QReply, NQ, QNext} = Module:handle_cancel(Tag, Time, Q),
     NReply = cancel_reply(Reply, QReply),
-    NQs = [{QKey, NQ} | Qs],
-    cancel(Rest, Module, Tag, Time, NReply, min(QNext, Next), NQs);
-cancel([], _, _, _, Reply, Next, Qs) ->
-    {Reply, maps:from_list(Qs), Next}.
+    NQs = Qs#{QKey => NQ},
+    cancel(maps:next(Rest), Module, Tag, Time, NReply, min(QNext, Next), NQs);
+cancel(none, _, _, _, Reply, Next, Qs) ->
+    {Reply, Qs, Next}.
 
 cancel_reply(false, QReply) ->
     QReply;
@@ -542,5 +547,5 @@ change(
     {NState, Next}.
 
 change_map(Fun, Qs, Es) ->
-    NEs = [{QKey, Q} || {QKey, {Q, _}} <- maps:to_list(Es)],
-    map(NEs ++ maps:to_list(Qs), Fun, infinity, []).
+    NEs = #{QKey => Q || QKey := {Q, _} <- Es},
+    map_4(maps:merge(NEs, Qs), Fun, infinity, #{}).

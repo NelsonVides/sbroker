@@ -163,7 +163,7 @@ config_change(
 ) ->
     Rand = rand:seed_s(Seed),
     NEntries = entries(Regulators),
-    Old = maps:from_list([{{Regulator, Queue}, Entry}]),
+    Old = #{{Regulator, Queue} => Entry},
     change(NEntries, Time, Old, Rand);
 config_change({Regulators, Seed}, Time, #state{wheel = Wheel}) ->
     Rand = rand:seed_s(Seed),
@@ -187,7 +187,7 @@ terminate(_, _) ->
 
 %% Internal
 
-entries(EntriesArg) when length(EntriesArg) > 0 ->
+entries([_ | _] = EntriesArg) ->
     Entries = [entry(EntryArg) || EntryArg <- EntriesArg],
     DedupList = [
         {{Regulator, Queue}, ignore}
@@ -275,8 +275,8 @@ handle(Time, #state{update_next = UpdateNext} = State) ->
 
 change([Entry], Time, Old, Rand) ->
     #entry{regulator = Regulator, queue = Queue, update = Update} = Entry,
-    case maps:find({Regulator, Queue}, Old) of
-        {ok, #entry{updated = Updated}} when is_integer(Updated) ->
+    case maps:get({Regulator, Queue}, Old, '$not_found') of
+        #entry{updated = Updated} when is_integer(Updated) ->
             {Current, NRand} = sbroker_util:uniform_interval_s(Update, Rand),
             Next = max(Updated + Current, Time),
             NEntry = Entry#entry{updated = Updated},
@@ -289,8 +289,8 @@ change([_ | _] = Entries, Time, Old, Rand) ->
 
 change([Entry | Entries], Time, Old, Rand, Wheel) ->
     #entry{regulator = Regulator, queue = Queue, update = Update} = Entry,
-    case maps:find({Regulator, Queue}, Old) of
-        {ok, #entry{updated = Updated}} when is_integer(Updated) ->
+    case maps:get({Regulator, Queue}, Old, '$not_found') of
+        #entry{updated = Updated} when is_integer(Updated) ->
             {Current, NRand} = sbroker_util:uniform_interval_s(Update, Rand),
             Next = max(Updated + Current, Time),
             NWheel = insert(Next, Entry#entry{updated = Updated}, Wheel),
