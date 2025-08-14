@@ -43,6 +43,7 @@ jobs:
         uses: codecov/codecov-action@v5
         if: ${{ matrix.otp == '28' }}
         with:
+          files: _build/test/covertool/sbroker.covertool.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
           verbose: true
