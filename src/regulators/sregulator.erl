@@ -356,16 +356,7 @@ See `async_ask/1` and `async_ask/2`.
     SojournTime :: non_neg_integer(),
     Drop :: {drop, SojournTime}.
 await(Tag, Timeout) ->
-    receive
-        {Tag, {go, _, _, _, _} = Reply} ->
-            Reply;
-        {Tag, {drop, _} = Reply} ->
-            Reply;
-        {'DOWN', Tag, _, _, Reason} when is_reference(Tag) ->
-            exit({Reason, {?MODULE, await, [Tag, Timeout]}})
-    after Timeout ->
-        exit({timeout, {?MODULE, await, [Tag, Timeout]}})
-    end.
+    sbroker_gen:await(Tag, Timeout, ?MODULE).
 
 ?DOC(#{equiv => cancel(Regulator, Tag, infinity)}).
 -spec cancel(Regulator, Tag) -> Count | false when

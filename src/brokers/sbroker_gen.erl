@@ -1,13 +1,12 @@
 -module(sbroker_gen).
 -if(?OTP_RELEASE >= 27).
 -define(MODULEDOC(Str), -moduledoc(Str)).
--define(DOC(Str), -doc(Str)).
 -else.
 -define(MODULEDOC(Str), -compile([])).
--define(DOC(Str), -compile([])).
 -endif.
 ?MODULEDOC(false).
 
+-export([await/3]).
 -export([call/4]).
 -export([simple_call/4]).
 -export([async_call/3]).
@@ -43,6 +42,28 @@
     | {spawn_opt, [proc_lib:spawn_option()]}
     | {read_time_after, non_neg_integer() | infinity}.
 -type start_return() :: {ok, pid()} | {ok, {pid(), reference()}} | ignore | {error, term()}.
+
+-spec await(Tag, Timeout, Module) -> Go | Drop when
+    Tag :: reference(),
+    Timeout :: timeout(),
+    Module :: module(),
+    Go :: {go, Ref, Value, RelativeTime, SojournTime},
+    Ref :: reference(),
+    Value :: term(),
+    RelativeTime :: integer(),
+    SojournTime :: non_neg_integer(),
+    Drop :: {drop, SojournTime}.
+await(Tag, Timeout, Module) ->
+    receive
+        {Tag, {go, _, _, _, _} = Reply} ->
+            Reply;
+        {Tag, {drop, _} = Reply} ->
+            Reply;
+        {'DOWN', Tag, _, _, Reason} when is_reference(Tag) ->
+            exit({Reason, {Module, await, [Tag, Timeout]}})
+    after Timeout ->
+        exit({timeout, {Module, await, [Tag, Timeout]}})
+    end.
 
 -spec call(Process, Label, Msg, Timeout) -> Reply when
     Process :: process(),
