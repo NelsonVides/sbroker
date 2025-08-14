@@ -388,7 +388,7 @@ in(
 ) ->
     case find_queue(QKey, Qs, Es) of
         error ->
-            Item = {SendTime, From, Value, monitor(process, Pid)},
+            Item = {SendTime, From, Value, erlang:monitor(process, Pid)},
             InternalQ = queue:from_list([Item]),
             {Q, QNext} = Module:init(InternalQ, Time, Args),
             {queue:in(QKey, Robin), Es, Q, QNext};

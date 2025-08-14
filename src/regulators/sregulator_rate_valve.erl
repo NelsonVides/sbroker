@@ -403,14 +403,14 @@ done(Ref, Map, Before, Time, #state{min = Min} = State) ->
             {Status, NextTimeout} = status(Before, Time, NState),
             {error, Status, NState, NextTimeout};
         _ when Before =:= Min ->
-            demonitor(Ref, [flush]),
+            erlang:demonitor(Ref, [flush]),
             NState = State#state{map = NMap, small_time = Time},
             {done, open, NState, infinity};
         _ when Before < Min ->
-            demonitor(Ref, [flush]),
+            erlang:demonitor(Ref, [flush]),
             {done, open, State#state{map = NMap}, infinity};
         After ->
-            demonitor(Ref, [flush]),
+            erlang:demonitor(Ref, [flush]),
             NState = limit_done(NMap, Time, State),
             {Status, NextTimeout} = status(After, Time, NState),
             {done, Status, NState, NextTimeout}

@@ -102,13 +102,13 @@ handle_done(Ref, Time, #state{max = Max, map = Map} = State) ->
     NState = State#state{map = NMap},
     case {After < Before, Before =:= Max, After < Max} of
         {true, true, _} ->
-            demonitor(Ref, [flush]),
+            erlang:demonitor(Ref, [flush]),
             {done, open, NState#state{small_time = Time}, infinity};
         {true, false, true} ->
-            demonitor(Ref, [flush]),
+            erlang:demonitor(Ref, [flush]),
             {done, open, NState, infinity};
         {true, false, false} ->
-            demonitor(Ref, [flush]),
+            erlang:demonitor(Ref, [flush]),
             {done, closed, NState, infinity};
         {false, _, true} ->
             {error, open, NState, infinity};

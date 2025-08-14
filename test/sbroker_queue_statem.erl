@@ -552,7 +552,7 @@ handle_out_post(_, _, _) ->
     false.
 
 out_post(Ref) ->
-    case demonitor(Ref, [flush, info]) of
+    case erlang:demonitor(Ref, [flush, info]) of
         true ->
             true;
         false ->

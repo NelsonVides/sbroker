@@ -116,7 +116,7 @@ async_call(Process, Label, Msg) ->
         undefined ->
             exit({noproc, {?MODULE, async_call, [Process, Label, Msg]}});
         NProcess ->
-            Tag = monitor(process, NProcess),
+            Tag = erlang:monitor(process, NProcess),
             _ = erlang:send(NProcess, {Label, {self(), Tag}, Msg}, [noconnect]),
             {await, Tag, NProcess}
     catch
@@ -157,19 +157,19 @@ dynamic_call(Process, Label, Msg, Timeout) ->
         undefined ->
             exit({noproc, {?MODULE, dynamic_call, [Process, Label, Msg, Timeout]}});
         NProcess ->
-            Tag = monitor(process, NProcess),
+            Tag = erlang:monitor(process, NProcess),
             _ = erlang:send(NProcess, {Label, {self(), Tag}, Msg}, [noconnect]),
             receive
                 {Tag, {await, Tag, _} = Await} ->
                     Await;
                 {Tag, Reply} ->
-                    demonitor(Tag, [flush]),
+                    erlang:demonitor(Tag, [flush]),
                     Reply;
                 {'DOWN', Tag, _, _, Reason} ->
                     Args = [Process, Label, Msg, Timeout],
                     exit({Reason, {?MODULE, dynamic_call, Args}})
             after Timeout ->
-                demonitor(Tag, [flush]),
+                erlang:demonitor(Tag, [flush]),
                 Args = [Process, Label, Msg, Timeout],
                 exit({timeout, {?MODULE, dynamic_call, Args}})
             end

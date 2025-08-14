@@ -103,7 +103,7 @@ handle_cancel(Tag, Time, #state{queue = Q} = State) ->
     Len = queue:len(Q),
     Cancel = fun
         ({_, {_, Tag2}, _, Ref}) when Tag2 =:= Tag ->
-            demonitor(Ref, [flush]),
+            erlang:demonitor(Ref, [flush]),
             false;
         (_) ->
             true
@@ -152,5 +152,5 @@ drop_queue(Time, Q) ->
     ok.
 
 drop_item(Time, {SendTime, From, _, Ref}) ->
-    demonitor(Ref, [flush]),
+    erlang:demonitor(Ref, [flush]),
     sbroker_queue:drop(From, SendTime, Time).

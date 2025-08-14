@@ -1336,7 +1336,7 @@ handle_out(Mod, Now, Queue) ->
     end.
 
 handle_out(Ref, Result, Mod, Now, Queue) ->
-    case demonitor(Ref, [flush, info]) of
+    case erlang:demonitor(Ref, [flush, info]) of
         true ->
             Result;
         false ->

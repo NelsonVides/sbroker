@@ -169,7 +169,7 @@ handle_in(
 ) ->
     {{value, Item}, NQ} = queue:out(Q),
     drop_item(Time, Item),
-    Ref = monitor(process, Pid),
+    Ref = erlang:monitor(process, Pid),
     NQ2 = queue:in({SendTime, From, Value, Ref}, NQ),
     in(Max, NQ2, Time, State);
 handle_in(
@@ -179,7 +179,7 @@ handle_in(
     Time,
     #state{len = Len, queue = Q} = State
 ) ->
-    Ref = monitor(process, Pid),
+    Ref = erlang:monitor(process, Pid),
     NQ = queue:in({SendTime, From, Value, Ref}, Q),
     in(Len + 1, NQ, Time, State).
 
@@ -261,7 +261,7 @@ handle_timeout(Time, #state{min = Min, len = Len, queue = Q} = State) ->
 handle_cancel(Tag, Time, #state{len = Len, queue = Q} = State) ->
     Cancel = fun
         ({_, {_, Tag2}, _, Ref}) when Tag2 =:= Tag ->
-            demonitor(Ref, [flush]),
+            erlang:demonitor(Ref, [flush]),
             false;
         (_) ->
             true
@@ -611,12 +611,12 @@ drop_control(C, Time, #state{interval = Interval} = State) ->
     State#state{count = C, timeout_next = DropNext, drop_next = DropNext}.
 
 drop_item(Time, {SendTime, From, _, Ref}) ->
-    demonitor(Ref, [flush]),
+    erlang:demonitor(Ref, [flush]),
     sbroker_queue:drop(From, SendTime, Time).
 
 drop_queue(Time, Q) ->
     Drop = fun({SendTime, From, _, Ref}) ->
-        demonitor(Ref, [flush]),
+        erlang:demonitor(Ref, [flush]),
         sbroker_queue:drop(From, SendTime, Time),
         false
     end,

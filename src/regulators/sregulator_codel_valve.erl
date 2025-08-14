@@ -401,7 +401,7 @@ done(Ref, Map, Before, Time, #state{min = Min} = State) ->
         _ when Before =:= Min ->
             {done, open, NState#state{small_time = Time}, infinity};
         After ->
-            demonitor(Ref, [flush]),
+            erlang:demonitor(Ref, [flush]),
             {done, status(After, Time, NState), NState, infinity}
     end.
 

@@ -1034,7 +1034,7 @@ open(
 ) when
     Label == ask; Label == nb_ask; Label == dynamic_ask
 ->
-    Ref = monitor(process, Pid),
+    Ref = erlang:monitor(process, Pid),
     try VMod:handle_ask(Pid, Ref, Send, V) of
         {go, Open, NState, NV, Next} when NState == open; NState == closed ->
             go(Ask, Ref, Send, Open, Now),
